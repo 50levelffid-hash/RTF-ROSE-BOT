@@ -11,7 +11,6 @@
     "node-telegram-bot-api": "^0.67.0",
     "cors": "^2.8.6",
     "moment-timezone": "^0.6.0",
-    "@sabir7718/log": "latest",
     "multer": "^1.4.5-lts.1"
   },
   "engines": {
