@@ -1,26 +1,41 @@
-// ====================== index.js (Complete Bot with Admin Panel) ======================
+// ====================== index.js (Complete Working Code) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
  * Complete Bot with Admin Panel - Photo Management
+ * No Environment Variables Needed - Everything Set in Code
  */
 
 process.env.NTBA_FIX_350 = 1;
 
 // ====================== CONFIGURATION ======================
 const config = {
-    mainToken: process.env.BOT_TOKEN || '', // Bot Token from environment
-    S7: '@ZoroXbug',
-    port: process.env.PORT || 3000,
-    love: 'S7_LOVE_2026',
-    adminPassword: process.env.ADMIN_PASSWORD || 'admin123', // Change this!
+    // 🔥 BAS YAHAN APNA BOT TOKEN DAALO 🔥
+    mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA', // <-- Yahan apna token daalo!
     
-    channelId: process.env.CHANNEL_ID || '-1003004551707',
-    groupId: process.env.GROUP_ID || '-1003559518526',
-    group: process.env.GROUP_LINK || 'https://t.me/RTFGAMINGHACK0',
-    channel: process.env.CHANNEL_LINK || 'https://t.me/RTFGAMINGHACK0',
+    S7: '@ZoroXbug',
+    port: 3000,
+    love: 'S7_LOVE_2026',
+    adminPassword: 'admin123', // Admin panel password - CHANGE KARO!
+    
+    // ✅ Aapke channel aur group IDs set kar diye
+    channelId: '-1003004551707',
+    groupId: '-1003559518526',
+    group: 'https://t.me/RTFGAMINGHACK0',
+    channel: 'https://t.me/RTFGAMINGHACK0',
     
     bot: '𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 𝐁𝐎𝐘 𝐅𝐎𝐑𝐄𝐕𝐄𝐑 𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌 𝐁𝐎𝐓'
 };
+
+// ====================== CHECK TOKEN ======================
+if (!config.mainToken || config.mainToken === 'YOUR_BOT_TOKEN_HERE') {
+    console.error('❌ ERROR: Please add your Bot Token in config.mainToken!');
+    console.error('📌 Get token from @BotFather on Telegram');
+    process.exit(1);
+}
+
+console.log('✅ Bot Token found, starting...');
+console.log('📌 Channel ID:', config.channelId);
+console.log('📌 Group ID:', config.groupId);
 
 // ====================== DEPENDENCIES ======================
 const express = require('express');
@@ -52,7 +67,6 @@ if (!fs.existsSync(PAGES_DIR)) fs.mkdirSync(PAGES_DIR, { recursive: true });
 // Photo storage file
 const PHOTOS_FILE = path.join(DATA_DIR, 'photos.json');
 
-// Initialize photos.json
 if (!fs.existsSync(PHOTOS_FILE)) {
     fs.writeFileSync(PHOTOS_FILE, JSON.stringify({ photos: [] }, null, 2));
 }
@@ -607,13 +621,11 @@ app.get('/admin', (req, res) => {
 
 // ====================== ADMIN API ROUTES ======================
 
-// Get all photos
 app.get('/api/admin/photos', (req, res) => {
     const photos = getPhotos();
     res.json({ photos, total: photos.length });
 });
 
-// Upload photo
 app.post('/api/admin/upload', upload.single('photo'), (req, res) => {
     try {
         if (!req.file) {
@@ -627,7 +639,6 @@ app.post('/api/admin/upload', upload.single('photo'), (req, res) => {
     }
 });
 
-// Delete photo
 app.delete('/api/admin/photos/:id', (req, res) => {
     const success = deletePhoto(req.params.id);
     if (success) {
@@ -637,7 +648,6 @@ app.delete('/api/admin/photos/:id', (req, res) => {
     }
 });
 
-// Toggle photo active status
 app.patch('/api/admin/photos/:id/toggle', (req, res) => {
     const photo = togglePhoto(req.params.id);
     if (photo) {
@@ -649,7 +659,6 @@ app.patch('/api/admin/photos/:id/toggle', (req, res) => {
 
 // ====================== BOT API ROUTES ======================
 
-// Get random photo for bot
 app.get('/api/bot/random-photo', (req, res) => {
     const photo = getRandomPhoto();
     if (photo) {
@@ -790,8 +799,11 @@ async function IsSYLovsToo(userId) {
 const S7 = new TelegramBot(config.mainToken, { polling: true });
 
 S7.getMe().then((botInfo) => {
-    log('success', null, `Bot Started: ${botInfo.username}`);
-}).catch(err => log('error', null, err.message));
+    console.log(`✅ Bot Started: ${botInfo.username}`);
+}).catch(err => {
+    console.error('❌ Bot Start Error:', err.message);
+    process.exit(1);
+});
 
 // ====================== KEYBOARDS ======================
 
@@ -867,10 +879,9 @@ function SYLoVe(commands) {
                         reply_markup: protectionButtons 
                     });
                 }
-                log('command', msg.from.first_name, msg.text);
                 await SendLoveSYMenu(msg.chat.id, msg.from.first_name);
             } catch (err) {
-                log('error', 'EXEC', err.message);
+                console.error('Command Error:', err.message);
             }
         }
     });
@@ -970,17 +981,17 @@ S7.on('callback_query', async (q) => {
 // ====================== START SERVER ======================
 
 app.listen(config.port, () => {
-    log('success', 'SERVER', `Bot running on port ${config.port}`);
-    log('info', 'ADMIN', `Admin Panel: http://localhost:${config.port}/admin`);
-    log('info', 'STATUS', '🤖 Bot is ready! Send /start to begin.');
+    console.log(`✅ Server running on port ${config.port}`);
+    console.log(`📌 Admin Panel: http://localhost:${config.port}/admin`);
+    console.log(`🤖 Bot is ready! Send /start to begin.`);
 });
 
 // ====================== ERROR HANDLING ======================
 
 process.on('uncaughtException', (err) => {
-    log('error', 'CRITICAL', 'Uncaught Exception:', err.message);
+    console.error('❌ Uncaught Exception:', err.message);
 });
 
 process.on('unhandledRejection', (reason) => {
-    log('error', 'CRITICAL', 'Unhandled Rejection:', reason);
+    console.error('❌ Unhandled Rejection:', reason);
 });
