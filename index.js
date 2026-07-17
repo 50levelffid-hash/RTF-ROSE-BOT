@@ -8,16 +8,16 @@ process.env.NTBA_FIX_350 = 1;
 
 // ====================== CONFIGURATION ======================
 const config = {
-    mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA', // Bot Token Here - CHANGE THIS!
+    mainToken: process.env.BOT_TOKEN || '', // Bot Token from environment
     S7: '@ZoroXbug',
     port: process.env.PORT || 3000,
     love: 'S7_LOVE_2026',
-    adminPassword: 'admin123', // Admin panel password - CHANGE THIS!
+    adminPassword: process.env.ADMIN_PASSWORD || 'admin123', // Change this!
     
-    channelId: '-1003004551707',
-    groupId: '-1003559518526',
-    group: 'https://t.me/rtfgamminggc',
-    channel: 'https://t.me/RTFGAMINGHACK0',
+    channelId: process.env.CHANNEL_ID || '-1003004551707',
+    groupId: process.env.GROUP_ID || '-1003559518526',
+    group: process.env.GROUP_LINK || 'https://t.me/RTFGAMINGHACK0',
+    channel: process.env.CHANNEL_LINK || 'https://t.me/RTFGAMINGHACK0',
     
     bot: '𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 𝐁𝐎𝐘 𝐅𝐎𝐑𝐄𝐕𝐄𝐑 𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌 𝐁𝐎𝐓'
 };
