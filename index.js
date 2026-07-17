@@ -9,7 +9,7 @@ process.env.NTBA_FIX_350 = 1;
 // ====================== CONFIGURATION ======================
 const config = {
     mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA',
-    S7: '@ZoroXbug',
+    S7: '@RTFGAMMING',
     port: process.env.PORT || 3000,
     love: 'S7_LOVE_2026',
     adminPassword: 'admin123',
