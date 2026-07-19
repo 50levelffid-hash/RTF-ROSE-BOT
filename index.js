@@ -17,7 +17,7 @@ const config = {
     adminPassword: 'admin123',
     channels: [
         { id: '-1003004551707', name: 'Main Channel', link: 'https://t.me/RTFGAMINGHACK0' },
-        { id: '-1003559518526', name: 'Main Group', link: 'https://t.me/RTFGAMINGHACK0' }
+        { id: '-1003559518526', name: 'Main Group', link: 'https://t.me/rtfgamminggc' }
     ],
     bot: '𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 𝐁𝐎𝐘 𝐅𝐎𝐑𝐄𝐕𝐄𝐑 𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌 𝐁𝐎𝐓',
     baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com',
