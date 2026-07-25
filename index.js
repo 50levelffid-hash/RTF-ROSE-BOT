@@ -21,7 +21,7 @@ process.env.NTBA_FIX_350 = 1;
 
 // ====================== CONFIG ======================
 const config = {
-    mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA',
+    mainToken: '8607208829:AAF3qtXBvnW8Kf5ycH2mKW4bmcWOQSd8qgE',
     S7: '@RTFGAMMING',
     adminId: '6346250222',
     port: process.env.PORT || 3000,
