@@ -25,7 +25,7 @@ const config = {
     S7: '@RTFGAMMING',
     adminId: '6346250222',
     port: process.env.PORT || 3000,
-    baseUrl: process.env.RENDER_URL || 'https://official-fb6s.onrender.com',
+    baseUrl: process.env.RENDER_URL || 'https://official-ptemuim.onrender.com',
     BATCH_SIZE: 100,
     LINK_EXPIRY: 15 * 60 * 1000,
     MAX_OPENS: 3,
