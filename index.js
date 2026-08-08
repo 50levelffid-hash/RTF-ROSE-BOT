@@ -20,6 +20,7 @@
  *     - 🟢 Success: Positive actions (Referral, Credits, Buy, Accept, Add, +ADDPROTECTED)
  *     - 🔴 Danger: Destructive (Back, Remove, Delete, Ban, Reject, REMOVEPROTECTED)
  *     - URL buttons (with url field) do NOT get style attribute
+ * 15. ADDED: Official Telegram Menu Button (setMyCommands) – registers /start and /menu
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -2480,6 +2481,17 @@ const S7 = new TelegramBot(config.mainToken, { polling: true });
 S7.getMe().then(botInfo => {
     console.log('✅ Bot Started: @' + botInfo.username);
     logToFile('🤖 Bot Started: @' + botInfo.username);
+
+    // ====================== REGISTER COMMANDS FOR MENU BUTTON ======================
+    // This enables the official Telegram "☰ Menu" button
+    S7.setMyCommands([
+        { command: 'start', description: 'Start the bot' },
+        { command: 'menu', description: 'Show main menu' }
+    ]).then(() => {
+        console.log('✅ Menu commands registered (start, menu)');
+    }).catch(err => {
+        console.warn('⚠️ Could not set commands:', err.message);
+    });
 }).catch(err => {
     console.error('❌ Bot Start Error:', err.message);
     logToFile('❌ Bot Start Error: ' + err.message);
@@ -3535,6 +3547,7 @@ async function startServer() {
             console.log('🤖 Bot is ready! Send /start to begin.');
             console.log('📸 NEW INSTAGRAM FLOW: username → plan → payment (1K) → password');
             console.log('✅ All buttons styled (Primary, Success, Danger) as per Telegram API 9.4+');
+            console.log('✅ Menu button registered (☰) with /start and /menu commands');
         });
     } else {
         console.error('❌ Failed to connect to MongoDB. Exiting...');
